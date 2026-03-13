@@ -1,12 +1,14 @@
 import os
 import json
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
 def normalizar_nomes_nuvem(lista_nomes_sujos: list) -> list:
     print("☁️ Gemini: Traduzindo nomes na nuvem (Gemini 2.5 Flash)...")
     
-    genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-    model = genai.GenerativeModel('gemini-2.5-flash')
+    # 1. O novo SDK usa o objeto Client.
+    # Ele lê a variável GEMINI_API_KEY do seu arquivo .env automaticamente!
+    client = genai.Client()
     
     prompt = f"""
     Aja como um normalizador de dados de faturas.
@@ -16,9 +18,14 @@ def normalizar_nomes_nuvem(lista_nomes_sujos: list) -> list:
     Lista: {json.dumps(lista_nomes_sujos)}
     """
     
-    response = model.generate_content(
-        prompt,
-        generation_config={"response_mime_type": "application/json"}
+    # 2. A chamada agora é feita via client.models
+    # 3. As configurações (como forçar o JSON) vão dentro do objeto GenerateContentConfig
+    response = client.models.generate_content(
+        model='gemini-2.5-flash',
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            response_mime_type="application/json"
+        )
     )
     
     return json.loads(response.text)
