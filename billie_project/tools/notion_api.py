@@ -1,7 +1,10 @@
 import os
+from dotenv import load_dotenv
 import requests
 import pandas as pd
 from datetime import datetime
+
+load_dotenv()
 
 def obter_hashes_existentes(database_id: str, headers: dict) -> set:
     url = f"https://api.notion.com/v1/databases/{database_id}/query"
@@ -88,7 +91,6 @@ def enviar_para_notion(df_gastos: pd.DataFrame):
         if response.status_code == 200:
             print(f"  ✅ Salvo: {nome_loja} - R$ {valor_float}")
             inseridos += 1
+
         else:
             print(f"  ❌ Erro ao salvar {nome_loja}: {response.text}")
-
-    print(f"🎉 Sincronização concluída! {inseridos} novos registos. {ignorados} duplicados ignorados.")
