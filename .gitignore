@@ -1,7 +1,16 @@
-venv
+# Pastas de compilação do PyInstaller
+build/
+dist/
+
+# Arquivo de configuração do PyInstaller
+*.spec
+
+__pycache__/
+*.pyc
+
+venv/
+.venv/
 
 .env
 
 *.pdf
-
-__pycache__
