@@ -20,7 +20,7 @@ class BillieApp(ctk.CTk):
         super().__init__()
 
         # Configurações da Janela
-        self.title("Billie - Processador de Faturas")
+        self.title("Processador de Faturas")
         self.geometry("600x550")
         self.resizable(False, False)
 

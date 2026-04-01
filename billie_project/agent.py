@@ -25,9 +25,9 @@ def orquestrar_pipeline(caminho_pdf, senha, banco, ano, log_callback):
         quantidade = len(df)
         log_callback(f"✅ Extração concluída: {quantidade} transações encontradas.")
         
-        # 2. Fase de IA (Opcional - Gemini)
-        # log_callback("🧠 Enviando para o Gemini higienizar os nomes...")
-        # df = trade_name_searcher.normalizar_nomes_nuvem(df)
+        # 2. Fase de IA
+        log_callback("🧠 Enviando para o Gemini higienizar os nomes...")
+        df = trade_name_searcher.normalizar_nomes_nuvem(df, log_callback)
         
         # 3. Fase de Upload (Notion)
         log_callback("☁️ Enviando dados para o banco do Notion...")
