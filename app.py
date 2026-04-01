@@ -6,10 +6,12 @@ if pasta_raiz not in sys.path:
     sys.path.insert(0, pasta_raiz)
 
 import customtkinter as ctk
+import threading
+import webbrowser
 from tkinter import filedialog
 from datetime import datetime
-import threading
 from billie_project import agent
+from billie_project.tools import config_manager
 
 # Configuração visual base
 ctk.set_appearance_mode("dark")  # Modo escuro elegante
@@ -70,10 +72,79 @@ class BillieApp(ctk.CTk):
         self.btn_processar = ctk.CTkButton(self, text="Processar Fatura", font=ctk.CTkFont(size=16, weight="bold"), height=40, command=self.iniciar_processamento)
         self.btn_processar.pack(pady=20)
 
+        # --- BOTÃO CONFIG ---
+        self.btn_config = ctk.CTkButton(
+            self, 
+            text="⚙️", 
+            width=40, 
+            height=40, 
+            font=ctk.CTkFont(size=20),
+            fg_color="transparent", 
+            text_color="white",
+            hover_color="#2b2b2b",
+            command=self.abrir_janela_config
+        )
+        self.btn_config.place(relx=0.96, rely=0.04, anchor="ne")
+
         # --- CAIXA DE LOGS / STATUS ---
         self.caixa_logs = ctk.CTkTextbox(self, width=560, height=120, state="disabled")
         self.caixa_logs.pack(padx=20, pady=(0, 20))
         self.escrever_log("Pronto para iniciar. Selecione o arquivo PDF.")
+
+    # --- MÉTODOS DE AJUDA (Ficam dentro da classe) ---
+    def abrir_tutorial_notion(self):
+        webbrowser.open("https://www.notion.so/my-integrations")
+
+    def abrir_gerador_gemini(self):
+        webbrowser.open("https://aistudio.google.com/app/apikey")
+
+    # --- POPUP DE CONFIGURAÇÕES ---
+    def abrir_janela_config(self):
+        janela = ctk.CTkToplevel(self)
+        janela.title("Configurações do Sistema")
+        janela.geometry("450x450")
+        janela.resizable(False, False)
+        janela.wait_visibility()
+        janela.grab_set()
+
+        ctk.CTkLabel(janela, text="Credenciais de Integração", font=ctk.CTkFont(size=20, weight="bold")).pack(pady=(20, 10))
+
+        # --- NOTION ---
+        ctk.CTkLabel(janela, text="Notion Token (secret_...):").pack(anchor="w", padx=20)
+        entry_notion = ctk.CTkEntry(janela, width=400, show="*")
+        entry_notion.pack(padx=20, pady=(0, 0))
+        entry_notion.insert(0, config_manager.obter_configuracao("NOTION_TOKEN"))
+
+        # Botão de ajuda do Notion colado embaixo do input
+        btn_ajuda_notion = ctk.CTkButton(janela, text="Como conseguir esse token?", fg_color="transparent", text_color="#1E90FF", hover_color="#2b2b2b", command=self.abrir_tutorial_notion)
+        btn_ajuda_notion.pack(anchor="e", padx=20, pady=(0, 10)) # anchor="e" alinha à direita
+
+        ctk.CTkLabel(janela, text="Notion Database ID:").pack(anchor="w", padx=20)
+        entry_db = ctk.CTkEntry(janela, width=400)
+        entry_db.pack(padx=20, pady=(0, 10))
+        entry_db.insert(0, config_manager.obter_configuracao("NOTION_DATABASE_ID"))
+
+        # --- GEMINI ---
+        ctk.CTkLabel(janela, text="Gemini API Key (AI):").pack(anchor="w", padx=20)
+        entry_gemini = ctk.CTkEntry(janela, width=400, show="*")
+        entry_gemini.pack(padx=20, pady=(0, 0))
+        entry_gemini.insert(0, config_manager.obter_configuracao("GEMINI_API_KEY"))
+
+        # Botão de ajuda do Gemini colado embaixo do input
+        btn_ajuda_gemini = ctk.CTkButton(janela, text="Gerar chave grátis em 1 minuto", fg_color="transparent", text_color="#1E90FF", hover_color="#2b2b2b", command=self.abrir_gerador_gemini)
+        btn_ajuda_gemini.pack(anchor="e", padx=20, pady=(0, 20))
+
+        # --- FUNÇÃO DE SALVAR (Pode ficar aninhada aqui mesmo, pois ela só existe enquanto o popup existir) ---
+        def salvar_tudo():
+            config_manager.salvar_configuracao("NOTION_TOKEN", entry_notion.get().strip())
+            config_manager.salvar_configuracao("NOTION_DATABASE_ID", entry_db.get().strip())
+            config_manager.salvar_configuracao("GEMINI_API_KEY", entry_gemini.get().strip())
+
+            # self.escrever_log("⚙️ Configurações atualizadas e salvas com sucesso!")
+            janela.destroy()
+
+        btn_salvar = ctk.CTkButton(janela, text="Salvar e Fechar", command=salvar_tudo)
+        btn_salvar.pack(pady=10)
 
     def selecionar_arquivo(self):
         caminho = filedialog.askopenfilename(filetypes=[("Arquivos PDF", "*.pdf")])
