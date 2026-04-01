@@ -7,7 +7,7 @@ import threading
 VERSAO_ATUAL = "v1.0.0" 
 
 # Substitua pelo seu usuário e nome do repositório no GitHub
-GITHUB_REPO = "seu-usuario/nome-do-repositorio" 
+GITHUB_REPO = "eduardoteranisi/billie-project"
 
 def buscar_atualizacoes(callback_ui):
     """
