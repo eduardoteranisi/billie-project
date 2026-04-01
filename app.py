@@ -12,6 +12,7 @@ from tkinter import filedialog
 from datetime import datetime
 from billie_project import agent
 from billie_project.tools import config_manager
+from billie_project.tools import updater
 
 # Configuração visual base
 ctk.set_appearance_mode("dark")  # Modo escuro elegante
@@ -86,6 +87,19 @@ class BillieApp(ctk.CTk):
         )
         self.btn_config.place(relx=0.96, rely=0.04, anchor="ne")
 
+        # --- BOTÃO DE ATUALIZAÇÃO ---
+        self.btn_atualizar = ctk.CTkButton(
+            self, 
+            text="🎁 Nova Versão Disponível!", 
+            fg_color="#2ecc71",
+            hover_color="#27ae60",
+            text_color="white",
+            font=ctk.CTkFont(weight="bold")
+        )
+
+        # --- GATILHO DO SMART UPDATE ---
+        updater.buscar_atualizacoes(self.processar_resultado_update)
+
         # --- CAIXA DE LOGS / STATUS ---
         self.caixa_logs = ctk.CTkTextbox(self, width=560, height=120, state="disabled")
         self.caixa_logs.pack(padx=20, pady=(0, 20))
@@ -97,6 +111,19 @@ class BillieApp(ctk.CTk):
 
     def abrir_gerador_gemini(self):
         webbrowser.open("https://aistudio.google.com/app/apikey")
+
+    def processar_resultado_update(self, tem_atualizacao, nova_versao, url_download):
+        """Recebe a resposta do updater.py e atualiza a tela se necessário."""
+        if tem_atualizacao:
+            self.btn_atualizar.configure(
+                text=f"🎁 Atualizar para {nova_versao}",
+                command=lambda: updater.abrir_link_atualizacao(url_download)
+            )
+            # Mostra o botão na tela (posicionado no topo, centralizado ou no canto)
+            self.btn_atualizar.place(relx=0.5, rely=0.04, anchor="n")
+            
+            # Opcional: Avisa no log da interface
+            self.escrever_log(f"✨ Opa! Uma nova versão ({nova_versao}) está disponível no GitHub.")
 
     # --- POPUP DE CONFIGURAÇÕES ---
     def abrir_janela_config(self):
