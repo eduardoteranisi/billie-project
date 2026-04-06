@@ -1,6 +1,6 @@
 import os
 import pikepdf
-from tools.pdf_reader import extrair_xp_rico, extrair_nubank, extrair_santander
+from .pdf_reader import extrair_xp_rico, extrair_nubank, extrair_santander
 
 def processar_fatura(caminho_pdf: str, senha: str, banco_selecionado: str, ano: int):
     print(f"Iniciando roteamento manual para o banco: {banco_selecionado}")

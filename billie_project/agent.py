@@ -1,13 +1,8 @@
 import sys
 import os
-
-pasta_raiz = os.path.dirname(os.path.abspath(__file__))
-if pasta_raiz not in sys.path:
-    sys.path.insert(0, pasta_raiz)
-
-from tools import router
-from tools import notion_api
-from tools import trade_name_searcher
+from .tools import router
+from .tools import notion_api
+from .tools import trade_name_searcher
 
 def orquestrar_pipeline(caminho_pdf, senha, banco, ano, log_callback):
     """

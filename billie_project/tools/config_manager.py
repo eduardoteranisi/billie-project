@@ -1,11 +1,20 @@
 import os
+import sys
 from dotenv import load_dotenv, set_key
 
-# 1. Blindagem de Caminho (Preparando para o .exe)
-# Como este arquivo está dentro da pasta 'tools', pegamos a pasta atual e voltamos um nível (..) para achar a raiz.
-PASTA_ATUAL = os.path.dirname(os.path.abspath(__file__))
-PASTA_RAIZ = os.path.dirname(PASTA_ATUAL)
-CAMINHO_ENV = os.path.join(PASTA_RAIZ, ".env")
+# --- DESCUBRE ONDE ESTAMOS RODANDO ---
+if getattr(sys, 'frozen', False):
+    # REALIDADE 1: Estamos rodando como .exe (PyInstaller)
+    # Pega o caminho de onde o usuário colocou o .exe (ex: C:\Users\Nome\Downloads)
+    PASTA_BASE = os.path.dirname(sys.executable)
+else:
+    # REALIDADE 2: Estamos rodando no terminal pelo VS Code (python app.py)
+    # Usa a sua lógica original para achar a pasta do projeto
+    PASTA_ATUAL = os.path.dirname(os.path.abspath(__file__))
+    PASTA_BASE = os.path.dirname(PASTA_ATUAL)
+
+# O caminho do .env agora é dinâmico e 100% seguro contra a amnésia do PyInstaller
+CAMINHO_ENV = os.path.join(PASTA_BASE, ".env")
 
 def inicializar_ambiente():
     """Garante que o arquivo .env existe e carrega as variáveis para a memória."""

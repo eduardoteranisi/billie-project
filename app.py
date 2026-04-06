@@ -1,10 +1,5 @@
 import sys
 import os
-
-pasta_raiz = os.path.dirname(os.path.abspath(__file__))
-if pasta_raiz not in sys.path:
-    sys.path.insert(0, pasta_raiz)
-
 import customtkinter as ctk
 import threading
 import webbrowser
