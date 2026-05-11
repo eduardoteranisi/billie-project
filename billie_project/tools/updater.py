@@ -4,7 +4,7 @@ import threading
 
 # --- CONFIGURAÇÕES DO APP ---
 # Esta é a versão ATUAL do código. Você vai mudar isso aqui sempre que for lançar um .exe novo.
-VERSAO_ATUAL = "v1.0.0" 
+VERSAO_ATUAL = "v1.1.0" 
 
 # Substitua pelo seu usuário e nome do repositório no GitHub
 GITHUB_REPO = "eduardoteranisi/billie-project"

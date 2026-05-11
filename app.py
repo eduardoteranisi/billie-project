@@ -26,7 +26,7 @@ class BillieApp(ctk.CTk):
         self.label_titulo = ctk.CTkLabel(self, text="Billie", font=ctk.CTkFont(size=28, weight="bold"))
         self.label_titulo.pack(pady=(20, 5))
         
-        self.label_subtitulo = ctk.CTkLabel(self, text="Extração local e segura para o Notion", text_color="gray")
+        self.label_subtitulo = ctk.CTkLabel(self, text="Extração local e segura", text_color="gray")
         self.label_subtitulo.pack(pady=(0, 20))
 
         # --- FRAME DE ARQUIVO ---
@@ -63,6 +63,29 @@ class BillieApp(ctk.CTk):
         anos_disponiveis = ["Automático (Recomendado)"] + [str(ano) for ano in range(datetime.now().year, 2020, -1)]
         self.combo_ano = ctk.CTkComboBox(self.frame_config, values=anos_disponiveis, width=190)
         self.combo_ano.grid(row=1, column=2, padx=10, pady=(0, 15), sticky="w")
+
+        # -- Check box para normalizacao por ia e notion
+        self.check_ia_var = ctk.BooleanVar(value=False)
+        self.check_notion_var = ctk.BooleanVar(value=False)
+        
+        # --- FRAME DE OPÇÕES EXTRAS ---
+        self.frame_opcoes = ctk.CTkFrame(self)
+        self.frame_opcoes.pack(pady=10, padx=20, fill="x")
+
+        self.check_ia = ctk.CTkCheckBox(
+        self.frame_opcoes, 
+            text="Normalizar nomes com IA (Gemini)", 
+            variable=self.check_ia_var
+        )
+        self.check_ia.pack(side="left", padx=20, pady=10)
+
+        self.check_notion = ctk.CTkCheckBox(
+            self.frame_opcoes, 
+            text="Exportar para o Notion", 
+            variable=self.check_notion_var
+        )
+
+        self.check_notion.pack(side="left", padx=20, pady=10)
 
         # --- BOTÃO PROCESSAR ---
         self.btn_processar = ctk.CTkButton(self, text="Processar Fatura", font=ctk.CTkFont(size=16, weight="bold"), height=40, command=self.iniciar_processamento)
@@ -186,24 +209,43 @@ class BillieApp(ctk.CTk):
         senha = self.entry_senha.get()
         banco = self.combo_banco.get()
         ano = self.combo_ano.get()
+    
+        # Novas flags
+        usar_ia = self.check_ia_var.get()
+        usar_notion = self.check_notion_var.get()
 
         if not arquivo:
             self.escrever_log("⚠️ Erro: Nenhum arquivo selecionado.")
             return
 
-        # Trava o botão para o usuário não clicar duas vezes
+        # Validação condicional de chaves
+        if usar_notion:
+            token = config_manager.obter_configuracao("NOTION_TOKEN")
+            db_id = config_manager.obter_configuracao("NOTION_DATABASE_ID")
+            if not token or not db_id:
+                self.escrever_log("❌ Erro: Chaves do Notion não configuradas.")
+                self.abrir_janela_config()
+                return
+
+        if usar_ia:
+            gemini_key = config_manager.obter_configuracao("GEMINI_API_KEY")
+            if not gemini_key:
+                self.escrever_log("❌ Erro: Chave do Gemini não configurada.")
+                self.abrir_janela_config()
+                return
+
         self.btn_processar.configure(state="disabled", text="Processando...")
-        
-        # Cria a função que vai rodar em paralelo
+    
         def tarefa_em_background():
-            # Chama o agente passando a função escrever_log como canal de comunicação
-            sucesso = agent.orquestrar_pipeline(arquivo, senha, banco, ano, self.escrever_log)
-            
-            # O CustomTkinter exige que atualizações visuais sejam feitas na Thread principal.
-            # O .after(0, ...) garante que o botão volte ao normal com segurança.
+            # Passamos as novas flags para o orquestrador
+            sucesso = agent.orquestrar_pipeline(
+                arquivo, senha, banco, ano, 
+                self.escrever_log, 
+                usar_ia=usar_ia, 
+                usar_notion=usar_notion
+            )
             self.after(0, self.finalizar_processamento, sucesso)
 
-        # Inicia a Thread paralela (daemon=True garante que ela morre se fechar o app)
         threading.Thread(target=tarefa_em_background, daemon=True).start()
 
     def finalizar_processamento(self, sucesso):

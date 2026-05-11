@@ -4,7 +4,7 @@ from .tools import router
 from .tools import notion_api
 from .tools import trade_name_searcher
 
-def orquestrar_pipeline(caminho_pdf, senha, banco, ano, log_callback):
+def orquestrar_pipeline(caminho_pdf, senha, banco, ano, log_callback, usar_ia, usar_notion):
     """
     Função principal que coordena o fluxo de dados.
     Recebe 'log_callback' para enviar mensagens em tempo real para a interface.
@@ -21,13 +21,23 @@ def orquestrar_pipeline(caminho_pdf, senha, banco, ano, log_callback):
         log_callback(f"✅ Extração concluída: {quantidade} transações encontradas.")
         
         # 2. Fase de IA
-        log_callback("🧠 Enviando para o Gemini higienizar os nomes...")
-        df = trade_name_searcher.normalizar_nomes_nuvem(df, log_callback)
+        if usar_ia:
+            log_callback("🧠 Enviando para o Gemini higienizar os nomes...")
+            df = trade_name_searcher.normalizar_nomes_nuvem(df, log_callback)
         
-        # 3. Fase de Upload (Notion)
-        log_callback("☁️ Enviando dados para o banco do Notion...")
-        notion_api.enviar_para_notion(df)
-        
+        # 3. Fase de Upload (Notion) ou Geracao de .csv
+        if usar_notion:
+            log_callback("☁️ Enviando dados para o banco do Notion...")
+            notion_api.enviar_para_notion(df)
+        else:
+            nome_arquivo = f"fatura.csv"
+
+            log_callback(f"💾 Gerando arquivo local: {nome_arquivo}...")
+
+            df.to_csv(nome_arquivo, index=False, encoding='utf-8-sig', sep=';')
+
+            log_callback(f"✅ Arquivo salvo com sucesso na pasta do programa!")    
+
         log_callback("🎉 Processo finalizado com sucesso!")
         return True
         
