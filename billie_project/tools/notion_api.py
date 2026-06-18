@@ -59,7 +59,7 @@ def enviar_para_notion(df_gastos: pd.DataFrame):
     
     for index, row in df_gastos.iterrows():
         id_transacao = str(row['ID_Transacao'])
-        nome_loja = str(row['Nome_Fantasia']).strip() if 'Nome_Fantasia' in row else str(row['Descricao_suja']).strip()
+        nome_loja = str(row['Nome_Fantasia']).strip() if 'Nome_Fantasia' in row else str(row['Descricao_Suja']).strip()
         valor_float = float(row['Valor'])
         data_formatada = row['Data']
         
