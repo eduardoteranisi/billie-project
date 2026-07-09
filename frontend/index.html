@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Billie — Processador de faturas</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <div id="app">
+
+    <!-- ---------- cabeçalho ---------- -->
+    <header class="header">
+      <div class="brand">
+        <h1>Billie</h1>
+        <p>Extração local de faturas</p>
+      </div>
+    </header>
+
+    <!-- ---------- banner de atualização ---------- -->
+    <div id="update-banner" class="update-banner">
+      <span id="update-text">Nova versão disponível</span>
+      <button id="btn-update">Atualizar</button>
+    </div>
+
+    <!-- ---------- arquivo ---------- -->
+    <section class="section">
+      <p class="section-label">Arquivo</p>
+      <button id="file-row" class="file-row empty" type="button">
+        <span class="file-name" id="file-name">Nenhum arquivo selecionado</span>
+        <span class="leader"></span>
+        <span class="file-action">Procurar PDF</span>
+      </button>
+      <input type="file" id="file-input" accept="application/pdf" hidden />
+    </section>
+
+    <!-- ---------- configurações da fatura ---------- -->
+    <section class="section">
+      <p class="section-label">Detalhes da fatura</p>
+      <div class="field-row">
+        <div class="field">
+          <label for="senha">Senha do PDF</label>
+          <input type="password" id="senha" placeholder="opcional" autocomplete="off" />
+        </div>
+        <div class="field">
+          <label for="banco">Banco</label>
+          <select id="banco">
+            <option>Nubank</option>
+            <option>XP / Rico</option>
+            <option>Santander</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="ano">Ano da fatura</label>
+          <select id="ano"></select>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- processar ---------- -->
+    <button id="btn-processar" class="btn-primary">Processar fatura</button>
+
+    <!-- ---------- log ---------- -->
+    <section class="section">
+      <p class="section-label">Registro</p>
+      <div id="log" class="log"></div>
+    </section>
+
+  </div>
+
+  <script type="module" src="./app.ts"></script>
+</body>
+</html>
