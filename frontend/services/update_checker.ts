@@ -1,4 +1,4 @@
-const CURRENT_VERSION = "v0.1.0";
+const CURRENT_VERSION = "v2.0.0";
 const GITHUB_REPO = "eduardoteranisi/billie-project";
 
 export interface UpdateCheckResult {
