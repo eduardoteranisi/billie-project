@@ -5,6 +5,12 @@ export interface Transaction {
   amount: number;
 }
 
+export interface CsvColumnConfig {
+  date: string;
+  merchant: string;
+  amount: string;
+}
+
 export interface RawTransaction {
   date: string;
   dirtyDescription: string;
