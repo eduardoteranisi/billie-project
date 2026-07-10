@@ -1,4 +1,4 @@
-import { runPipeline, exportToCsv, type Bank } from "@billie/parser";
+import { runPipeline, exportToCsv, DEFAULT_CSV_COLUMNS, type Bank, type CsvColumnConfig } from "@billie/parser";
 import { checkForUpdates, openExternalLink } from "./services/update_checker";
 
 type InvokeFn = (cmd: string, args?: Record<string, unknown>) => Promise<any>;
@@ -23,6 +23,11 @@ const els = {
   senha: byId<HTMLInputElement>("senha"),
   banco: byId<HTMLSelectElement>("banco"),
   ano: byId<HTMLSelectElement>("ano"),
+
+  colData: byId<HTMLInputElement>("col-data"),
+  colEstabelecimento: byId<HTMLInputElement>("col-estabelecimento"),
+  colValor: byId<HTMLInputElement>("col-valor"),
+  btnRestaurarColunas: byId<HTMLButtonElement>("btn-restaurar-colunas"),
 
   btnProcessar: byId<HTMLButtonElement>("btn-processar"),
   log: byId<HTMLDivElement>("log"),
@@ -115,6 +120,46 @@ async function checarAtualizacoes() {
   log(`Nova versão (${version}) disponível.`);
 }
 
+// ---------- colunas CSV ----------
+
+const CHAVE_CONFIG_COLUNAS = "billie:csv-colunas";
+
+function carregarConfigColunas() {
+  let config: CsvColumnConfig = DEFAULT_CSV_COLUMNS;
+
+  const salvo = localStorage.getItem(CHAVE_CONFIG_COLUNAS);
+  if (salvo) {
+    try {
+      config = { ...DEFAULT_CSV_COLUMNS, ...JSON.parse(salvo) };
+    } catch {
+      config = DEFAULT_CSV_COLUMNS;
+    }
+  }
+
+  els.colData.value = config.date;
+  els.colEstabelecimento.value = config.merchant;
+  els.colValor.value = config.amount;
+}
+
+function salvarConfigColunas() {
+  localStorage.setItem(CHAVE_CONFIG_COLUNAS, JSON.stringify(obterConfigColunasAtual()));
+}
+
+function obterConfigColunasAtual(): CsvColumnConfig {
+  return {
+    date: els.colData.value.trim() || DEFAULT_CSV_COLUMNS.date,
+    merchant: els.colEstabelecimento.value.trim() || DEFAULT_CSV_COLUMNS.merchant,
+    amount: els.colValor.value.trim() || DEFAULT_CSV_COLUMNS.amount,
+  };
+}
+
+function restaurarColunasPadrao() {
+  els.colData.value = DEFAULT_CSV_COLUMNS.date;
+  els.colEstabelecimento.value = DEFAULT_CSV_COLUMNS.merchant;
+  els.colValor.value = DEFAULT_CSV_COLUMNS.amount;
+  salvarConfigColunas();
+}
+
 // ---------- processamento ----------
 
 async function processarFatura() {
@@ -147,7 +192,7 @@ async function processarFatura() {
     }
 
     const nomeArquivo = nomeArquivoCsv(els.banco.value);
-    baixarCsv(exportToCsv(resultado.transactions), nomeArquivo);
+    baixarCsv(exportToCsv(resultado.transactions, obterConfigColunasAtual()), nomeArquivo);
 
     log(`Concluído — ${resultado.transactions.length} transações extraídas.`, "success");
     log(`Arquivo "${nomeArquivo}" salvo na pasta Downloads.`, "success");
@@ -189,11 +234,17 @@ function bindEvents() {
   els.fileRow.addEventListener("click", selecionarArquivo);
   els.fileInput.addEventListener("change", onFileInputChange);
   els.btnProcessar.addEventListener("click", processarFatura);
+
+  els.colData.addEventListener("blur", salvarConfigColunas);
+  els.colEstabelecimento.addEventListener("blur", salvarConfigColunas);
+  els.colValor.addEventListener("blur", salvarConfigColunas);
+  els.btnRestaurarColunas.addEventListener("click", restaurarColunasPadrao);
 }
 
 // ---------- boot ----------
 
 preencherAnos();
+carregarConfigColunas();
 bindEvents();
 checarAtualizacoes();
 log("Pronto para iniciar. Selecione o arquivo PDF.");
