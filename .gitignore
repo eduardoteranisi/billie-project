@@ -30,8 +30,8 @@ yarn-debug.log*
 yarn-error.log*
 
 # test files
-*.pdf
-*.csv
+backend-parser/test-data/*.pdf
+backend-parser/test-data/*.csv
 
 # local claude files
 .claude/
@@ -39,3 +39,4 @@ yarn-error.log*
 
 CLAUDE.md
 spec.md
+specs/

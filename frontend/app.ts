@@ -1,4 +1,4 @@
-import { runPipeline, exportToCsv, DEFAULT_CSV_COLUMNS, type Bank, type CsvColumnConfig } from "@billie/parser";
+import { runPipeline, exportToCsv, DEFAULT_CSV_COLUMNS, type Bank, type CsvColumnConfig, type Transaction } from "@billie/parser";
 import { checkForUpdates, openExternalLink } from "./services/update_checker";
 
 type InvokeFn = (cmd: string, args?: Record<string, unknown>) => Promise<any>;
@@ -191,7 +191,8 @@ async function processarFatura() {
       throw new Error(resultado.error ?? "erro desconhecido no processamento");
     }
 
-    const nomeArquivo = nomeArquivoCsv(els.banco.value);
+    const periodo = periodoFatura(resultado.transactions);
+    const nomeArquivo = nomeArquivoCsv(els.banco.value, periodo);
     baixarCsv(exportToCsv(resultado.transactions, obterConfigColunasAtual()), nomeArquivo);
 
     log(`Concluído — ${resultado.transactions.length} transações extraídas.`, "success");
@@ -205,15 +206,26 @@ async function processarFatura() {
   }
 }
 
-function nomeArquivoCsv(banco: string): string {
+function nomeArquivoCsv(banco: string, periodo: string): string {
   const bancoSlug = banco
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
-  const data = new Date().toISOString().slice(0, 10);
-  return `fatura-${bancoSlug}-${data}.csv`;
+  return `fatura-${bancoSlug}-${periodo}.csv`;
+}
+
+function periodoFatura(transacoes: Transaction[]): string {
+  if (transacoes.length === 0) return new Date().toISOString().slice(0, 7);
+  const periodos = transacoes.map((t) => t.date.slice(0, 7)); // "YYYY-MM" direto da string ISO
+  return maisFrequente(periodos);
+}
+
+function maisFrequente(valores: string[]): string {
+  const contagem = new Map<string, number>();
+  for (const valor of valores) contagem.set(valor, (contagem.get(valor) ?? 0) + 1);
+  return [...contagem.entries()].sort((a, b) => b[1] - a[1])[0][0];
 }
 
 function baixarCsv(csv: string, nomeArquivo: string) {
