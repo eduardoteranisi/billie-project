@@ -53,6 +53,45 @@ This opens Billie in a native window instead of a browser tab.
 
 ---
 
+## 🏗️ Architecture
+
+Billie is an npm workspace with two JS packages plus a Rust/Tauri shell. `frontend` imports `@billie/parser` directly — there's no backend server or IPC hop involved in parsing.
+
+```mermaid
+graph TD
+    subgraph "src-tauri/ (Rust/Tauri desktop shell)"
+        TAURI[Tauri WebView]
+    end
+
+    subgraph "frontend/ (Vite + TypeScript UI)"
+        APP[app.ts]
+    end
+
+    subgraph "backend-parser/ (@billie/parser)"
+        IDX[index.ts]
+        PIPE["pipeline.ts<br/>runPipeline"]
+        ROUTER["bank_router.ts<br/>routeInvoice"]
+        READER["pdf_reader.ts<br/>extractNubank / extractXpRico / extractSantander"]
+        TXTEX[pdf_text_extractor.ts]
+        PROC["transaction_processor.ts<br/>finalizeTransactions"]
+        CSV["csv_exporter.ts<br/>exportToCsv"]
+    end
+
+    TAURI -->|hosts| APP
+    APP -->|imports directly, no HTTP/IPC| IDX
+    IDX --> PIPE
+    PIPE --> ROUTER
+    ROUTER --> READER
+    READER --> TXTEX
+    READER --> PROC
+    PROC --> CSV
+    CSV -->|CSV string| APP
+```
+
+Each bank gets its own extractor function in `pdf_reader.ts`, matched against a bank-specific regex in `bank_patterns.ts`. Adding a new bank means adding a pattern, an `extractX` function, and a case in the `bank_router.ts` switch.
+
+---
+
 ## 📦 Releasing new versions (installers for Windows/Linux)
 
 Installers are **not** built or committed manually — they're produced by CI and attached to a GitHub Release.
