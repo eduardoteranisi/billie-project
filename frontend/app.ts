@@ -15,6 +15,7 @@ const els = {
   updateBanner: byId<HTMLDivElement>("update-banner"),
   updateText: byId<HTMLSpanElement>("update-text"),
   btnUpdate: byId<HTMLButtonElement>("btn-update"),
+  btnTema: byId<HTMLButtonElement>("btn-tema"),
 
   fileRow: byId<HTMLButtonElement>("file-row"),
   fileName: byId<HTMLSpanElement>("file-name"),
@@ -118,6 +119,29 @@ async function checarAtualizacoes() {
   els.updateBanner.classList.add("visible");
   els.btnUpdate.onclick = () => openExternalLink(url);
   log(`Nova versão (${version}) disponível.`);
+}
+
+// ---------- tema ----------
+
+const CHAVE_TEMA = "billie:tema";
+
+function carregarTema() {
+  const salvo = localStorage.getItem(CHAVE_TEMA);
+  const tema = salvo === "light" ? "light" : "dark";
+  document.documentElement.dataset.theme = tema;
+  atualizarIconeTema(tema);
+}
+
+function alternarTema() {
+  const atual = document.documentElement.dataset.theme === "light" ? "light" : "dark";
+  const novo = atual === "light" ? "dark" : "light";
+  document.documentElement.dataset.theme = novo;
+  localStorage.setItem(CHAVE_TEMA, novo);
+  atualizarIconeTema(novo);
+}
+
+function atualizarIconeTema(tema: string) {
+  els.btnTema.textContent = tema === "light" ? "🌙" : "☀️";
 }
 
 // ---------- colunas CSV ----------
@@ -243,6 +267,7 @@ function baixarCsv(csv: string, nomeArquivo: string) {
 // ---------- eventos ----------
 
 function bindEvents() {
+  els.btnTema.addEventListener("click", alternarTema);
   els.fileRow.addEventListener("click", selecionarArquivo);
   els.fileInput.addEventListener("change", onFileInputChange);
   els.btnProcessar.addEventListener("click", processarFatura);
@@ -255,6 +280,7 @@ function bindEvents() {
 
 // ---------- boot ----------
 
+carregarTema();
 preencherAnos();
 carregarConfigColunas();
 bindEvents();

@@ -32,6 +32,24 @@
   --radius: 3px;
 }
 
+:root[data-theme="light"] {
+  /* cor — paleta "tinta de razão" (variante clara) */
+  --bg: #f5f3ec;
+  --surface: #ffffff;
+  --surface-raised: #faf8f2;
+  --border: #d8d4c5;
+  --border-soft: #e5e1d2;
+
+  --text-primary: #1f2420;
+  --text-secondary: #5c5a4d;
+  --text-tertiary: #8a887a;
+
+  --accent: #7fa374;
+  --accent-strong: #4a6640;
+  --gold: #a17f2e;
+  --danger: #a85a3d;
+}
+
 * { box-sizing: border-box; }
 
 html, body {
@@ -140,6 +158,10 @@ html, body {
   cursor: pointer;
   padding: 0;
   margin-top: 12px;
+}
+
+.header .link-button {
+  margin-top: 0;
 }
 
 /* ---------- seções ---------- */
@@ -305,6 +327,12 @@ select {
 }
 .btn-primary:hover:not(:disabled) { background: var(--accent-strong); }
 .btn-primary:disabled { opacity: 0.5; cursor: default; }
+
+/* no tema claro, --accent-strong é um verde escuro (serve de texto em
+   .entry.success sobre fundo branco) — usá-lo como fundo do hover deixaria
+   o texto quase-preto do botão ilegível, então o hover usa um tom mais
+   claro só neste tema, mantendo --accent-strong intacto para o outro uso */
+:root[data-theme="light"] .btn-primary:hover:not(:disabled) { background: #93b989; }
 
 /* ---------- log ---------- */
 
