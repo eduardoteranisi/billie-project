@@ -53,6 +53,49 @@ This opens Billie in a native window instead of a browser tab.
 
 ---
 
+## 🏗️ Architecture
+
+Billie is an npm workspace with two JS packages plus a Rust/Tauri shell. `frontend` imports `@billie/parser` directly — there's no backend server or IPC hop involved in parsing.
+
+```mermaid
+graph TD
+    subgraph "src-tauri/ (Rust/Tauri desktop shell)"
+        TAURI[Tauri WebView]
+    end
+
+    subgraph "frontend/ (Vite + TypeScript UI)"
+        APP[app.ts]
+    end
+
+    subgraph "backend-parser/ (@billie/parser)"
+        IDX[index.ts]
+        PIPE["pipeline.ts<br/>runPipeline"]
+        ROUTER["bank_router.ts<br/>routeInvoice"]
+
+        subgraph "pdf_reader.ts (extractNubank / extractXpRico / extractSantander)"
+            direction TB
+            STEP1["1 . extractPdfLines()<br/>(pdf_text_extractor.ts)"]
+            STEP2["2 . regex match against<br/>reconstructed lines<br/>(bank_patterns.ts)"]
+            STEP3["3 . finalizeTransactions()<br/>(transaction_processor.ts)"]
+            STEP1 --> STEP2 --> STEP3
+        end
+
+        CSV["csv_exporter.ts<br/>exportToCsv"]
+    end
+
+    TAURI -->|hosts| APP
+    APP -->|imports directly, no HTTP/IPC| IDX
+    IDX --> PIPE
+    PIPE --> ROUTER
+    ROUTER -->|"extractX(pdfBytes, year, password)"| STEP1
+    STEP3 -->|"Transaction[]"| CSV
+    CSV -->|CSV string| APP
+```
+
+`bank_router.ts` only calls into `pdf_reader.ts`'s per-bank `extractX` function — it never touches `pdf_text_extractor.ts` or `transaction_processor.ts` directly. Those two are called *from inside* `extractX`, in strict sequence: first `extractPdfLines` reconstructs visual lines from the PDF, then a bank-specific regex from `bank_patterns.ts` matches rows out of those lines, and only then does `finalizeTransactions` run on the matches. Adding a new bank means adding a pattern, an `extractX` function, and a case in the `bank_router.ts` switch.
+
+---
+
 ## 📦 Releasing new versions (installers for Windows/Linux)
 
 Installers are **not** built or committed manually — they're produced by CI and attached to a GitHub Release.
