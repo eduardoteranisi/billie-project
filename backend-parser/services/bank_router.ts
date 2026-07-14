@@ -1,7 +1,7 @@
-import type { ParseInvoiceInput, Transaction } from "../types";
+import type { PdfParseInput, Transaction } from "../types";
 import { extractNubank, extractXpRico, extractSantander } from "./pdf_reader";
 
-export async function routeInvoice(input: ParseInvoiceInput): Promise<Transaction[]> {
+export async function routeInvoice(input: PdfParseInput): Promise<Transaction[]> {
   const { pdfBytes, password, bank, year } = input;
 
   console.log(`Iniciando roteamento manual para o banco: ${bank}`);

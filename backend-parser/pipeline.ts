@@ -1,9 +1,10 @@
 import { routeInvoice } from "./services/bank_router";
-import type { LogFn, ParseInvoiceInput, Transaction } from "./types";
+import { parseCsvInvoice } from "./services/csv_reader";
+import type { LogFn, PdfParseInput, CsvParseInput, Transaction } from "./types";
 
-export interface RunPipelineOptions extends ParseInvoiceInput {
-  onLog: LogFn;
-}
+export type RunPipelineOptions =
+  | (PdfParseInput & { onLog: LogFn })
+  | (CsvParseInput & { onLog: LogFn });
 
 export interface PipelineResult {
   success: boolean;
@@ -12,16 +13,22 @@ export interface PipelineResult {
 }
 
 export async function runPipeline(options: RunPipelineOptions): Promise<PipelineResult> {
-  const { pdfBytes, password, bank, year, onLog } = options;
+  const { onLog } = options;
 
   try {
-    onLog(`Iniciando pipeline para o banco: ${bank}`);
+    let transactions: Transaction[];
 
-    onLog("Desbloqueando e lendo o PDF...");
-    let transactions = await routeInvoice({ pdfBytes, password, bank, year });
+    if (options.source === "pdf") {
+      const { pdfBytes, password, bank, year } = options;
+      onLog(`Iniciando pipeline para o banco: ${bank}`);
+      onLog("Desbloqueando e lendo o PDF...");
+      transactions = await routeInvoice({ source: "pdf", pdfBytes, password, bank, year });
+    } else {
+      onLog("Iniciando pipeline para importação de CSV...");
+      transactions = await parseCsvInvoice(options.csvText, options.columns);
+    }
 
     onLog(`✅ Extração concluída: ${transactions.length} transações encontradas.`);
-
     onLog("🎉 Extração finalizada com sucesso!");
     return { success: true, transactions };
   } catch (error) {

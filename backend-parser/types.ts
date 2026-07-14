@@ -21,9 +21,18 @@ export type Bank = "Nubank" | "XP / Rico" | "Santander";
 
 export type LogFn = (message: string) => void;
 
-export interface ParseInvoiceInput {
+export interface PdfParseInput {
+  source: "pdf";
   pdfBytes: Uint8Array;
   password?: string;
   bank: Bank;
   year: string;
 }
+
+export interface CsvParseInput {
+  source: "csv";
+  csvText: string;
+  columns?: CsvColumnConfig; // mapeamento inverso ao uso em csv_exporter.ts (que nomeia colunas de saída)
+}
+
+export type ParseInvoiceInput = PdfParseInput | CsvParseInput;
