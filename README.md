@@ -71,8 +71,8 @@ graph TD
         IDX[index.ts]
         PIPE["pipeline.ts<br/>runPipeline"]
         ROUTER["bank_router.ts<br/>routeInvoice"]
-        READER["pdf_reader.ts<br/>extractNubank / extractXpRico / extractSantander"]
-        TXTEX[pdf_text_extractor.ts]
+        TXTEX["pdf_text_extractor.ts<br/>extractPdfLines"]
+        READER["pdf_reader.ts<br/>extractNubank / extractXpRico / extractSantander<br/>(regex match per bank)"]
         PROC["transaction_processor.ts<br/>finalizeTransactions"]
         CSV["csv_exporter.ts<br/>exportToCsv"]
     end
@@ -81,14 +81,14 @@ graph TD
     APP -->|imports directly, no HTTP/IPC| IDX
     IDX --> PIPE
     PIPE --> ROUTER
-    ROUTER --> READER
-    READER --> TXTEX
-    READER --> PROC
+    ROUTER --> TXTEX
+    TXTEX -->|reconstructed lines| READER
+    READER -->|RawTransaction| PROC
     PROC --> CSV
     CSV -->|CSV string| APP
 ```
 
-Each bank gets its own extractor function in `pdf_reader.ts`, matched against a bank-specific regex in `bank_patterns.ts`. Adding a new bank means adding a pattern, an `extractX` function, and a case in the `bank_router.ts` switch.
+Within each `extractX` function in `pdf_reader.ts`, the call order is strictly sequential: it first calls `extractPdfLines` (`pdf_text_extractor.ts`) to reconstruct visual lines from the PDF, applies a bank-specific regex from `bank_patterns.ts` to those lines, and only then calls `finalizeTransactions` (`transaction_processor.ts`) on the matches — there's no branching between these steps. Adding a new bank means adding a pattern, an `extractX` function, and a case in the `bank_router.ts` switch.
 
 ---
 
