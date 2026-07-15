@@ -209,6 +209,7 @@ async function processarFatura() {
     const pdfBytes = new Uint8Array(await arquivoBlob.arrayBuffer());
 
     const resultado = await runPipeline({
+      source: "pdf",
       pdfBytes,
       password: els.senha.value || undefined,
       bank: els.banco.value as Bank,
