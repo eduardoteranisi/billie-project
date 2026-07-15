@@ -1,10 +1,3 @@
-/* ============================================================
-   Billie — design tokens
-   Conceito: livro-razão local. A identidade vem da promessa
-   do produto (extração local, segura, sem ruído) — não de um
-   tema "dark mode" genérico.
-   ============================================================ */
-
 @import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap");
 
 :root {
@@ -51,6 +44,13 @@
 }
 
 * { box-sizing: border-box; }
+
+/* troca de tema suave — cobre qualquer elemento que não declare sua
+   própria transição; os que já têm (inputs, botão primário, checkbox)
+   mantêm a própria lista abaixo, ampliada para incluir cor/fundo */
+*, *::before, *::after {
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+}
 
 html, body {
   margin: 0;
@@ -164,6 +164,26 @@ html, body {
   margin-top: 0;
 }
 
+/* ---------- botão de ícone (ex.: alternância de tema) ---------- */
+
+.icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+.icon-btn:hover { color: var(--text-primary); border-color: var(--border); }
+.icon-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.icon-btn svg { display: block; }
+
 /* ---------- seções ---------- */
 
 .section {
@@ -249,7 +269,7 @@ select {
   font-size: 13px;
   padding: 8px 10px;
   outline: none;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, background-color 0.25s ease, color 0.25s ease;
 }
 
 input:focus, select:focus {
@@ -322,16 +342,13 @@ select {
   font-size: 14px;
   padding: 13px;
   cursor: pointer;
-  transition: background 0.15s, opacity 0.15s;
+  transition: background 0.15s, opacity 0.15s, color 0.25s ease;
   margin-bottom: 12px;
 }
 .btn-primary:hover:not(:disabled) { background: var(--accent-strong); }
 .btn-primary:disabled { opacity: 0.5; cursor: default; }
 
-/* no tema claro, --accent-strong é um verde escuro (serve de texto em
-   .entry.success sobre fundo branco) — usá-lo como fundo do hover deixaria
-   o texto quase-preto do botão ilegível, então o hover usa um tom mais
-   claro só neste tema, mantendo --accent-strong intacto para o outro uso */
+:root[data-theme="light"] .btn-primary { color: #1c1712; }
 :root[data-theme="light"] .btn-primary:hover:not(:disabled) { background: #93b989; }
 
 /* ---------- log ---------- */
