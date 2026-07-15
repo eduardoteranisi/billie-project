@@ -1,10 +1,3 @@
-/* ============================================================
-   Billie — design tokens
-   Conceito: livro-razão local. A identidade vem da promessa
-   do produto (extração local, segura, sem ruído) — não de um
-   tema "dark mode" genérico.
-   ============================================================ */
-
 @import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap");
 
 :root {
@@ -32,7 +25,32 @@
   --radius: 3px;
 }
 
+:root[data-theme="light"] {
+  /* cor — paleta "tinta de razão" (variante clara) */
+  --bg: #f5f3ec;
+  --surface: #ffffff;
+  --surface-raised: #faf8f2;
+  --border: #d8d4c5;
+  --border-soft: #e5e1d2;
+
+  --text-primary: #1f2420;
+  --text-secondary: #5c5a4d;
+  --text-tertiary: #8a887a;
+
+  --accent: #7fa374;
+  --accent-strong: #4a6640;
+  --gold: #a17f2e;
+  --danger: #a85a3d;
+}
+
 * { box-sizing: border-box; }
+
+/* troca de tema suave — cobre qualquer elemento que não declare sua
+   própria transição; os que já têm (inputs, botão primário, checkbox)
+   mantêm a própria lista abaixo, ampliada para incluir cor/fundo */
+*, *::before, *::after {
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+}
 
 html, body {
   margin: 0;
@@ -142,6 +160,30 @@ html, body {
   margin-top: 12px;
 }
 
+.header .link-button {
+  margin-top: 0;
+}
+
+/* ---------- botão de ícone (ex.: alternância de tema) ---------- */
+
+.icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+.icon-btn:hover { color: var(--text-primary); border-color: var(--border); }
+.icon-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.icon-btn svg { display: block; }
+
 /* ---------- seções ---------- */
 
 .section {
@@ -227,7 +269,7 @@ select {
   font-size: 13px;
   padding: 8px 10px;
   outline: none;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, background-color 0.25s ease, color 0.25s ease;
 }
 
 input:focus, select:focus {
@@ -300,11 +342,14 @@ select {
   font-size: 14px;
   padding: 13px;
   cursor: pointer;
-  transition: background 0.15s, opacity 0.15s;
+  transition: background 0.15s, opacity 0.15s, color 0.25s ease;
   margin-bottom: 12px;
 }
 .btn-primary:hover:not(:disabled) { background: var(--accent-strong); }
 .btn-primary:disabled { opacity: 0.5; cursor: default; }
+
+:root[data-theme="light"] .btn-primary { color: #1c1712; }
+:root[data-theme="light"] .btn-primary:hover:not(:disabled) { background: #93b989; }
 
 /* ---------- log ---------- */
 

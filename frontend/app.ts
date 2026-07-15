@@ -15,6 +15,7 @@ const els = {
   updateBanner: byId<HTMLDivElement>("update-banner"),
   updateText: byId<HTMLSpanElement>("update-text"),
   btnUpdate: byId<HTMLButtonElement>("btn-update"),
+  btnTema: byId<HTMLButtonElement>("btn-tema"),
 
   fileRow: byId<HTMLButtonElement>("file-row"),
   fileName: byId<HTMLSpanElement>("file-name"),
@@ -118,6 +119,34 @@ async function checarAtualizacoes() {
   els.updateBanner.classList.add("visible");
   els.btnUpdate.onclick = () => openExternalLink(url);
   log(`Nova versão (${version}) disponível.`);
+}
+
+// ---------- tema ----------
+
+const CHAVE_TEMA = "billie:tema";
+
+function carregarTema() {
+  const salvo = localStorage.getItem(CHAVE_TEMA);
+  const tema = salvo === "light" ? "light" : "dark";
+  document.documentElement.dataset.theme = tema;
+  atualizarIconeTema(tema);
+}
+
+function alternarTema() {
+  const atual = document.documentElement.dataset.theme === "light" ? "light" : "dark";
+  const novo = atual === "light" ? "dark" : "light";
+  document.documentElement.dataset.theme = novo;
+  localStorage.setItem(CHAVE_TEMA, novo);
+  atualizarIconeTema(novo);
+}
+
+const ICONE_SOL = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.8v3M12 18.2v3M4.3 4.3l2.1 2.1M17.6 17.6l2.1 2.1M2.8 12h3M18.2 12h3M4.3 19.7l2.1-2.1M17.6 6.4l2.1-2.1"/></svg>`;
+
+const ICONE_LUA = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20.2 14.6A8.5 8.5 0 1 1 9.4 3.8a7 7 0 0 0 10.8 10.8Z"/></svg>`;
+
+function atualizarIconeTema(tema: string) {
+  els.btnTema.innerHTML = tema === "light" ? ICONE_LUA : ICONE_SOL;
+  els.btnTema.setAttribute("aria-label", tema === "light" ? "Mudar para tema escuro" : "Mudar para tema claro");
 }
 
 // ---------- colunas CSV ----------
@@ -243,6 +272,7 @@ function baixarCsv(csv: string, nomeArquivo: string) {
 // ---------- eventos ----------
 
 function bindEvents() {
+  els.btnTema.addEventListener("click", alternarTema);
   els.fileRow.addEventListener("click", selecionarArquivo);
   els.fileInput.addEventListener("change", onFileInputChange);
   els.btnProcessar.addEventListener("click", processarFatura);
@@ -255,6 +285,7 @@ function bindEvents() {
 
 // ---------- boot ----------
 
+carregarTema();
 preencherAnos();
 carregarConfigColunas();
 bindEvents();
