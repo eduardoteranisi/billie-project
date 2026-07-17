@@ -351,6 +351,117 @@ select {
 :root[data-theme="light"] .btn-primary { color: #1c1712; }
 :root[data-theme="light"] .btn-primary:hover:not(:disabled) { background: #93b989; }
 
+/* ---------- abas ---------- */
+
+.tabs {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-tertiary);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 0 0 10px;
+  cursor: pointer;
+}
+
+.tab.active {
+  color: var(--text-primary);
+  border-bottom-color: var(--accent);
+}
+
+.view[hidden] { display: none; }
+
+/* ---------- controle de gastos: cards do DRE ---------- */
+
+.dre-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.dre-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 12px 14px;
+}
+
+.dre-card-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin: 0 0 6px;
+}
+
+.dre-card-value {
+  font-size: 17px;
+  font-weight: 600;
+  margin: 0;
+  color: var(--accent-strong);
+}
+
+.dre-card-value.negative { color: var(--danger); }
+
+/* ---------- controle de gastos: categorias ---------- */
+
+.category-list { display: flex; flex-direction: column; gap: 10px; }
+
+.category-row-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.category-bar {
+  height: 6px;
+  background: var(--surface-raised);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.category-bar-fill {
+  height: 100%;
+  background: var(--accent);
+}
+
+/* ---------- controle de gastos: lançamentos manuais ---------- */
+
+.manual-entry-form .field-row { margin-bottom: 12px; }
+
+.manual-entry-list { display: flex; flex-direction: column; gap: 8px; }
+
+.manual-entry-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.manual-entry-date { color: var(--text-tertiary); font-family: var(--font-mono); font-size: 12px; }
+.manual-entry-description { flex: 1; }
+.manual-entry-amount.income { color: var(--accent-strong); }
+.manual-entry-amount.expense { color: var(--danger); }
+
+.empty-state {
+  color: var(--text-tertiary);
+  font-size: 13px;
+  margin: 0;
+}
+
 /* ---------- log ---------- */
 
 .log {
@@ -370,4 +481,5 @@ select {
 @media (max-width: 640px) {
   #app { width: 100%; padding: 20px; }
   .field-row { grid-template-columns: 1fr; }
+  .dre-cards { grid-template-columns: 1fr 1fr; }
 }

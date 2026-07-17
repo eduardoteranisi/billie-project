@@ -29,68 +29,142 @@
       <button id="btn-update">Atualizar</button>
     </div>
 
-    <!-- ---------- arquivo ---------- -->
-    <section class="section">
-      <p class="section-label">Arquivo</p>
-      <button id="file-row" class="file-row empty" type="button">
-        <span class="file-name" id="file-name">Nenhum arquivo selecionado</span>
-        <span class="leader"></span>
-        <span class="file-action">Procurar PDF</span>
-      </button>
-      <input type="file" id="file-input" accept="application/pdf" hidden />
-    </section>
+    <!-- ---------- abas ---------- -->
+    <nav class="tabs">
+      <button type="button" class="tab active" id="tab-invoice" data-view="invoice">Processar Fatura</button>
+      <button type="button" class="tab" id="tab-expenses" data-view="expenses">Controle de Gastos</button>
+    </nav>
 
-    <!-- ---------- configurações da fatura ---------- -->
-    <section class="section">
-      <p class="section-label">Detalhes da fatura</p>
-      <div class="field-row">
-        <div class="field">
-          <label for="senha">Senha do PDF</label>
-          <input type="password" id="senha" placeholder="opcional" autocomplete="off" />
-        </div>
-        <div class="field">
-          <label for="banco">Banco</label>
-          <select id="banco">
-            <option>Nubank</option>
-            <option>XP / Rico</option>
-            <option>Santander</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="ano">Ano da fatura</label>
-          <select id="ano"></select>
-        </div>
-      </div>
-    </section>
+    <!-- ---------- aba: processar fatura ---------- -->
+    <div id="view-invoice" class="view">
 
-    <!-- ---------- personalização de colunas do csv ---------- -->
-    <section class="section">
-      <p class="section-label">Nomes das colunas (CSV)</p>
-      <div class="field-row">
-        <div class="field">
-          <label for="col-data">Data</label>
-          <input type="text" id="col-data" />
-        </div>
-        <div class="field">
-          <label for="col-estabelecimento">Estabelecimento</label>
-          <input type="text" id="col-estabelecimento" />
-        </div>
-        <div class="field">
-          <label for="col-valor">Valor</label>
-          <input type="text" id="col-valor" />
-        </div>
-      </div>
-      <button id="btn-restaurar-colunas" type="button" class="link-button">Restaurar padrão</button>
-    </section>
+      <!-- ---------- arquivo ---------- -->
+      <section class="section">
+        <p class="section-label">Arquivo</p>
+        <button id="file-row" class="file-row empty" type="button">
+          <span class="file-name" id="file-name">Nenhum arquivo selecionado</span>
+          <span class="leader"></span>
+          <span class="file-action">Procurar PDF</span>
+        </button>
+        <input type="file" id="file-input" accept="application/pdf" hidden />
+      </section>
 
-    <!-- ---------- processar ---------- -->
-    <button id="btn-processar" class="btn-primary">Processar fatura</button>
+      <!-- ---------- configurações da fatura ---------- -->
+      <section class="section">
+        <p class="section-label">Detalhes da fatura</p>
+        <div class="field-row">
+          <div class="field">
+            <label for="senha">Senha do PDF</label>
+            <input type="password" id="senha" placeholder="opcional" autocomplete="off" />
+          </div>
+          <div class="field">
+            <label for="banco">Banco</label>
+            <select id="banco">
+              <option>Nubank</option>
+              <option>XP / Rico</option>
+              <option>Santander</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="ano">Ano da fatura</label>
+            <select id="ano"></select>
+          </div>
+        </div>
+      </section>
 
-    <!-- ---------- log ---------- -->
-    <section class="section">
-      <p class="section-label">Registro</p>
-      <div id="log" class="log"></div>
-    </section>
+      <!-- ---------- personalização de colunas do csv ---------- -->
+      <section class="section">
+        <p class="section-label">Nomes das colunas (CSV)</p>
+        <div class="field-row">
+          <div class="field">
+            <label for="col-data">Data</label>
+            <input type="text" id="col-data" />
+          </div>
+          <div class="field">
+            <label for="col-estabelecimento">Estabelecimento</label>
+            <input type="text" id="col-estabelecimento" />
+          </div>
+          <div class="field">
+            <label for="col-valor">Valor</label>
+            <input type="text" id="col-valor" />
+          </div>
+        </div>
+        <button id="btn-restaurar-colunas" type="button" class="link-button">Restaurar padrão</button>
+      </section>
+
+      <!-- ---------- processar ---------- -->
+      <button id="btn-processar" class="btn-primary">Processar fatura</button>
+
+      <!-- ---------- log ---------- -->
+      <section class="section">
+        <p class="section-label">Registro</p>
+        <div id="log" class="log"></div>
+      </section>
+
+    </div>
+
+    <!-- ---------- aba: controle de gastos ---------- -->
+    <div id="view-expenses" class="view" hidden>
+
+      <section class="section">
+        <p class="section-label">Período</p>
+        <select id="expenses-period"></select>
+      </section>
+
+      <section class="dre-cards">
+        <div class="dre-card">
+          <p class="dre-card-label">Receita Total</p>
+          <p class="dre-card-value" id="dre-income">R$ 0,00</p>
+        </div>
+        <div class="dre-card">
+          <p class="dre-card-label">Despesas Fixas</p>
+          <p class="dre-card-value" id="dre-fixed">R$ 0,00</p>
+        </div>
+        <div class="dre-card">
+          <p class="dre-card-label">Despesas Variáveis</p>
+          <p class="dre-card-value" id="dre-variable">R$ 0,00</p>
+        </div>
+        <div class="dre-card">
+          <p class="dre-card-label">Resultado</p>
+          <p class="dre-card-value" id="dre-result">R$ 0,00</p>
+        </div>
+      </section>
+
+      <section class="section">
+        <p class="section-label">Gastos por categoria</p>
+        <div class="category-list" id="category-list"></div>
+      </section>
+
+      <section class="section">
+        <p class="section-label">Lançamento manual</p>
+        <form id="manual-entry-form" class="manual-entry-form">
+          <div class="field-row">
+            <div class="field">
+              <label for="manual-type">Tipo</label>
+              <select id="manual-type">
+                <option value="income">Receita</option>
+                <option value="expense">Despesa</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="manual-date">Data</label>
+              <input type="date" id="manual-date" required />
+            </div>
+            <div class="field">
+              <label for="manual-description">Descrição</label>
+              <input type="text" id="manual-description" required />
+            </div>
+            <div class="field">
+              <label for="manual-amount">Valor</label>
+              <input type="number" id="manual-amount" step="0.01" min="0.01" required />
+            </div>
+          </div>
+          <button type="submit" class="btn-primary">Lançar</button>
+        </form>
+        <div class="manual-entry-list" id="manual-entry-list"></div>
+      </section>
+
+    </div>
 
   </div>
 

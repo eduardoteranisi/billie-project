@@ -1,5 +1,16 @@
-import { runPipeline, exportToCsv, DEFAULT_CSV_COLUMNS, type Bank, type CsvColumnConfig, type Transaction } from "@billie/parser";
+import {
+  runPipeline,
+  exportToCsv,
+  classifyTransactions,
+  DEFAULT_CSV_COLUMNS,
+  type Bank,
+  type CsvColumnConfig,
+  type Transaction,
+} from "@billie/parser";
 import { checkForUpdates, openExternalLink } from "./services/update_checker";
+import { saveTransactions } from "./services/expense_store";
+import { initExpensesView, EXPENSES_UPDATED_EVENT } from "./screens/expenses";
+import type { StoredTransaction } from "./types";
 
 type InvokeFn = (cmd: string, args?: Record<string, unknown>) => Promise<any>;
 
@@ -16,6 +27,11 @@ const els = {
   updateText: byId<HTMLSpanElement>("update-text"),
   btnUpdate: byId<HTMLButtonElement>("btn-update"),
   btnTema: byId<HTMLButtonElement>("btn-tema"),
+
+  tabInvoice: byId<HTMLButtonElement>("tab-invoice"),
+  tabExpenses: byId<HTMLButtonElement>("tab-expenses"),
+  viewInvoice: byId<HTMLDivElement>("view-invoice"),
+  viewExpenses: byId<HTMLDivElement>("view-expenses"),
 
   fileRow: byId<HTMLButtonElement>("file-row"),
   fileName: byId<HTMLSpanElement>("file-name"),
@@ -119,6 +135,17 @@ async function checarAtualizacoes() {
   els.updateBanner.classList.add("visible");
   els.btnUpdate.onclick = () => openExternalLink(url);
   log(`Nova versão (${version}) disponível.`);
+}
+
+// ---------- abas ----------
+
+type ViewName = "invoice" | "expenses";
+
+function showView(view: ViewName) {
+  els.viewInvoice.hidden = view !== "invoice";
+  els.viewExpenses.hidden = view !== "expenses";
+  els.tabInvoice.classList.toggle("active", view === "invoice");
+  els.tabExpenses.classList.toggle("active", view === "expenses");
 }
 
 // ---------- tema ----------
@@ -227,6 +254,19 @@ async function processarFatura() {
 
     log(`Concluído — ${resultado.transactions.length} transações extraídas.`, "success");
     log(`Arquivo "${nomeArquivo}" salvo na pasta Downloads.`, "success");
+
+    const categorized = classifyTransactions(resultado.transactions);
+    const storedTransactions: StoredTransaction[] = categorized.map((transaction) => ({
+      ...transaction,
+      origin: "pdf",
+    }));
+    const { added, duplicates } = await saveTransactions(storedTransactions);
+    log(
+      `${added} transações novas salvas no controle de gastos${duplicates > 0 ? ` (${duplicates} já existiam)` : ""}.`,
+      "success"
+    );
+    document.dispatchEvent(new Event(EXPENSES_UPDATED_EVENT));
+
     els.btnProcessar.textContent = "Processar outra fatura";
   } catch (erro) {
     log(`Erro ao processar: ${erro}`, "error");
@@ -274,6 +314,8 @@ function baixarCsv(csv: string, nomeArquivo: string) {
 
 function bindEvents() {
   els.btnTema.addEventListener("click", alternarTema);
+  els.tabInvoice.addEventListener("click", () => showView("invoice"));
+  els.tabExpenses.addEventListener("click", () => showView("expenses"));
   els.fileRow.addEventListener("click", selecionarArquivo);
   els.fileInput.addEventListener("change", onFileInputChange);
   els.btnProcessar.addEventListener("click", processarFatura);
@@ -291,4 +333,6 @@ preencherAnos();
 carregarConfigColunas();
 bindEvents();
 checarAtualizacoes();
+initExpensesView();
+showView("invoice");
 log("Pronto para iniciar. Selecione o arquivo PDF.");

@@ -36,3 +36,20 @@ export interface CsvParseInput {
 }
 
 export type ParseInvoiceInput = PdfParseInput | CsvParseInput;
+
+export type CategoryGroup = "fixed" | "variable";
+
+export interface Category {
+  id: string;
+  label: string;
+  group: CategoryGroup;
+}
+
+export interface CategoryRule {
+  categoryId: string;
+  keywords: string[];
+}
+
+export interface CategorizedTransaction extends Transaction {
+  categoryId: string;
+}
