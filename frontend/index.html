@@ -166,6 +166,18 @@
 
     </div>
 
+    <!-- ---------- modal: confirmar salvar no controle de gastos ---------- -->
+    <div id="modal-save-expenses" class="modal-overlay" hidden>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-save-expenses-title">
+        <p id="modal-save-expenses-title" class="modal-title">Salvar no Controle de Gastos?</p>
+        <p class="modal-text">O CSV já foi gerado. Deseja também salvar essas transações no Controle de Gastos?</p>
+        <div class="modal-actions">
+          <button id="modal-save-expenses-confirm" type="button" class="btn-primary">Salvar no Controle de Gastos</button>
+          <button id="modal-save-expenses-skip" type="button" class="btn-secondary">Somente gerar CSV</button>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <script type="module" src="./app.ts"></script>

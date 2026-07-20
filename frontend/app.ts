@@ -48,6 +48,10 @@ const els = {
 
   btnProcessar: byId<HTMLButtonElement>("btn-processar"),
   log: byId<HTMLDivElement>("log"),
+
+  modalSaveExpenses: byId<HTMLDivElement>("modal-save-expenses"),
+  modalSaveExpensesConfirm: byId<HTMLButtonElement>("modal-save-expenses-confirm"),
+  modalSaveExpensesSkip: byId<HTMLButtonElement>("modal-save-expenses-skip"),
 };
 
 function byId<T extends HTMLElement>(id: string): T {
@@ -216,6 +220,25 @@ function restaurarColunasPadrao() {
   salvarConfigColunas();
 }
 
+// ---------- modal: salvar no controle de gastos ----------
+
+function confirmarSalvarControleGastos(): Promise<boolean> {
+  return new Promise((resolve) => {
+    const finalizar = (resultado: boolean) => {
+      els.modalSaveExpenses.hidden = true;
+      els.modalSaveExpensesConfirm.removeEventListener("click", onConfirm);
+      els.modalSaveExpensesSkip.removeEventListener("click", onSkip);
+      resolve(resultado);
+    };
+    const onConfirm = () => finalizar(true);
+    const onSkip = () => finalizar(false);
+
+    els.modalSaveExpensesConfirm.addEventListener("click", onConfirm);
+    els.modalSaveExpensesSkip.addEventListener("click", onSkip);
+    els.modalSaveExpenses.hidden = false;
+  });
+}
+
 // ---------- processamento ----------
 
 async function processarFatura() {
@@ -255,17 +278,22 @@ async function processarFatura() {
     log(`Concluído — ${resultado.transactions.length} transações extraídas.`, "success");
     log(`Arquivo "${nomeArquivo}" salvo na pasta Downloads.`, "success");
 
-    const categorized = classifyTransactions(resultado.transactions);
-    const storedTransactions: StoredTransaction[] = categorized.map((transaction) => ({
-      ...transaction,
-      origin: "pdf",
-    }));
-    const { added, duplicates } = await saveTransactions(storedTransactions);
-    log(
-      `${added} transações novas salvas no controle de gastos${duplicates > 0 ? ` (${duplicates} já existiam)` : ""}.`,
-      "success"
-    );
-    document.dispatchEvent(new Event(EXPENSES_UPDATED_EVENT));
+    const salvarNoControle = await confirmarSalvarControleGastos();
+    if (salvarNoControle) {
+      const categorized = classifyTransactions(resultado.transactions);
+      const storedTransactions: StoredTransaction[] = categorized.map((transaction) => ({
+        ...transaction,
+        origin: "pdf",
+      }));
+      const { added, duplicates } = await saveTransactions(storedTransactions);
+      log(
+        `${added} transações novas salvas no controle de gastos${duplicates > 0 ? ` (${duplicates} já existiam)` : ""}.`,
+        "success"
+      );
+      document.dispatchEvent(new Event(EXPENSES_UPDATED_EVENT));
+    } else {
+      log("Transações não foram salvas no controle de gastos.");
+    }
 
     els.btnProcessar.textContent = "Processar outra fatura";
   } catch (erro) {
