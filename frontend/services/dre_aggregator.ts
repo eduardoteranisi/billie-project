@@ -1,4 +1,4 @@
-import { DEFAULT_CATEGORIES } from "@billie/parser";
+import type { Category } from "@billie/parser";
 import type { CategorySummary, DreSummary, ManualIncomeEntry, StoredTransaction } from "../types";
 
 export function listAvailablePeriods(transactions: StoredTransaction[], income: ManualIncomeEntry[]): string[] {
@@ -11,7 +11,8 @@ export function listAvailablePeriods(transactions: StoredTransaction[], income: 
 export function calculateDre(
   period: string,
   transactions: StoredTransaction[],
-  income: ManualIncomeEntry[]
+  income: ManualIncomeEntry[],
+  allCategories: Category[]
 ): DreSummary {
   const periodTransactions = transactions.filter((transaction) => transaction.date.slice(0, 7) === period);
   const periodIncome = income.filter((entry) => entry.date.slice(0, 7) === period);
@@ -23,7 +24,7 @@ export function calculateDre(
     totalsByCategory.set(transaction.categoryId, (totalsByCategory.get(transaction.categoryId) ?? 0) + transaction.amount);
   }
 
-  const categories: CategorySummary[] = DEFAULT_CATEGORIES.map((category) => ({
+  const categories: CategorySummary[] = allCategories.map((category) => ({
     categoryId: category.id,
     label: category.label,
     group: category.group,

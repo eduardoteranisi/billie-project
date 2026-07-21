@@ -2,8 +2,8 @@ export { runPipeline } from "./pipeline";
 export type { RunPipelineOptions, PipelineResult } from "./pipeline";
 export { exportToCsv, DEFAULT_CSV_COLUMNS } from "./services/csv_exporter";
 export {
-  classifyTransaction,
-  classifyTransactions,
+  classifyTransactionDescription,
+  classifyTransactionList,
   DEFAULT_CATEGORIES,
   DEFAULT_CATEGORY_RULES,
   UNCATEGORIZED_CATEGORY_ID,

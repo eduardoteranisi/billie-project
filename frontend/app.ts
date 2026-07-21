@@ -1,14 +1,14 @@
 import {
   runPipeline,
   exportToCsv,
-  classifyTransactions,
+  classifyTransactionList,
   DEFAULT_CSV_COLUMNS,
   type Bank,
   type CsvColumnConfig,
   type Transaction,
 } from "@billie/parser";
 import { checkForUpdates, openExternalLink } from "./services/update_checker";
-import { saveTransactions } from "./services/expense_store";
+import { listCategoryRules, saveTransactions } from "./services/expense_store";
 import { initExpensesView, EXPENSES_UPDATED_EVENT } from "./screens/expenses";
 import type { StoredTransaction } from "./types";
 
@@ -27,11 +27,16 @@ const els = {
   updateText: byId<HTMLSpanElement>("update-text"),
   btnUpdate: byId<HTMLButtonElement>("btn-update"),
   btnTema: byId<HTMLButtonElement>("btn-tema"),
+  btnCategories: byId<HTMLButtonElement>("btn-categories"),
+  modalCategories: byId<HTMLDivElement>("modal-categories"),
+  modalCategoriesClose: byId<HTMLButtonElement>("modal-categories-close"),
 
   tabInvoice: byId<HTMLButtonElement>("tab-invoice"),
   tabExpenses: byId<HTMLButtonElement>("tab-expenses"),
+  tabTransactions: byId<HTMLButtonElement>("tab-transactions"),
   viewInvoice: byId<HTMLDivElement>("view-invoice"),
   viewExpenses: byId<HTMLDivElement>("view-expenses"),
+  viewTransactions: byId<HTMLDivElement>("view-transactions"),
 
   fileRow: byId<HTMLButtonElement>("file-row"),
   fileName: byId<HTMLSpanElement>("file-name"),
@@ -143,13 +148,15 @@ async function checarAtualizacoes() {
 
 // ---------- abas ----------
 
-type ViewName = "invoice" | "expenses";
+type ViewName = "invoice" | "expenses" | "transactions";
 
 function showView(view: ViewName) {
   els.viewInvoice.hidden = view !== "invoice";
   els.viewExpenses.hidden = view !== "expenses";
+  els.viewTransactions.hidden = view !== "transactions";
   els.tabInvoice.classList.toggle("active", view === "invoice");
   els.tabExpenses.classList.toggle("active", view === "expenses");
+  els.tabTransactions.classList.toggle("active", view === "transactions");
 }
 
 // ---------- tema ----------
@@ -280,7 +287,8 @@ async function processarFatura() {
 
     const salvarNoControle = await confirmarSalvarControleGastos();
     if (salvarNoControle) {
-      const categorized = classifyTransactions(resultado.transactions);
+      const rules = await listCategoryRules();
+      const categorized = classifyTransactionList(resultado.transactions, rules);
       const storedTransactions: StoredTransaction[] = categorized.map((transaction) => ({
         ...transaction,
         origin: "pdf",
@@ -342,8 +350,11 @@ function baixarCsv(csv: string, nomeArquivo: string) {
 
 function bindEvents() {
   els.btnTema.addEventListener("click", alternarTema);
+  els.btnCategories.addEventListener("click", () => { els.modalCategories.hidden = false; });
+  els.modalCategoriesClose.addEventListener("click", () => { els.modalCategories.hidden = true; });
   els.tabInvoice.addEventListener("click", () => showView("invoice"));
   els.tabExpenses.addEventListener("click", () => showView("expenses"));
+  els.tabTransactions.addEventListener("click", () => showView("transactions"));
   els.fileRow.addEventListener("click", selecionarArquivo);
   els.fileInput.addEventListener("change", onFileInputChange);
   els.btnProcessar.addEventListener("click", processarFatura);

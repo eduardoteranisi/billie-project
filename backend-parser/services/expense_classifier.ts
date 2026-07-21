@@ -53,7 +53,7 @@ export const DEFAULT_CATEGORY_RULES: CategoryRule[] = [
   { categoryId: "leisure", keywords: ["CINEMA", "INGRESSO", "STEAM", "PLAYSTATION", "BALADA"] },
 ];
 
-export function classifyTransaction(
+export function classifyTransactionDescription(
   description: string,
   rules: CategoryRule[] = DEFAULT_CATEGORY_RULES
 ): string {
@@ -67,13 +67,13 @@ export function classifyTransaction(
   return UNCATEGORIZED_CATEGORY_ID;
 }
 
-export function classifyTransactions(
+export function classifyTransactionList(
   transactions: Transaction[],
   rules: CategoryRule[] = DEFAULT_CATEGORY_RULES
 ): CategorizedTransaction[] {
   return transactions.map((transaction) => ({
     ...transaction,
-    categoryId: classifyTransaction(transaction.merchant, rules),
+    categoryId: classifyTransactionDescription(transaction.merchant, rules),
   }));
 }
 

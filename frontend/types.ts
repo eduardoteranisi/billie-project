@@ -9,6 +9,8 @@ export interface ManualIncomeEntry {
 
 export interface StoredTransaction extends CategorizedTransaction {
   origin: "pdf" | "manual";
+  categoryOverridden?: boolean;
+  detailsOverridden?: boolean;
 }
 
 export interface CategorySummary {

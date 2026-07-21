@@ -164,6 +164,13 @@ html, body {
   margin-top: 0;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
 /* ---------- botão de ícone (ex.: alternância de tema) ---------- */
 
 .icon-btn {
@@ -182,6 +189,16 @@ html, body {
 }
 .icon-btn:hover { color: var(--text-primary); border-color: var(--border); }
 .icon-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.icon-btn-labeled {
+  width: auto;
+  gap: 6px;
+  padding: 0 10px;
+}
+.icon-btn-labeled span {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
 .icon-btn svg { display: block; }
 
 /* ---------- seções ---------- */
@@ -259,6 +276,8 @@ html, body {
 
 input[type="password"],
 input[type="text"],
+input[type="date"],
+input[type="number"],
 select {
   width: 100%;
   background: var(--surface-raised);
@@ -405,10 +424,13 @@ select {
 }
 
 .dre-card-value {
-  font-size: 17px;
+  font-size: clamp(13px, calc(26px - var(--value-length, 7) * 1px), 19px);
   font-weight: 600;
   margin: 0;
   color: var(--accent-strong);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .dre-card-value.negative { color: var(--danger); }
@@ -455,6 +477,59 @@ select {
 .manual-entry-description { flex: 1; }
 .manual-entry-amount.income { color: var(--accent-strong); }
 .manual-entry-amount.expense { color: var(--danger); }
+.manual-entry-row .link-button { margin-top: 0; }
+
+/* ---------- controle de gastos: transações do período ---------- */
+
+.transaction-list { display: flex; flex-direction: column; gap: 8px; }
+
+.transaction-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.transaction-date { color: var(--text-tertiary); font-family: var(--font-mono); font-size: 12px; flex-shrink: 0; }
+.transaction-description {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.transaction-amount { color: var(--danger); white-space: nowrap; flex-shrink: 0; }
+.transaction-category-select { width: auto; min-width: 150px; font-size: 12px; padding: 6px 24px 6px 8px; flex-shrink: 0; }
+.transaction-row .link-button { margin-top: 0; flex-shrink: 0; }
+
+.transaction-row-editing { flex-wrap: wrap; }
+.transaction-row-editing .transaction-edit-date,
+.transaction-row-editing .transaction-edit-description,
+.transaction-row-editing .transaction-edit-amount { font-size: 12px; padding: 6px 8px; }
+.transaction-row-editing .transaction-edit-date { width: 140px; }
+.transaction-row-editing .transaction-edit-description { flex: 1; min-width: 120px; }
+.transaction-row-editing .transaction-edit-amount { width: 100px; }
+
+/* ---------- controle de gastos: categorias (CRUD) ---------- */
+
+.category-manager { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+
+.category-manager-row {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr 1.5fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.category-manager-row input,
+.category-manager-row select { font-size: 12px; padding: 6px 8px; }
+.category-manager-row .link-button { margin-top: 0; }
+
+.category-form .field-row { margin-bottom: 12px; }
 
 .empty-state {
   color: var(--text-tertiary);
@@ -500,6 +575,13 @@ select {
   padding: 20px;
 }
 
+.modal-wide {
+  width: 640px;
+  max-height: 85vh;
+  overflow-y: auto;
+  background: var(--surface);
+}
+
 .modal-title {
   font-family: var(--font-display);
   font-size: 18px;
@@ -542,4 +624,6 @@ select {
   #app { width: 100%; padding: 20px; }
   .field-row { grid-template-columns: 1fr; }
   .dre-cards { grid-template-columns: 1fr 1fr; }
+  .category-manager-row { grid-template-columns: 1fr; }
+  .transaction-row { flex-wrap: wrap; }
 }
