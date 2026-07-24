@@ -9,6 +9,7 @@ export interface CsvColumnConfig {
   date: string;
   merchant: string;
   amount: string;
+  installment?: string;
 }
 
 export interface RawTransaction {

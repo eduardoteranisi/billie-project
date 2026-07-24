@@ -38,18 +38,31 @@ const els = {
   viewExpenses: byId<HTMLDivElement>("view-expenses"),
   viewTransactions: byId<HTMLDivElement>("view-transactions"),
 
+  sourcePdfBtn: byId<HTMLButtonElement>("source-pdf"),
+  sourceCsvBtn: byId<HTMLButtonElement>("source-csv"),
+
   fileRow: byId<HTMLButtonElement>("file-row"),
   fileName: byId<HTMLSpanElement>("file-name"),
   fileInput: byId<HTMLInputElement>("file-input"),
+  fileActionLabel: byId<HTMLSpanElement>("file-action-label"),
 
+  sectionPdfDetails: byId<HTMLElement>("section-pdf-details"),
   senha: byId<HTMLInputElement>("senha"),
   banco: byId<HTMLSelectElement>("banco"),
   ano: byId<HTMLSelectElement>("ano"),
 
+  sectionExportColumnNames: byId<HTMLElement>("section-export-column-names"),
   colData: byId<HTMLInputElement>("col-data"),
   colEstabelecimento: byId<HTMLInputElement>("col-estabelecimento"),
   colValor: byId<HTMLInputElement>("col-valor"),
   btnRestaurarColunas: byId<HTMLButtonElement>("btn-restaurar-colunas"),
+
+  sectionCsvMapping: byId<HTMLElement>("section-csv-mapping"),
+  mapColData: byId<HTMLSelectElement>("map-col-data"),
+  mapColEstabelecimento: byId<HTMLSelectElement>("map-col-estabelecimento"),
+  mapColValor: byId<HTMLSelectElement>("map-col-valor"),
+  mapColParcela: byId<HTMLSelectElement>("map-col-parcela"),
+  btnConfirmarMapeamento: byId<HTMLButtonElement>("btn-confirmar-mapeamento"),
 
   btnProcessar: byId<HTMLButtonElement>("btn-processar"),
   log: byId<HTMLDivElement>("log"),
@@ -66,7 +79,11 @@ function byId<T extends HTMLElement>(id: string): T {
 }
 
 let arquivoPath: string | null = null;
-let arquivoBlob: File | null = null;     
+let arquivoBlob: File | null = null;
+
+type FonteFatura = "pdf" | "csv";
+let fonteSelecionada: FonteFatura = "pdf";
+let csvTextoAtual: string | null = null;
 
 // ---------- inicialização ----------
 
@@ -132,6 +149,25 @@ function registrarArquivoSelecionado(nome: string) {
 
 function temArquivoSelecionado(): boolean {
   return arquivoPath !== null || arquivoBlob !== null;
+}
+
+function selecionarFonte(fonte: FonteFatura) {
+  fonteSelecionada = fonte;
+  arquivoPath = null;
+  arquivoBlob = null;
+  csvTextoAtual = null;
+
+  els.sourcePdfBtn.classList.toggle("active", fonte === "pdf");
+  els.sourceCsvBtn.classList.toggle("active", fonte === "csv");
+  els.sectionPdfDetails.hidden = fonte === "csv";
+  els.sectionExportColumnNames.hidden = fonte === "csv";
+  els.sectionCsvMapping.hidden = true;
+
+  els.fileInput.accept = fonte === "pdf" ? "application/pdf" : ".csv,text/csv";
+  els.fileActionLabel.textContent = fonte === "pdf" ? "Procurar PDF" : "Procurar CSV";
+  els.fileName.textContent = "Nenhum arquivo selecionado";
+  els.fileRow.classList.add("empty");
+  els.btnProcessar.textContent = "Processar fatura";
 }
 
 // ---------- atualizações ----------
@@ -263,47 +299,117 @@ async function processarFatura() {
       throw new Error("Seleção de arquivo pelo Tauri ainda não implementada.");
     }
 
-    const pdfBytes = new Uint8Array(await arquivoBlob.arrayBuffer());
-
-    const resultado = await runPipeline({
-      source: "pdf",
-      pdfBytes,
-      password: els.senha.value || undefined,
-      bank: els.banco.value as Bank,
-      year: els.ano.value,
-      onLog: (mensagem) => log(mensagem),
-    });
-
-    if (!resultado.success || !resultado.transactions) {
-      throw new Error(resultado.error ?? "erro desconhecido no processamento");
-    }
-
-    const periodo = periodoFatura(resultado.transactions);
-    const nomeArquivo = nomeArquivoCsv(els.banco.value, periodo);
-    baixarCsv(exportToCsv(resultado.transactions, obterConfigColunasAtual()), nomeArquivo);
-
-    log(`Concluído — ${resultado.transactions.length} transações extraídas.`, "success");
-    log(`Arquivo "${nomeArquivo}" salvo na pasta Downloads.`, "success");
-
-    const salvarNoControle = await confirmarSalvarControleGastos();
-    if (salvarNoControle) {
-      const rules = await listCategoryRules();
-      const categorized = classifyTransactionList(resultado.transactions, rules);
-      const storedTransactions: StoredTransaction[] = categorized.map((transaction) => ({
-        ...transaction,
-        origin: "pdf",
-      }));
-      const { added, duplicates } = await saveTransactions(storedTransactions);
-      log(
-        `${added} transações novas salvas no controle de gastos${duplicates > 0 ? ` (${duplicates} já existiam)` : ""}.`,
-        "success"
-      );
-      document.dispatchEvent(new Event(EXPENSES_UPDATED_EVENT));
+    if (fonteSelecionada === "pdf") {
+      await processarComoPdf(arquivoBlob);
     } else {
-      log("Transações não foram salvas no controle de gastos.");
+      csvTextoAtual = await arquivoBlob.text();
+      await processarComoCsv(csvTextoAtual, undefined);
     }
+  } catch (erro) {
+    log(`Erro ao processar: ${erro}`, "error");
+    els.btnProcessar.textContent = "Tentar novamente";
+  } finally {
+    els.btnProcessar.disabled = false;
+  }
+}
 
-    els.btnProcessar.textContent = "Processar outra fatura";
+async function processarComoPdf(arquivo: File) {
+  const pdfBytes = new Uint8Array(await arquivo.arrayBuffer());
+
+  const resultado = await runPipeline({
+    source: "pdf",
+    pdfBytes,
+    password: els.senha.value || undefined,
+    bank: els.banco.value as Bank,
+    year: els.ano.value,
+    onLog: (mensagem) => log(mensagem),
+  });
+
+  if (!resultado.success || !resultado.transactions) {
+    throw new Error(resultado.error ?? "erro desconhecido no processamento");
+  }
+
+  const periodo = periodoFatura(resultado.transactions);
+  const nomeArquivo = nomeArquivoCsv(els.banco.value, periodo);
+  baixarCsv(exportToCsv(resultado.transactions, obterConfigColunasAtual()), nomeArquivo);
+
+  log(`Concluído — ${resultado.transactions.length} transações extraídas.`, "success");
+  log(`Arquivo "${nomeArquivo}" salvo na pasta Downloads.`, "success");
+
+  await salvarTransacoesNoControle(resultado.transactions, "pdf");
+  els.btnProcessar.textContent = "Processar outra fatura";
+}
+
+async function processarComoCsv(csvText: string, columns: CsvColumnConfig | undefined) {
+  const resultado = await runPipeline({
+    source: "csv",
+    csvText,
+    columns,
+    onLog: (mensagem) => log(mensagem),
+  });
+
+  if (!resultado.success || !resultado.transactions) {
+    if (resultado.needsColumnMapping) {
+      mostrarMapeamentoManual(resultado.needsColumnMapping.headers);
+      els.btnProcessar.textContent = "Processar fatura";
+      return;
+    }
+    throw new Error(resultado.error ?? "erro desconhecido no processamento");
+  }
+
+  log(`Concluído — ${resultado.transactions.length} transações extraídas.`, "success");
+
+  await salvarTransacoesNoControle(resultado.transactions, "csv");
+  els.btnProcessar.textContent = "Processar outra fatura";
+  els.sectionCsvMapping.hidden = true;
+}
+
+async function salvarTransacoesNoControle(transactions: Transaction[], origin: StoredTransaction["origin"]) {
+  const salvarNoControle = await confirmarSalvarControleGastos();
+  if (!salvarNoControle) {
+    log("Transações não foram salvas no controle de gastos.");
+    return;
+  }
+
+  const rules = await listCategoryRules();
+  const categorized = classifyTransactionList(transactions, rules);
+  const storedTransactions: StoredTransaction[] = categorized.map((transaction) => ({
+    ...transaction,
+    origin,
+  }));
+  const { added, duplicates } = await saveTransactions(storedTransactions);
+  log(
+    `${added} transações novas salvas no controle de gastos${duplicates > 0 ? ` (${duplicates} já existiam)` : ""}.`,
+    "success"
+  );
+  document.dispatchEvent(new Event(EXPENSES_UPDATED_EVENT));
+}
+
+function mostrarMapeamentoManual(headers: string[]) {
+  const options = headers.map((h) => `<option value="${h}">${h}</option>`).join("");
+  els.mapColData.innerHTML = options;
+  els.mapColEstabelecimento.innerHTML = options;
+  els.mapColValor.innerHTML = options;
+  els.mapColParcela.innerHTML = `<option value="">— nenhuma —</option>${options}`;
+
+  els.sectionCsvMapping.hidden = false;
+  log("Selecione manualmente as colunas do CSV para continuar.", "error");
+}
+
+async function onConfirmarMapeamento() {
+  if (!csvTextoAtual) return;
+
+  const columns: CsvColumnConfig = {
+    date: els.mapColData.value,
+    merchant: els.mapColEstabelecimento.value,
+    amount: els.mapColValor.value,
+    installment: els.mapColParcela.value || undefined,
+  };
+
+  els.btnProcessar.disabled = true;
+  els.btnProcessar.textContent = "Processando...";
+  try {
+    await processarComoCsv(csvTextoAtual, columns);
   } catch (erro) {
     log(`Erro ao processar: ${erro}`, "error");
     els.btnProcessar.textContent = "Tentar novamente";
@@ -349,6 +455,10 @@ function baixarCsv(csv: string, nomeArquivo: string) {
 // ---------- eventos ----------
 
 function bindEvents() {
+  els.sourcePdfBtn.addEventListener("click", () => selecionarFonte("pdf"));
+  els.sourceCsvBtn.addEventListener("click", () => selecionarFonte("csv"));
+  els.btnConfirmarMapeamento.addEventListener("click", onConfirmarMapeamento);
+
   els.btnTema.addEventListener("click", alternarTema);
   els.btnCategories.addEventListener("click", () => { els.modalCategories.hidden = false; });
   els.modalCategoriesClose.addEventListener("click", () => { els.modalCategories.hidden = true; });
@@ -370,6 +480,7 @@ function bindEvents() {
 carregarTema();
 preencherAnos();
 carregarConfigColunas();
+selecionarFonte("pdf");
 bindEvents();
 checarAtualizacoes();
 initExpensesView();

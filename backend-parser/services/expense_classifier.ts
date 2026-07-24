@@ -1,4 +1,5 @@
 import type { Category, CategoryRule, CategorizedTransaction, Transaction } from "../types";
+import { normalizeText } from "./text_utils";
 
 export const UNCATEGORIZED_CATEGORY_ID = "other";
 
@@ -75,11 +76,4 @@ export function classifyTransactionList(
     ...transaction,
     categoryId: classifyTransactionDescription(transaction.merchant, rules),
   }));
-}
-
-function normalizeText(value: string): string {
-  return value
-    .toUpperCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
 }

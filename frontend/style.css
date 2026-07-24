@@ -220,6 +220,35 @@ html, body {
   margin: 0 0 12px;
 }
 
+/* ---------- toggle de fonte da fatura (pdf / csv) ---------- */
+
+.source-toggle {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.source-toggle-btn {
+  background: var(--surface-raised);
+  border: none;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.source-toggle-btn + .source-toggle-btn { border-left: 1px solid var(--border); }
+
+.source-toggle-btn.active {
+  background: var(--accent);
+  color: var(--surface);
+}
+
+:root[data-theme="light"] .source-toggle-btn.active { color: #1c1712; }
+
 /* ---------- linha de arquivo (padrão pontilhado de razão) ---------- */
 
 .file-row {
@@ -259,6 +288,10 @@ html, body {
 }
 
 /* ---------- formulário ---------- */
+
+#section-csv-mapping .field-row {
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+}
 
 .field-row {
   display: grid;

@@ -1,5 +1,7 @@
 import { routeInvoice } from "./services/bank_router";
-import { parseCsvInvoice } from "./services/csv_reader";
+import { parseCsvInvoice } from "./services/csv/csv_reader";
+import { CsvColumnMappingError } from "./services/csv/csv_column_mapping_error";
+import type { CsvColumnRole } from "./services/csv/csv_column_resolver";
 import type { LogFn, PdfParseInput, CsvParseInput, Transaction } from "./types";
 
 export type RunPipelineOptions =
@@ -10,6 +12,7 @@ export interface PipelineResult {
   success: boolean;
   transactions?: Transaction[];
   error?: string;
+  needsColumnMapping?: { headers: string[]; missingRoles: CsvColumnRole[] };
 }
 
 export async function runPipeline(options: RunPipelineOptions): Promise<PipelineResult> {
@@ -32,6 +35,15 @@ export async function runPipeline(options: RunPipelineOptions): Promise<Pipeline
     onLog("🎉 Extração finalizada com sucesso!");
     return { success: true, transactions };
   } catch (error) {
+    if (error instanceof CsvColumnMappingError) {
+      onLog("⚠️ Não foi possível identificar as colunas automaticamente.");
+      return {
+        success: false,
+        error: error.message,
+        needsColumnMapping: { headers: error.headers, missingRoles: error.missingRoles },
+      };
+    }
+
     const message = error instanceof Error ? error.message : String(error);
     onLog(`❌ Erro crítico: ${message}`);
     return { success: false, error: message };

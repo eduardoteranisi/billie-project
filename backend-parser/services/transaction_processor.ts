@@ -9,6 +9,13 @@ interface ParsedTransaction {
   amount: number;
 }
 
+export interface CsvRowInput {
+  date: string;
+  merchant: string;
+  rawAmount: string;
+  isInstallment: boolean;
+}
+
 export function finalizeTransactions(rawTransactions: RawTransaction[]): Transaction[] {
   const parsed: ParsedTransaction[] = rawTransactions.map((t) => ({
     date: parseBrazilianDate(t.date),
@@ -16,8 +23,24 @@ export function finalizeTransactions(rawTransactions: RawTransaction[]): Transac
     amount: parseAmount(t.rawAmount),
   }));
 
-  correctInstallmentDates(parsed);
+  correctInstallmentDates(parsed, (t) => installmentPattern.test(t.dirtyDescription));
 
+  return finalizeParsed(parsed);
+}
+
+export function finalizeCsvTransactions(rows: CsvRowInput[]): Transaction[] {
+  const parsed: ParsedTransaction[] = rows.map((row) => ({
+    date: parseBrazilianDate(row.date),
+    dirtyDescription: row.merchant,
+    amount: parseAmount(row.rawAmount),
+  }));
+
+  correctInstallmentDates(parsed, (_t, index) => rows[index].isInstallment);
+
+  return finalizeParsed(parsed);
+}
+
+function finalizeParsed(parsed: ParsedTransaction[]): Transaction[] {
   return parsed.map((t) => ({
     id: generateTransactionId(t.date, t.dirtyDescription, t.amount),
     date: formatIsoDate(t.date),
@@ -26,11 +49,12 @@ export function finalizeTransactions(rawTransactions: RawTransaction[]): Transac
   }));
 }
 
-function parseAmount(rawAmount: string): number {
-  return parseFloat(rawAmount.replace(/\./g, "").replace(",", "."));
+export function parseAmount(rawAmount: string): number {
+  const cleaned = rawAmount.replace(/^\s*R\$\s*/i, "").trim();
+  return parseFloat(cleaned.replace(/\./g, "").replace(",", "."));
 }
 
-function parseBrazilianDate(dateStr: string): Date {
+export function parseBrazilianDate(dateStr: string): Date {
   const [day, month, yearPart] = dateStr.split("/").map(Number);
 
   let year = yearPart;
@@ -43,13 +67,16 @@ function parseBrazilianDate(dateStr: string): Date {
   return new Date(year, month - 1, day);
 }
 
-function formatIsoDate(date: Date): string {
+export function formatIsoDate(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
-function correctInstallmentDates(transactions: ParsedTransaction[]): void {
-  const installmentRows = transactions.filter((t) => installmentPattern.test(t.dirtyDescription));
-  const normalRows = transactions.filter((t) => !installmentPattern.test(t.dirtyDescription));
+function correctInstallmentDates(
+  transactions: ParsedTransaction[],
+  isInstallment: (t: ParsedTransaction, index: number) => boolean
+): void {
+  const installmentRows = transactions.filter((t, i) => isInstallment(t, i));
+  const normalRows = transactions.filter((t, i) => !isInstallment(t, i));
 
   if (installmentRows.length === 0 || normalRows.length === 0) return;
 
@@ -69,7 +96,7 @@ function mostFrequent(values: number[]): number {
   return [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0];
 }
 
-function generateTransactionId(date: Date, description: string, amount: number): string {
+export function generateTransactionId(date: Date, description: string, amount: number): string {
   const raw = `${formatIsoDate(date)}${description}${amount}`;
   return SparkMD5.hash(raw);
 }

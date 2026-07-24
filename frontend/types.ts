@@ -8,7 +8,7 @@ export interface ManualIncomeEntry {
 }
 
 export interface StoredTransaction extends CategorizedTransaction {
-  origin: "pdf" | "manual";
+  origin: "pdf" | "manual" | "csv";
   categoryOverridden?: boolean;
   detailsOverridden?: boolean;
 }
