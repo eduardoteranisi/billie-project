@@ -1,4 +1,4 @@
-import type { CsvColumnConfig, Transaction } from "../types";
+import type { CsvColumnConfig, Transaction } from "../../types";
 
 const CSV_DELIMITER = ";";
 const FORMULA_TRIGGER_CHARS = ["=", "+", "-", "@", "\t", "\r"];

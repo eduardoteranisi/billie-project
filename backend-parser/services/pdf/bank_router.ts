@@ -1,4 +1,4 @@
-import type { PdfParseInput, Transaction } from "../types";
+import type { PdfParseInput, Transaction } from "../../types";
 import { extractNubank, extractXpRico, extractSantander } from "./pdf_reader";
 
 export async function routeInvoice(input: PdfParseInput): Promise<Transaction[]> {

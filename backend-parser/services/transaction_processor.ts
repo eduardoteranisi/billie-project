@@ -16,28 +16,38 @@ export interface CsvRowInput {
   isInstallment: boolean;
 }
 
-export function finalizeTransactions(rawTransactions: RawTransaction[]): Transaction[] {
-  const parsed: ParsedTransaction[] = rawTransactions.map((t) => ({
-    date: parseBrazilianDate(t.date),
-    dirtyDescription: t.dirtyDescription,
-    amount: parseAmount(t.rawAmount),
-  }));
-
-  correctInstallmentDates(parsed, (t) => installmentPattern.test(t.dirtyDescription));
-
+function finalizeParsedTransactions<T>(
+  rows: T[],
+  toParsed: (row: T) => ParsedTransaction,
+  isInstallment: (row: T, index: number) => boolean
+): Transaction[] {
+  const parsed = rows.map(toParsed);
+  correctInstallmentDates(parsed, (_t, index) => isInstallment(rows[index], index));
   return finalizeParsed(parsed);
 }
 
+export function finalizeTransactions(rawTransactions: RawTransaction[]): Transaction[] {
+  return finalizeParsedTransactions(
+    rawTransactions,
+    (t) => ({
+      date: parseBrazilianDate(t.date),
+      dirtyDescription: t.dirtyDescription,
+      amount: parseAmount(t.rawAmount),
+    }),
+    (t) => installmentPattern.test(t.dirtyDescription)
+  );
+}
+
 export function finalizeCsvTransactions(rows: CsvRowInput[]): Transaction[] {
-  const parsed: ParsedTransaction[] = rows.map((row) => ({
-    date: parseBrazilianDate(row.date),
-    dirtyDescription: row.merchant,
-    amount: parseAmount(row.rawAmount),
-  }));
-
-  correctInstallmentDates(parsed, (_t, index) => rows[index].isInstallment);
-
-  return finalizeParsed(parsed);
+  return finalizeParsedTransactions(
+    rows,
+    (row) => ({
+      date: parseBrazilianDate(row.date),
+      dirtyDescription: row.merchant,
+      amount: parseAmount(row.rawAmount),
+    }),
+    (row) => row.isInstallment
+  );
 }
 
 function finalizeParsed(parsed: ParsedTransaction[]): Transaction[] {

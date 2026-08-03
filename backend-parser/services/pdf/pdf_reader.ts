@@ -1,4 +1,4 @@
-import type { RawTransaction, Transaction } from "../types";
+import type { RawTransaction, Transaction } from "../../types";
 import {
   monthAbbreviations,
   nubankPattern,
@@ -7,7 +7,25 @@ import {
   xpRicoPattern,
 } from "./bank_patterns";
 import { extractPdfLines } from "./pdf_text_extractor";
-import { finalizeTransactions } from "./transaction_processor";
+import { finalizeTransactions } from "../transaction_processor";
+
+function resolvePurchaseYear(
+  month: number,
+  yearParam: string,
+  now: Date,
+  options: { explicitYear?: number; alwaysAdjustForRollover?: boolean } = {}
+): number {
+  if (options.explicitYear !== undefined) return options.explicitYear;
+
+  const hasYearParam = /^\d+$/.test(yearParam);
+  let year = hasYearParam ? Number(yearParam) : now.getFullYear();
+
+  if ((options.alwaysAdjustForRollover || !hasYearParam) && month > now.getMonth() + 1) {
+    year -= 1;
+  }
+
+  return year;
+}
 
 export async function extractXpRico(
   pdfBytes: Uint8Array,
@@ -30,16 +48,8 @@ export async function extractXpRico(
     }
 
     const [day, month, yearPart] = date.split("/");
-    let purchaseYear: number;
-
-    if (yearPart) {
-      purchaseYear = yearPart.length === 2 ? Number(yearPart) + 2000 : Number(yearPart);
-    } else if (/^\d+$/.test(year)) {
-      purchaseYear = Number(year);
-    } else {
-      purchaseYear = now.getFullYear();
-      if (Number(month) > now.getMonth() + 1) purchaseYear -= 1;
-    }
+    const explicitYear = yearPart ? (yearPart.length === 2 ? Number(yearPart) + 2000 : Number(yearPart)) : undefined;
+    const purchaseYear = resolvePurchaseYear(Number(month), year, now, { explicitYear });
 
     rawTransactions.push({
       date: `${day}/${month}/${purchaseYear}`,
@@ -81,8 +91,7 @@ export async function extractNubank(
     const day = dayStr.padStart(2, "0");
     const month = monthAbbreviations[monthAbbr] ?? "01";
 
-    let purchaseYear = /^\d+$/.test(year) ? Number(year) : now.getFullYear();
-    if (Number(month) > now.getMonth() + 1) purchaseYear -= 1;
+    const purchaseYear = resolvePurchaseYear(Number(month), year, now, { alwaysAdjustForRollover: true });
 
     rawTransactions.push({
       date: `${day}/${month}/${purchaseYear}`,
@@ -123,13 +132,7 @@ export async function extractSantander(
       }
 
       const [day, month] = dateStr.split("/");
-      let purchaseYear = now.getFullYear();
-
-      if (/^\d+$/.test(year)) {
-        purchaseYear = Number(year);
-      } else if (Number(month) > now.getMonth() + 1) {
-        purchaseYear -= 1;
-      }
+      const purchaseYear = resolvePurchaseYear(Number(month), year, now);
 
       rawTransactions.push({
         date: `${day}/${month.padStart(2, "0")}/${purchaseYear}`,

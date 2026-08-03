@@ -1,6 +1,6 @@
 export { runPipeline } from "./pipeline";
 export type { RunPipelineOptions, PipelineResult } from "./pipeline";
-export { exportToCsv, DEFAULT_CSV_COLUMNS } from "./services/csv_exporter";
+export { exportToCsv, DEFAULT_CSV_COLUMNS } from "./services/csv/csv_exporter";
 export { CsvColumnMappingError } from "./services/csv/csv_column_mapping_error";
 export type { CsvColumnRole } from "./services/csv/csv_column_resolver";
 export {

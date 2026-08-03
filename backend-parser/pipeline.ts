@@ -1,4 +1,4 @@
-import { routeInvoice } from "./services/bank_router";
+import { routeInvoice } from "./services/pdf/bank_router";
 import { parseCsvInvoice } from "./services/csv/csv_reader";
 import { CsvColumnMappingError } from "./services/csv/csv_column_mapping_error";
 import type { CsvColumnRole } from "./services/csv/csv_column_resolver";
