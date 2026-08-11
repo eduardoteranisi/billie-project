@@ -60,7 +60,7 @@ function finalizeParsed(parsed: ParsedTransaction[]): Transaction[] {
 }
 
 export function parseAmount(rawAmount: string): number {
-  const cleaned = rawAmount.replace(/^\s*R\$\s*/i, "").trim();
+  const cleaned = rawAmount.replace(/R\$\s*/i, "").trim();
   return parseFloat(cleaned.replace(/\./g, "").replace(",", "."));
 }
 

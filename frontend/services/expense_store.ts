@@ -110,6 +110,26 @@ export async function saveIncome(entry: ManualIncomeEntry): Promise<void> {
   await runInStore(INCOME_STORE, "readwrite", (store) => store.put(entry));
 }
 
+export async function saveIncomeEntries(
+  entries: ManualIncomeEntry[]
+): Promise<{ added: number; duplicates: number }> {
+  const existingIds = new Set((await listIncome()).map((entry) => entry.id));
+
+  let added = 0;
+  let duplicates = 0;
+
+  for (const entry of entries) {
+    if (existingIds.has(entry.id)) {
+      duplicates++;
+    } else {
+      added++;
+    }
+    await runInStore(INCOME_STORE, "readwrite", (store) => store.put(entry));
+  }
+
+  return { added, duplicates };
+}
+
 export function listIncome(): Promise<ManualIncomeEntry[]> {
   return getAll<ManualIncomeEntry>(INCOME_STORE);
 }

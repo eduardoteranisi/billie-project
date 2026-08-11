@@ -11,6 +11,7 @@ export type RunPipelineOptions =
 export interface PipelineResult {
   success: boolean;
   transactions?: Transaction[];
+  income?: Transaction[];
   error?: string;
   needsColumnMapping?: { headers: string[]; missingRoles: CsvColumnRole[] };
 }
@@ -20,6 +21,7 @@ export async function runPipeline(options: RunPipelineOptions): Promise<Pipeline
 
   try {
     let transactions: Transaction[];
+    let income: Transaction[] = [];
 
     if (options.source === "pdf") {
       const { pdfBytes, password, bank, year } = options;
@@ -28,12 +30,17 @@ export async function runPipeline(options: RunPipelineOptions): Promise<Pipeline
       transactions = await routeInvoice({ source: "pdf", pdfBytes, password, bank, year });
     } else {
       onLog("Iniciando pipeline para importação de CSV...");
-      transactions = await parseCsvInvoice(options.csvText, options.columns);
+      const result = await parseCsvInvoice(options.csvText, options.columns);
+      transactions = result.expenses;
+      income = result.income;
     }
 
     onLog(`✅ Extração concluída: ${transactions.length} transações encontradas.`);
+    if (income.length > 0) {
+      onLog(`💰 ${income.length} entradas de receita identificadas.`);
+    }
     onLog("🎉 Extração finalizada com sucesso!");
-    return { success: true, transactions };
+    return { success: true, transactions, income: income.length > 0 ? income : undefined };
   } catch (error) {
     if (error instanceof CsvColumnMappingError) {
       onLog("⚠️ Não foi possível identificar as colunas automaticamente.");

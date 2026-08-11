@@ -181,6 +181,12 @@ export function initExpensesView(): void {
         const row = button.closest<HTMLElement>(".transaction-row");
         if (!row?.dataset.id) return;
 
+        const description =
+          row.querySelector(".transaction-description")?.textContent ??
+          row.querySelector<HTMLInputElement>(".transaction-edit-description")?.value ??
+          "";
+        if (!window.confirm(`Excluir a transação "${description}"?`)) return;
+
         await removeTransaction(row.dataset.id);
         editingTransactionId = null;
         await loadData();
@@ -242,7 +248,7 @@ export function initExpensesView(): void {
         <select class="transaction-category-select">${categoryOptionsHtml(row.categoryId)}</select>
         <button type="button" class="link-button transaction-save">Salvar</button>
         <button type="button" class="link-button transaction-cancel">Cancelar</button>
-        ${row.origin === "manual" ? `<button type="button" class="link-button transaction-remove">Remover</button>` : ""}
+        <button type="button" class="link-button transaction-remove">Excluir</button>
       </div>
     `;
   }

@@ -8,9 +8,9 @@ import {
   type Transaction,
 } from "@billie/parser";
 import { checkForUpdates, openExternalLink } from "./services/update_checker";
-import { listCategoryRules, saveTransactions } from "./services/expense_store";
+import { listCategoryRules, saveTransactions, saveIncomeEntries } from "./services/expense_store";
 import { initExpensesView, EXPENSES_UPDATED_EVENT } from "./screens/expenses";
-import type { StoredTransaction } from "./types";
+import type { ManualIncomeEntry, StoredTransaction } from "./types";
 
 type InvokeFn = (cmd: string, args?: Record<string, unknown>) => Promise<any>;
 
@@ -358,13 +358,20 @@ async function processarComoCsv(csvText: string, columns: CsvColumnConfig | unde
   }
 
   log(`Concluído — ${resultado.transactions.length} transações extraídas.`, "success");
+  if (resultado.income && resultado.income.length > 0) {
+    log(`${resultado.income.length} entradas de receita identificadas.`, "success");
+  }
 
-  await salvarTransacoesNoControle(resultado.transactions, "csv");
+  await salvarTransacoesNoControle(resultado.transactions, "csv", resultado.income);
   els.btnProcessar.textContent = "Processar outra fatura";
   els.sectionCsvMapping.hidden = true;
 }
 
-async function salvarTransacoesNoControle(transactions: Transaction[], origin: StoredTransaction["origin"]) {
+async function salvarTransacoesNoControle(
+  transactions: Transaction[],
+  origin: StoredTransaction["origin"],
+  income: Transaction[] = []
+) {
   const salvarNoControle = await confirmarSalvarControleGastos();
   if (!salvarNoControle) {
     log("Transações não foram salvas no controle de gastos.");
@@ -382,6 +389,21 @@ async function salvarTransacoesNoControle(transactions: Transaction[], origin: S
     `${added} transações novas salvas no controle de gastos${duplicates > 0 ? ` (${duplicates} já existiam)` : ""}.`,
     "success"
   );
+
+  if (income.length > 0) {
+    const incomeEntries: ManualIncomeEntry[] = income.map((entry) => ({
+      id: entry.id,
+      date: entry.date,
+      description: entry.merchant,
+      amount: entry.amount,
+    }));
+    const { added: incomeAdded, duplicates: incomeDuplicates } = await saveIncomeEntries(incomeEntries);
+    log(
+      `${incomeAdded} receitas novas salvas no controle de gastos${incomeDuplicates > 0 ? ` (${incomeDuplicates} já existiam)` : ""}.`,
+      "success"
+    );
+  }
+
   document.dispatchEvent(new Event(EXPENSES_UPDATED_EVENT));
 }
 
