@@ -220,34 +220,68 @@ html, body {
   margin: 0 0 12px;
 }
 
-/* ---------- toggle de fonte da fatura (pdf / csv) ---------- */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.section-header .section-label { margin-bottom: 0; }
 
-.source-toggle {
-  display: inline-flex;
+.popover-anchor {
+  position: relative;
+  display: inline-block;
+}
+
+.popover-right { left: auto; right: 0; }
+
+.field-row-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+/* ---------- importar extrato (aba transações) ---------- */
+
+.import-bar { margin-bottom: 12px; }
+
+.import-trigger-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 50;
+  width: 300px;
+  max-width: calc(100vw - 40px);
+  background: var(--surface-raised);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  overflow: hidden;
+  padding: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
 }
+.popover[hidden] { display: none; }
+.popover .modal-text { margin-bottom: 12px; }
+.popover .btn-primary { margin-bottom: 0; }
+.popover .modal-actions { margin-top: 0; }
 
-.source-toggle-btn {
-  background: var(--surface-raised);
-  border: none;
-  color: var(--text-tertiary);
+.import-step[hidden] { display: none; }
+
+.import-status {
+  margin: 0 0 12px;
   font-family: var(--font-mono);
   font-size: 12px;
-  padding: 8px 14px;
-  cursor: pointer;
-  transition: background-color 0.15s, color 0.15s;
+  color: var(--text-secondary);
 }
+.import-status[hidden] { display: none; }
+.import-status.success { color: var(--accent-strong); }
+.import-status.error { color: var(--danger); }
 
-.source-toggle-btn + .source-toggle-btn { border-left: 1px solid var(--border); }
-
-.source-toggle-btn.active {
-  background: var(--accent);
-  color: var(--surface);
-}
-
-:root[data-theme="light"] .source-toggle-btn.active { color: #1c1712; }
+#mapping-status { margin: 12px 0 0; }
 
 /* ---------- linha de arquivo (padrão pontilhado de razão) ---------- */
 
@@ -270,6 +304,7 @@ html, body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
 }
 .file-row.empty .file-name { color: var(--text-tertiary); }
 
@@ -289,8 +324,9 @@ html, body {
 
 /* ---------- formulário ---------- */
 
-#section-csv-mapping .field-row {
-  grid-template-columns: 1fr 1fr 1fr 1fr;
+#import-step-mapping .field-row {
+  grid-template-columns: 1fr;
+  margin-bottom: 12px;
 }
 
 .field-row {
@@ -512,6 +548,14 @@ select {
 .manual-entry-amount.expense { color: var(--danger); }
 .manual-entry-row .link-button { margin-top: 0; }
 
+.manual-entry-row-editing { flex-wrap: wrap; }
+.manual-entry-row-editing .manual-entry-edit-date,
+.manual-entry-row-editing .manual-entry-edit-description,
+.manual-entry-row-editing .manual-entry-edit-amount { font-size: 12px; padding: 6px 8px; }
+.manual-entry-row-editing .manual-entry-edit-date { width: 140px; }
+.manual-entry-row-editing .manual-entry-edit-description { flex: 1; min-width: 120px; }
+.manual-entry-row-editing .manual-entry-edit-amount { width: 100px; }
+
 /* ---------- controle de gastos: transações do período ---------- */
 
 .transaction-list { display: flex; flex-direction: column; gap: 8px; }
@@ -534,7 +578,7 @@ select {
   text-overflow: ellipsis;
 }
 .transaction-amount { color: var(--danger); white-space: nowrap; flex-shrink: 0; }
-.transaction-category-select { width: auto; min-width: 150px; font-size: 12px; padding: 6px 24px 6px 8px; flex-shrink: 0; }
+.transaction-category-select { width: 110px; font-size: 12px; padding: 6px 24px 6px 8px; flex-shrink: 0; }
 .transaction-row .link-button { margin-top: 0; flex-shrink: 0; }
 
 .transaction-row-editing { flex-wrap: wrap; }
@@ -628,6 +672,7 @@ select {
   color: var(--text-secondary);
   margin: 0 0 18px;
   line-height: 1.5;
+  overflow-wrap: break-word;
 }
 
 .modal-actions {

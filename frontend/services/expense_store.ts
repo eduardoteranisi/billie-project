@@ -138,6 +138,17 @@ export async function removeIncome(id: string): Promise<void> {
   await runInStore(INCOME_STORE, "readwrite", (store) => store.delete(id));
 }
 
+export async function updateIncomeFields(
+  id: string,
+  changes: { date: string; description: string; amount: number }
+): Promise<void> {
+  const entry = await runInStore<ManualIncomeEntry>(INCOME_STORE, "readonly", (store) => store.get(id));
+  if (!entry) throw new Error(`receita #${id} não encontrada`);
+
+  const updated: ManualIncomeEntry = { ...entry, ...changes };
+  await runInStore(INCOME_STORE, "readwrite", (store) => store.put(updated));
+}
+
 async function ensureCategoriesSeeded(): Promise<void> {
   const existing = await getAll<Category>(CATEGORIES_STORE);
   if (existing.length > 0) return;

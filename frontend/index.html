@@ -13,7 +13,7 @@
     <header class="header">
       <div class="brand">
         <h1>Billie</h1>
-        <p>Extração local de faturas</p>
+        <p>Menos ruído. Mais você</p>
       </div>
       <div class="header-actions">
         <button id="btn-categories" type="button" class="icon-btn icon-btn-labeled" aria-label="Configurar categorias">
@@ -43,21 +43,12 @@
     <!-- ---------- abas ---------- -->
     <nav class="tabs">
       <button type="button" class="tab active" id="tab-invoice" data-view="invoice">Processar Fatura</button>
-      <button type="button" class="tab" id="tab-expenses" data-view="expenses">Controle de Gastos</button>
-      <button type="button" class="tab" id="tab-transactions" data-view="transactions">Transações</button>
+      <button type="button" class="tab" id="tab-expenses" data-view="expenses">Controle</button>
+      <button type="button" class="tab" id="tab-transactions" data-view="transactions">Lançamentos</button>
     </nav>
 
     <!-- ---------- aba: processar fatura ---------- -->
     <div id="view-invoice" class="view">
-
-      <!-- ---------- fonte da fatura ---------- -->
-      <section class="section">
-        <p class="section-label">Fonte da fatura</p>
-        <div class="source-toggle" role="radiogroup" aria-label="Fonte da fatura">
-          <button type="button" id="source-pdf" class="source-toggle-btn active" data-source="pdf">Fatura em PDF</button>
-          <button type="button" id="source-csv" class="source-toggle-btn" data-source="csv">Extrato em CSV</button>
-        </div>
-      </section>
 
       <!-- ---------- arquivo ---------- -->
       <section class="section">
@@ -113,31 +104,6 @@
         <button id="btn-restaurar-colunas" type="button" class="link-button">Restaurar padrão</button>
       </section>
 
-      <!-- ---------- mapeamento manual de colunas do csv (importação) ---------- -->
-      <section class="section" id="section-csv-mapping" hidden>
-        <p class="section-label">Confirme as colunas do CSV</p>
-        <p class="modal-text">Não conseguimos identificar automaticamente todas as colunas. Selecione manualmente:</p>
-        <div class="field-row">
-          <div class="field">
-            <label for="map-col-data">Data</label>
-            <select id="map-col-data"></select>
-          </div>
-          <div class="field">
-            <label for="map-col-estabelecimento">Estabelecimento</label>
-            <select id="map-col-estabelecimento"></select>
-          </div>
-          <div class="field">
-            <label for="map-col-valor">Valor</label>
-            <select id="map-col-valor"></select>
-          </div>
-          <div class="field">
-            <label for="map-col-parcela">Parcela (opcional)</label>
-            <select id="map-col-parcela"></select>
-          </div>
-        </div>
-        <button type="button" id="btn-confirmar-mapeamento" class="btn-primary">Confirmar colunas e processar</button>
-      </section>
-
       <!-- ---------- processar ---------- -->
       <button id="btn-processar" class="btn-primary">Processar fatura</button>
 
@@ -181,39 +147,69 @@
         <div class="category-list" id="category-list"></div>
       </section>
 
-      <section class="section">
-        <p class="section-label">Lançamento manual</p>
-        <form id="manual-entry-form" class="manual-entry-form">
-          <div class="field-row">
-            <div class="field">
-              <label for="manual-type">Tipo</label>
-              <select id="manual-type">
-                <option value="income">Receita</option>
-                <option value="expense">Despesa</option>
-              </select>
-            </div>
-            <div class="field">
-              <label for="manual-date">Data</label>
-              <input type="date" id="manual-date" required />
-            </div>
-            <div class="field">
-              <label for="manual-description">Descrição</label>
-              <input type="text" id="manual-description" required />
-            </div>
-            <div class="field">
-              <label for="manual-amount">Valor</label>
-              <input type="number" id="manual-amount" step="0.01" min="0.01" required />
-            </div>
-          </div>
-          <button type="submit" class="btn-primary">Lançar</button>
-        </form>
-        <div class="manual-entry-list" id="income-entry-list"></div>
-      </section>
-
     </div>
 
     <!-- ---------- aba: transações ---------- -->
     <div id="view-transactions" class="view" hidden>
+
+      <!-- ---------- importar extrato (csv) ---------- -->
+      <div class="import-bar">
+        <div class="import-trigger-wrap">
+          <button type="button" id="btn-import-extrato" class="icon-btn icon-btn-labeled" aria-label="Importar extrato">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 16V4M12 4l-4.5 4.5M12 4l4.5 4.5" />
+              <path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" />
+            </svg>
+            <span>Importar extrato</span>
+          </button>
+          <div id="import-popover" class="popover" hidden>
+
+            <div id="import-step-select" class="import-step">
+              <p class="modal-text">Selecione um extrato exportado em CSV do seu banco.</p>
+              <button type="button" id="btn-selecionar-csv" class="btn-primary">Selecionar arquivo CSV</button>
+              <input type="file" id="import-file-input" accept=".csv,text/csv" hidden />
+            </div>
+
+            <div id="import-step-confirm" class="import-step" hidden>
+              <p class="modal-text" id="import-confirm-text"></p>
+              <div class="modal-actions">
+                <button type="button" id="btn-confirmar-importacao" class="btn-primary">Confirmar importação</button>
+                <button type="button" id="btn-cancelar-importacao" class="btn-secondary">Cancelar</button>
+              </div>
+            </div>
+
+            <div id="import-step-status" class="import-step" hidden>
+              <p id="import-status" class="import-status"></p>
+              <button type="button" id="btn-fechar-importacao" class="btn-secondary" hidden>Fechar</button>
+            </div>
+
+            <div id="import-step-mapping" class="import-step" hidden>
+              <p class="modal-text">Não conseguimos identificar automaticamente todas as colunas. Selecione manualmente:</p>
+              <div class="field-row">
+                <div class="field">
+                  <label for="map-col-data">Data</label>
+                  <select id="map-col-data"></select>
+                </div>
+                <div class="field">
+                  <label for="map-col-estabelecimento">Estabelecimento</label>
+                  <select id="map-col-estabelecimento"></select>
+                </div>
+                <div class="field">
+                  <label for="map-col-valor">Valor</label>
+                  <select id="map-col-valor"></select>
+                </div>
+                <div class="field">
+                  <label for="map-col-parcela">Parcela (opcional)</label>
+                  <select id="map-col-parcela"></select>
+                </div>
+              </div>
+              <button type="button" id="btn-confirmar-mapeamento" class="btn-primary">Confirmar colunas e processar</button>
+              <p id="mapping-status" class="import-status" hidden></p>
+            </div>
+
+          </div>
+        </div>
+      </div>
 
       <section class="section">
         <p class="section-label">Período</p>
@@ -221,7 +217,68 @@
       </section>
 
       <section class="section">
-        <p class="section-label">Transações do período</p>
+        <div class="section-header">
+          <p class="section-label">Receitas do período</p>
+          <div class="popover-anchor">
+            <button type="button" id="btn-add-income" class="icon-btn icon-btn-labeled" aria-label="Nova receita">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              <span>Nova receita</span>
+            </button>
+            <div id="income-add-popover" class="popover popover-right" hidden>
+              <form id="income-add-form" class="field-row-stack">
+                <div class="field">
+                  <label for="income-add-date">Data</label>
+                  <input type="date" id="income-add-date" required />
+                </div>
+                <div class="field">
+                  <label for="income-add-description">Descrição</label>
+                  <input type="text" id="income-add-description" required />
+                </div>
+                <div class="field">
+                  <label for="income-add-amount">Valor</label>
+                  <input type="number" id="income-add-amount" step="0.01" min="0.01" required />
+                </div>
+                <button type="submit" class="btn-primary">Lançar</button>
+              </form>
+            </div>
+          </div>
+        </div>
+        <div class="manual-entry-list" id="income-entry-list"></div>
+      </section>
+
+      <section class="section">
+        <div class="section-header">
+          <p class="section-label">Despesas do período</p>
+          <div class="popover-anchor">
+            <button type="button" id="btn-add-expense" class="icon-btn icon-btn-labeled" aria-label="Nova despesa">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              <span>Nova despesa</span>
+            </button>
+            <div id="expense-add-popover" class="popover popover-right" hidden>
+              <form id="expense-add-form" class="field-row-stack">
+                <div class="field">
+                  <label for="expense-add-date">Data</label>
+                  <input type="date" id="expense-add-date" required />
+                </div>
+                <div class="field">
+                  <label for="expense-add-description">Descrição</label>
+                  <input type="text" id="expense-add-description" required />
+                </div>
+                <div class="field">
+                  <label for="expense-add-amount">Valor</label>
+                  <input type="number" id="expense-add-amount" step="0.01" min="0.01" required />
+                </div>
+                <button type="submit" class="btn-primary">Lançar</button>
+              </form>
+            </div>
+          </div>
+        </div>
         <div class="transaction-list" id="transaction-list"></div>
       </section>
 
@@ -263,10 +320,10 @@
     <!-- ---------- modal: confirmar salvar no controle de gastos ---------- -->
     <div id="modal-save-expenses" class="modal-overlay" hidden>
       <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-save-expenses-title">
-        <p id="modal-save-expenses-title" class="modal-title">Salvar no Controle de Gastos?</p>
-        <p class="modal-text">O CSV já foi gerado. Deseja também salvar essas transações no Controle de Gastos?</p>
+        <p id="modal-save-expenses-title" class="modal-title">Salvar no Controle?</p>
+        <p class="modal-text">O CSV já foi gerado. Deseja também salvar essas transações no Controle?</p>
         <div class="modal-actions">
-          <button id="modal-save-expenses-confirm" type="button" class="btn-primary">Salvar no Controle de Gastos</button>
+          <button id="modal-save-expenses-confirm" type="button" class="btn-primary">Salvar no Controle</button>
           <button id="modal-save-expenses-skip" type="button" class="btn-secondary">Somente gerar CSV</button>
         </div>
       </div>

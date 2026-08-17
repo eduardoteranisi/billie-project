@@ -14,6 +14,7 @@ import {
   saveIncome,
   saveTransactions,
   updateCategory,
+  updateIncomeFields,
   updateTransactionCategory,
   updateTransactionFields,
 } from "../services/expense_store";
@@ -51,12 +52,19 @@ export function initExpensesView(): void {
   const categoryList = byId<HTMLDivElement>("category-list");
   const transactionsPeriodSelect = byId<HTMLSelectElement>("transactions-period");
   const transactionList = byId<HTMLDivElement>("transaction-list");
-  const manualForm = byId<HTMLFormElement>("manual-entry-form");
-  const manualType = byId<HTMLSelectElement>("manual-type");
-  const manualDate = byId<HTMLInputElement>("manual-date");
-  const manualDescription = byId<HTMLInputElement>("manual-description");
-  const manualAmount = byId<HTMLInputElement>("manual-amount");
   const incomeList = byId<HTMLDivElement>("income-entry-list");
+  const btnAddIncome = byId<HTMLButtonElement>("btn-add-income");
+  const incomeAddPopover = byId<HTMLDivElement>("income-add-popover");
+  const incomeAddForm = byId<HTMLFormElement>("income-add-form");
+  const incomeAddDate = byId<HTMLInputElement>("income-add-date");
+  const incomeAddDescription = byId<HTMLInputElement>("income-add-description");
+  const incomeAddAmount = byId<HTMLInputElement>("income-add-amount");
+  const btnAddExpense = byId<HTMLButtonElement>("btn-add-expense");
+  const expenseAddPopover = byId<HTMLDivElement>("expense-add-popover");
+  const expenseAddForm = byId<HTMLFormElement>("expense-add-form");
+  const expenseAddDate = byId<HTMLInputElement>("expense-add-date");
+  const expenseAddDescription = byId<HTMLInputElement>("expense-add-description");
+  const expenseAddAmount = byId<HTMLInputElement>("expense-add-amount");
   const categoryManager = byId<HTMLDivElement>("category-manager");
   const categoryForm = byId<HTMLFormElement>("category-form");
   const categoryLabelInput = byId<HTMLInputElement>("category-label");
@@ -68,6 +76,7 @@ export function initExpensesView(): void {
   let categories: Category[] = [];
   let categoryRules: CategoryRule[] = [];
   let editingTransactionId: string | null = null;
+  let editingIncomeId: string | null = null;
 
   async function loadData(): Promise<void> {
     [transactions, income, categories, categoryRules] = await Promise.all([
@@ -99,6 +108,7 @@ export function initExpensesView(): void {
     periodSelect.value = value;
     transactionsPeriodSelect.value = value;
     editingTransactionId = null;
+    editingIncomeId = null;
     renderPeriod();
   }
 
@@ -264,16 +274,7 @@ export function initExpensesView(): void {
     }
 
     incomeList.innerHTML = rows
-      .map(
-        (row) => `
-          <div class="manual-entry-row" data-id="${row.id}">
-            <span class="manual-entry-date">${row.date}</span>
-            <span class="manual-entry-description">${escapeHtml(row.description)}</span>
-            <span class="manual-entry-amount income">+ ${formatCurrency(row.amount)}</span>
-            <button type="button" class="link-button income-remove">Remover</button>
-          </div>
-        `
-      )
+      .map((row) => (row.id === editingIncomeId ? incomeEditRowHtml(row) : incomeViewRowHtml(row)))
       .join("");
 
     incomeList.querySelectorAll<HTMLButtonElement>(".income-remove").forEach((button) => {
@@ -281,10 +282,74 @@ export function initExpensesView(): void {
         const row = button.closest<HTMLElement>(".manual-entry-row");
         if (!row?.dataset.id) return;
 
+        const description =
+          row.querySelector(".manual-entry-description")?.textContent ??
+          row.querySelector<HTMLInputElement>(".manual-entry-edit-description")?.value ??
+          "";
+        if (!window.confirm(`Excluir a receita "${description}"?`)) return;
+
         await removeIncome(row.dataset.id);
+        editingIncomeId = null;
         await loadData();
       });
     });
+
+    incomeList.querySelectorAll<HTMLButtonElement>(".income-edit").forEach((button) => {
+      button.addEventListener("click", () => {
+        const row = button.closest<HTMLElement>(".manual-entry-row");
+        if (!row?.dataset.id) return;
+
+        editingIncomeId = row.dataset.id;
+        renderIncomeList(periodSelect.value);
+      });
+    });
+
+    incomeList.querySelectorAll<HTMLButtonElement>(".income-cancel").forEach((button) => {
+      button.addEventListener("click", () => {
+        editingIncomeId = null;
+        renderIncomeList(periodSelect.value);
+      });
+    });
+
+    incomeList.querySelectorAll<HTMLButtonElement>(".income-save").forEach((button) => {
+      button.addEventListener("click", async () => {
+        const row = button.closest<HTMLElement>(".manual-entry-row");
+        if (!row?.dataset.id) return;
+
+        const date = row.querySelector<HTMLInputElement>(".manual-entry-edit-date")?.value ?? "";
+        const description = row.querySelector<HTMLInputElement>(".manual-entry-edit-description")?.value.trim() ?? "";
+        const amount = parseFloat(row.querySelector<HTMLInputElement>(".manual-entry-edit-amount")?.value ?? "");
+        if (!date || !description || Number.isNaN(amount) || amount <= 0) return;
+
+        await updateIncomeFields(row.dataset.id, { date, description, amount });
+        editingIncomeId = null;
+        await loadData();
+      });
+    });
+  }
+
+  function incomeViewRowHtml(row: ManualIncomeEntry): string {
+    return `
+      <div class="manual-entry-row" data-id="${row.id}">
+        <span class="manual-entry-date">${row.date}</span>
+        <span class="manual-entry-description" title="${escapeHtml(row.description)}">${escapeHtml(row.description)}</span>
+        <span class="manual-entry-amount income">${formatCurrency(row.amount)}</span>
+        <button type="button" class="link-button income-edit">Editar</button>
+      </div>
+    `;
+  }
+
+  function incomeEditRowHtml(row: ManualIncomeEntry): string {
+    return `
+      <div class="manual-entry-row manual-entry-row-editing" data-id="${row.id}">
+        <input type="date" class="manual-entry-edit-date" value="${row.date}" />
+        <input type="text" class="manual-entry-edit-description" value="${escapeHtml(row.description)}" />
+        <input type="number" step="0.01" min="0.01" class="manual-entry-edit-amount" value="${row.amount}" />
+        <button type="button" class="link-button income-save">Salvar</button>
+        <button type="button" class="link-button income-cancel">Cancelar</button>
+        <button type="button" class="link-button income-remove">Excluir</button>
+      </div>
+    `;
   }
 
   function renderCategoryManager(): void {
@@ -368,30 +433,56 @@ export function initExpensesView(): void {
     });
   }
 
-  async function onManualSubmit(event: SubmitEvent): Promise<void> {
+  function wirePopover(trigger: HTMLButtonElement, popover: HTMLElement, onOpen?: () => void): void {
+    trigger.addEventListener("click", () => {
+      const willOpen = popover.hidden;
+      popover.hidden = !popover.hidden;
+      if (willOpen) onOpen?.();
+    });
+    document.addEventListener("click", (event) => {
+      if (popover.hidden) return;
+      const target = event.target as Node;
+      if (popover.contains(target) || trigger.contains(target)) return;
+      popover.hidden = true;
+    });
+  }
+
+  async function onIncomeAddSubmit(event: SubmitEvent): Promise<void> {
     event.preventDefault();
 
-    const date = manualDate.value;
-    const description = manualDescription.value.trim();
-    const amount = parseFloat(manualAmount.value);
+    const date = incomeAddDate.value;
+    const description = incomeAddDescription.value.trim();
+    const amount = parseFloat(incomeAddAmount.value);
     if (!date || !description || Number.isNaN(amount) || amount <= 0) return;
 
-    if (manualType.value === "income") {
-      const entry: ManualIncomeEntry = { id: crypto.randomUUID(), date, description, amount };
-      await saveIncome(entry);
-    } else {
-      const entry: StoredTransaction = {
-        id: crypto.randomUUID(),
-        date,
-        merchant: description,
-        amount,
-        categoryId: classifyTransactionDescription(description, categoryRules),
-        origin: "manual",
-      };
-      await saveTransactions([entry]);
-    }
+    const entry: ManualIncomeEntry = { id: crypto.randomUUID(), date, description, amount };
+    await saveIncome(entry);
 
-    manualForm.reset();
+    incomeAddForm.reset();
+    incomeAddPopover.hidden = true;
+    await loadData();
+  }
+
+  async function onExpenseAddSubmit(event: SubmitEvent): Promise<void> {
+    event.preventDefault();
+
+    const date = expenseAddDate.value;
+    const merchant = expenseAddDescription.value.trim();
+    const amount = parseFloat(expenseAddAmount.value);
+    if (!date || !merchant || Number.isNaN(amount) || amount <= 0) return;
+
+    const entry: StoredTransaction = {
+      id: crypto.randomUUID(),
+      date,
+      merchant,
+      amount,
+      categoryId: classifyTransactionDescription(merchant, categoryRules),
+      origin: "manual",
+    };
+    await saveTransactions([entry]);
+
+    expenseAddForm.reset();
+    expenseAddPopover.hidden = true;
     await loadData();
   }
 
@@ -414,7 +505,10 @@ export function initExpensesView(): void {
 
   periodSelect.addEventListener("change", onPeriodChange);
   transactionsPeriodSelect.addEventListener("change", onPeriodChange);
-  manualForm.addEventListener("submit", onManualSubmit);
+  incomeAddForm.addEventListener("submit", onIncomeAddSubmit);
+  expenseAddForm.addEventListener("submit", onExpenseAddSubmit);
+  wirePopover(btnAddIncome, incomeAddPopover, () => incomeAddForm.reset());
+  wirePopover(btnAddExpense, expenseAddPopover, () => expenseAddForm.reset());
   categoryForm.addEventListener("submit", onCategorySubmit);
   document.addEventListener(EXPENSES_UPDATED_EVENT, () => void loadData());
 

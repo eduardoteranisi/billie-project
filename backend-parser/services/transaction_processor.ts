@@ -61,7 +61,10 @@ function finalizeParsed(parsed: ParsedTransaction[]): Transaction[] {
 
 export function parseAmount(rawAmount: string): number {
   const cleaned = rawAmount.replace(/R\$\s*/i, "").trim();
-  return parseFloat(cleaned.replace(/\./g, "").replace(",", "."));
+  if (cleaned.includes(",")) {
+    return parseFloat(cleaned.replace(/\./g, "").replace(",", "."));
+  }
+  return parseFloat(cleaned);
 }
 
 export function parseBrazilianDate(dateStr: string): Date {
