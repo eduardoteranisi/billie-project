@@ -8,6 +8,21 @@ export function listAvailablePeriods(transactions: StoredTransaction[], income: 
   return [...periods].sort().reverse();
 }
 
+function summarizeByCategory(
+  categories: Category[],
+  totalsByCategory: Map<string, number>
+): CategorySummary[] {
+  return categories
+    .map((category) => ({
+      categoryId: category.id,
+      label: category.label,
+      group: category.type === "expense" ? category.group : undefined,
+      total: totalsByCategory.get(category.id) ?? 0,
+    }))
+    .filter((category) => category.total > 0)
+    .sort((a, b) => b.total - a.total);
+}
+
 export function calculateDre(
   period: string,
   transactions: StoredTransaction[],
@@ -19,25 +34,33 @@ export function calculateDre(
 
   const totalIncome = periodIncome.reduce((sum, entry) => sum + entry.amount, 0);
 
-  const totalsByCategory = new Map<string, number>();
+  const expenseTotalsByCategory = new Map<string, number>();
   for (const transaction of periodTransactions) {
-    totalsByCategory.set(transaction.categoryId, (totalsByCategory.get(transaction.categoryId) ?? 0) + transaction.amount);
+    expenseTotalsByCategory.set(
+      transaction.categoryId,
+      (expenseTotalsByCategory.get(transaction.categoryId) ?? 0) + transaction.amount
+    );
   }
 
-  const categories: CategorySummary[] = allCategories.map((category) => ({
-    categoryId: category.id,
-    label: category.label,
-    group: category.group,
-    total: totalsByCategory.get(category.id) ?? 0,
-  }))
-    .filter((category) => category.total > 0)
-    .sort((a, b) => b.total - a.total);
+  const incomeTotalsByCategory = new Map<string, number>();
+  for (const entry of periodIncome) {
+    incomeTotalsByCategory.set(entry.categoryId, (incomeTotalsByCategory.get(entry.categoryId) ?? 0) + entry.amount);
+  }
 
-  const fixedExpenses = categories
+  const expenseCategories = summarizeByCategory(
+    allCategories.filter((category) => category.type === "expense"),
+    expenseTotalsByCategory
+  );
+  const incomeCategories = summarizeByCategory(
+    allCategories.filter((category) => category.type === "income"),
+    incomeTotalsByCategory
+  );
+
+  const fixedExpenses = expenseCategories
     .filter((category) => category.group === "fixed")
     .reduce((sum, category) => sum + category.total, 0);
 
-  const variableExpenses = categories
+  const variableExpenses = expenseCategories
     .filter((category) => category.group === "variable")
     .reduce((sum, category) => sum + category.total, 0);
 
@@ -47,6 +70,7 @@ export function calculateDre(
     fixedExpenses,
     variableExpenses,
     result: totalIncome - fixedExpenses - variableExpenses,
-    categories,
+    expenseCategories,
+    incomeCategories,
   };
 }

@@ -1,7 +1,8 @@
-import { classifyTransactionDescription, UNCATEGORIZED_CATEGORY_ID } from "@billie/parser";
+import { classifyTransactionDescription, UNCATEGORIZED_CATEGORY_ID, UNCATEGORIZED_INCOME_CATEGORY_ID } from "@billie/parser";
 import type { Category, CategoryGroup, CategoryRule } from "@billie/parser";
 import { calculateDre, listAvailablePeriods } from "../services/dre_aggregator";
 import {
+  countIncomeByCategory,
   countTransactionsByCategory,
   createCategory,
   deleteCategory,
@@ -14,11 +15,13 @@ import {
   saveIncome,
   saveTransactions,
   updateCategory,
+  updateIncomeCategory,
   updateIncomeFields,
   updateTransactionCategory,
   updateTransactionFields,
 } from "../services/expense_store";
-import type { DreSummary, ManualIncomeEntry, StoredTransaction } from "../types";
+import type { CategoryType } from "../services/expense_store";
+import type { CategorySummary, DreSummary, ManualIncomeEntry, StoredTransaction } from "../types";
 
 export const EXPENSES_UPDATED_EVENT = "billie:expenses-updated";
 
@@ -50,6 +53,7 @@ export function initExpensesView(): void {
   const variableCard = byId<HTMLParagraphElement>("dre-variable");
   const resultCard = byId<HTMLParagraphElement>("dre-result");
   const categoryList = byId<HTMLDivElement>("category-list");
+  const incomeCategoryList = byId<HTMLDivElement>("income-category-list");
   const transactionsPeriodSelect = byId<HTMLSelectElement>("transactions-period");
   const transactionList = byId<HTMLDivElement>("transaction-list");
   const incomeList = byId<HTMLDivElement>("income-entry-list");
@@ -58,36 +62,57 @@ export function initExpensesView(): void {
   const incomeAddForm = byId<HTMLFormElement>("income-add-form");
   const incomeAddDate = byId<HTMLInputElement>("income-add-date");
   const incomeAddDescription = byId<HTMLInputElement>("income-add-description");
+  const incomeAddCategory = byId<HTMLSelectElement>("income-add-category");
   const incomeAddAmount = byId<HTMLInputElement>("income-add-amount");
   const btnAddExpense = byId<HTMLButtonElement>("btn-add-expense");
   const expenseAddPopover = byId<HTMLDivElement>("expense-add-popover");
   const expenseAddForm = byId<HTMLFormElement>("expense-add-form");
   const expenseAddDate = byId<HTMLInputElement>("expense-add-date");
   const expenseAddDescription = byId<HTMLInputElement>("expense-add-description");
+  const expenseAddCategory = byId<HTMLSelectElement>("expense-add-category");
   const expenseAddAmount = byId<HTMLInputElement>("expense-add-amount");
-  const categoryManager = byId<HTMLDivElement>("category-manager");
+  const categoryTypeToggle = byId<HTMLDivElement>("category-type-toggle");
+  const categoryManagerExpense = byId<HTMLDivElement>("category-manager-expense");
+  const categoryManagerIncome = byId<HTMLDivElement>("category-manager-income");
   const categoryForm = byId<HTMLFormElement>("category-form");
+  const categoryGroupField = byId<HTMLDivElement>("category-group-field");
   const categoryLabelInput = byId<HTMLInputElement>("category-label");
   const categoryGroupSelect = byId<HTMLSelectElement>("category-group");
   const categoryKeywordsInput = byId<HTMLInputElement>("category-keywords");
 
   let transactions: StoredTransaction[] = [];
   let income: ManualIncomeEntry[] = [];
-  let categories: Category[] = [];
-  let categoryRules: CategoryRule[] = [];
+  let expenseCategories: Category[] = [];
+  let incomeCategories: Category[] = [];
+  let expenseCategoryRules: CategoryRule[] = [];
+  let incomeCategoryRules: CategoryRule[] = [];
   let editingTransactionId: string | null = null;
   let editingIncomeId: string | null = null;
+  let activeCategoryManagerType: CategoryType = "expense";
+  let incomeCategoryTouched = false;
+  let expenseCategoryTouched = false;
 
   async function loadData(): Promise<void> {
-    [transactions, income, categories, categoryRules] = await Promise.all([
-      listTransactions(),
-      listIncome(),
-      listCategories(),
-      listCategoryRules(),
-    ]);
+    [transactions, income, expenseCategories, incomeCategories, expenseCategoryRules, incomeCategoryRules] =
+      await Promise.all([
+        listTransactions(),
+        listIncome(),
+        listCategories("expense"),
+        listCategories("income"),
+        listCategoryRules("expense"),
+        listCategoryRules("income"),
+      ]);
     renderPeriodOptions();
     renderPeriod();
     renderCategoryManager();
+    populateCategorySelect(incomeAddCategory, incomeCategories);
+    populateCategorySelect(expenseAddCategory, expenseCategories);
+  }
+
+  function populateCategorySelect(select: HTMLSelectElement, categories: Category[]): void {
+    const previousValue = select.value;
+    select.innerHTML = categoryOptionsHtml(categories, previousValue);
+    if (!select.value && categories.length > 0) select.value = categories[0].id;
   }
 
   function renderPeriodOptions(): void {
@@ -115,8 +140,16 @@ export function initExpensesView(): void {
   function renderPeriod(): void {
     const period = periodSelect.value;
     const summary: DreSummary = period
-      ? calculateDre(period, transactions, income, categories)
-      : { period: "", totalIncome: 0, fixedExpenses: 0, variableExpenses: 0, result: 0, categories: [] };
+      ? calculateDre(period, transactions, income, [...expenseCategories, ...incomeCategories])
+      : {
+          period: "",
+          totalIncome: 0,
+          fixedExpenses: 0,
+          variableExpenses: 0,
+          result: 0,
+          expenseCategories: [],
+          incomeCategories: [],
+        };
 
     setCardValue(incomeCard, summary.totalIncome);
     setCardValue(fixedCard, summary.fixedExpenses);
@@ -124,36 +157,51 @@ export function initExpensesView(): void {
     setCardValue(resultCard, summary.result);
     resultCard.classList.toggle("negative", summary.result < 0);
 
-    renderCategories(summary);
+    renderCategoryBreakdown(
+      categoryList,
+      summary.expenseCategories,
+      "Nenhum gasto categorizado neste período.",
+      summary.fixedExpenses + summary.variableExpenses
+    );
+    renderCategoryBreakdown(
+      incomeCategoryList,
+      summary.incomeCategories,
+      "Nenhuma receita categorizada neste período.",
+      summary.totalIncome
+    );
     renderTransactionList(period);
     renderIncomeList(period);
   }
 
-  function renderCategories(summary: DreSummary): void {
-    if (summary.categories.length === 0) {
-      categoryList.innerHTML = `<p class="empty-state">Nenhum gasto categorizado neste período.</p>`;
+  function renderCategoryBreakdown(
+    container: HTMLDivElement,
+    summaries: CategorySummary[],
+    emptyMessage: string,
+    periodTotal: number
+  ): void {
+    if (summaries.length === 0) {
+      container.innerHTML = `<p class="empty-state">${emptyMessage}</p>`;
       return;
     }
 
-    const maxTotal = summary.categories[0].total;
-
-    categoryList.innerHTML = summary.categories
+    container.innerHTML = summaries
       .map((category) => {
-        const barWidth = maxTotal > 0 ? Math.round((category.total / maxTotal) * 100) : 0;
+        const barWidth = periodTotal > 0 ? Math.round((category.total / periodTotal) * 100) : 0;
+        const fillGroupClass = category.group ? ` category-bar-fill-${category.group}` : "";
         return `
           <div class="category-row">
             <div class="category-row-header">
               <span>${escapeHtml(category.label)}</span>
               <span>${formatCurrency(category.total)}</span>
             </div>
-            <div class="category-bar"><div class="category-bar-fill" style="width: ${barWidth}%"></div></div>
+            <div class="category-bar"><div class="category-bar-fill${fillGroupClass}" style="width: ${barWidth}%"></div></div>
           </div>
         `;
       })
       .join("");
   }
 
-  function categoryOptionsHtml(selectedCategoryId: string): string {
+  function categoryOptionsHtml(categories: Category[], selectedCategoryId: string): string {
     return categories
       .map(
         (category) =>
@@ -243,7 +291,7 @@ export function initExpensesView(): void {
         <span class="transaction-date">${row.date}</span>
         <span class="transaction-description" title="${escapeHtml(row.merchant)}">${escapeHtml(row.merchant)}</span>
         <span class="transaction-amount">${formatCurrency(row.amount)}</span>
-        <select class="transaction-category-select">${categoryOptionsHtml(row.categoryId)}</select>
+        <select class="transaction-category-select">${categoryOptionsHtml(expenseCategories, row.categoryId)}</select>
         <button type="button" class="link-button transaction-edit">Editar</button>
       </div>
     `;
@@ -255,7 +303,7 @@ export function initExpensesView(): void {
         <input type="date" class="transaction-edit-date" value="${row.date}" />
         <input type="text" class="transaction-edit-description" value="${escapeHtml(row.merchant)}" />
         <input type="number" step="0.01" min="0.01" class="transaction-edit-amount" value="${row.amount}" />
-        <select class="transaction-category-select">${categoryOptionsHtml(row.categoryId)}</select>
+        <select class="transaction-category-select">${categoryOptionsHtml(expenseCategories, row.categoryId)}</select>
         <button type="button" class="link-button transaction-save">Salvar</button>
         <button type="button" class="link-button transaction-cancel">Cancelar</button>
         <button type="button" class="link-button transaction-remove">Excluir</button>
@@ -276,6 +324,16 @@ export function initExpensesView(): void {
     incomeList.innerHTML = rows
       .map((row) => (row.id === editingIncomeId ? incomeEditRowHtml(row) : incomeViewRowHtml(row)))
       .join("");
+
+    incomeList.querySelectorAll<HTMLSelectElement>(".income-category-select").forEach((select) => {
+      select.addEventListener("change", async () => {
+        const row = select.closest<HTMLElement>(".manual-entry-row");
+        if (!row?.dataset.id) return;
+
+        await updateIncomeCategory(row.dataset.id, select.value);
+        await loadData();
+      });
+    });
 
     incomeList.querySelectorAll<HTMLButtonElement>(".income-remove").forEach((button) => {
       button.addEventListener("click", async () => {
@@ -334,6 +392,7 @@ export function initExpensesView(): void {
         <span class="manual-entry-date">${row.date}</span>
         <span class="manual-entry-description" title="${escapeHtml(row.description)}">${escapeHtml(row.description)}</span>
         <span class="manual-entry-amount income">${formatCurrency(row.amount)}</span>
+        <select class="income-category-select">${categoryOptionsHtml(incomeCategories, row.categoryId)}</select>
         <button type="button" class="link-button income-edit">Editar</button>
       </div>
     `;
@@ -345,6 +404,7 @@ export function initExpensesView(): void {
         <input type="date" class="manual-entry-edit-date" value="${row.date}" />
         <input type="text" class="manual-entry-edit-description" value="${escapeHtml(row.description)}" />
         <input type="number" step="0.01" min="0.01" class="manual-entry-edit-amount" value="${row.amount}" />
+        <select class="income-category-select">${categoryOptionsHtml(incomeCategories, row.categoryId)}</select>
         <button type="button" class="link-button income-save">Salvar</button>
         <button type="button" class="link-button income-cancel">Cancelar</button>
         <button type="button" class="link-button income-remove">Excluir</button>
@@ -353,19 +413,37 @@ export function initExpensesView(): void {
   }
 
   function renderCategoryManager(): void {
-    categoryManager.innerHTML = categories
-      .filter((category) => category.id !== UNCATEGORIZED_CATEGORY_ID)
+    renderCategoryManagerPanel(categoryManagerExpense, "expense", expenseCategories, expenseCategoryRules);
+    renderCategoryManagerPanel(categoryManagerIncome, "income", incomeCategories, incomeCategoryRules);
+  }
+
+  function renderCategoryManagerPanel(
+    container: HTMLDivElement,
+    type: CategoryType,
+    categories: Category[],
+    rules: CategoryRule[]
+  ): void {
+    const uncategorizedId = type === "expense" ? UNCATEGORIZED_CATEGORY_ID : UNCATEGORIZED_INCOME_CATEGORY_ID;
+
+    container.innerHTML = categories
+      .filter((category) => category.id !== uncategorizedId)
       .map((category) => {
-        const rule = categoryRules.find((r) => r.categoryId === category.id);
+        const rule = rules.find((r) => r.categoryId === category.id);
         const keywords = (rule?.keywords ?? []).join(", ");
+        const groupSelectHtml =
+          category.type === "expense"
+            ? `
+              <select class="category-manager-group">
+                <option value="variable" ${category.group === "variable" ? "selected" : ""}>Variável</option>
+                <option value="fixed" ${category.group === "fixed" ? "selected" : ""}>Fixo</option>
+              </select>
+            `
+            : "";
 
         return `
-          <div class="category-manager-row" data-id="${category.id}">
+          <div class="category-manager-row" data-id="${category.id}" data-type="${type}">
             <input type="text" class="category-manager-label" value="${escapeHtml(category.label)}" />
-            <select class="category-manager-group">
-              <option value="variable" ${category.group === "variable" ? "selected" : ""}>Variável</option>
-              <option value="fixed" ${category.group === "fixed" ? "selected" : ""}>Fixo</option>
-            </select>
+            ${groupSelectHtml}
             <input
               type="text"
               class="category-manager-keywords"
@@ -378,7 +456,7 @@ export function initExpensesView(): void {
       })
       .join("");
 
-    categoryManager.querySelectorAll<HTMLInputElement>(".category-manager-label").forEach((input) => {
+    container.querySelectorAll<HTMLInputElement>(".category-manager-label").forEach((input) => {
       input.addEventListener("change", async () => {
         const id = input.closest<HTMLElement>(".category-manager-row")?.dataset.id;
         if (!id) return;
@@ -388,7 +466,7 @@ export function initExpensesView(): void {
       });
     });
 
-    categoryManager.querySelectorAll<HTMLSelectElement>(".category-manager-group").forEach((select) => {
+    container.querySelectorAll<HTMLSelectElement>(".category-manager-group").forEach((select) => {
       select.addEventListener("change", async () => {
         const id = select.closest<HTMLElement>(".category-manager-row")?.dataset.id;
         if (!id) return;
@@ -398,7 +476,7 @@ export function initExpensesView(): void {
       });
     });
 
-    categoryManager.querySelectorAll<HTMLInputElement>(".category-manager-keywords").forEach((input) => {
+    container.querySelectorAll<HTMLInputElement>(".category-manager-keywords").forEach((input) => {
       input.addEventListener("change", async () => {
         const id = input.closest<HTMLElement>(".category-manager-row")?.dataset.id;
         if (!id) return;
@@ -412,17 +490,17 @@ export function initExpensesView(): void {
       });
     });
 
-    categoryManager.querySelectorAll<HTMLButtonElement>(".category-manager-delete").forEach((button) => {
+    container.querySelectorAll<HTMLButtonElement>(".category-manager-delete").forEach((button) => {
       button.addEventListener("click", async () => {
         const row = button.closest<HTMLElement>(".category-manager-row");
         const id = row?.dataset.id;
         if (!id) return;
 
         const label = row?.querySelector<HTMLInputElement>(".category-manager-label")?.value ?? "";
-        const count = await countTransactionsByCategory(id);
+        const count = type === "expense" ? await countTransactionsByCategory(id) : await countIncomeByCategory(id);
         const confirmMessage =
           count > 0
-            ? `Excluir "${label}"? ${count} transação(ões) serão movidas para "Outros / Não categorizado".`
+            ? `Excluir "${label}"? ${count} lançamento(s) serão movidos para "Outros / Não categorizado".`
             : `Excluir "${label}"?`;
 
         if (!window.confirm(confirmMessage)) return;
@@ -431,6 +509,19 @@ export function initExpensesView(): void {
         await loadData();
       });
     });
+  }
+
+  function setActiveCategoryManagerType(type: CategoryType): void {
+    activeCategoryManagerType = type;
+
+    categoryTypeToggle.querySelectorAll<HTMLButtonElement>(".category-type-toggle-btn").forEach((button) => {
+      button.classList.toggle("active", button.dataset.type === type);
+    });
+
+    categoryManagerExpense.hidden = type !== "expense";
+    categoryManagerIncome.hidden = type !== "income";
+    categoryGroupField.hidden = type !== "expense";
+    categoryKeywordsInput.placeholder = type === "expense" ? "ex.: UBER, 99APP" : "ex.: SALARIO, FREELANCE";
   }
 
   function wirePopover(trigger: HTMLButtonElement, popover: HTMLElement, onOpen?: () => void): void {
@@ -455,7 +546,13 @@ export function initExpensesView(): void {
     const amount = parseFloat(incomeAddAmount.value);
     if (!date || !description || Number.isNaN(amount) || amount <= 0) return;
 
-    const entry: ManualIncomeEntry = { id: crypto.randomUUID(), date, description, amount };
+    const entry: ManualIncomeEntry = {
+      id: crypto.randomUUID(),
+      date,
+      description,
+      amount,
+      categoryId: incomeAddCategory.value,
+    };
     await saveIncome(entry);
 
     incomeAddForm.reset();
@@ -476,7 +573,7 @@ export function initExpensesView(): void {
       date,
       merchant,
       amount,
-      categoryId: classifyTransactionDescription(merchant, categoryRules),
+      categoryId: expenseAddCategory.value,
       origin: "manual",
     };
     await saveTransactions([entry]);
@@ -497,7 +594,12 @@ export function initExpensesView(): void {
       .map((keyword) => keyword.trim())
       .filter((keyword) => keyword.length > 0);
 
-    await createCategory({ label, group: categoryGroupSelect.value as CategoryGroup, keywords });
+    await createCategory({
+      label,
+      type: activeCategoryManagerType,
+      group: activeCategoryManagerType === "expense" ? (categoryGroupSelect.value as CategoryGroup) : undefined,
+      keywords,
+    });
 
     categoryForm.reset();
     await loadData();
@@ -507,8 +609,29 @@ export function initExpensesView(): void {
   transactionsPeriodSelect.addEventListener("change", onPeriodChange);
   incomeAddForm.addEventListener("submit", onIncomeAddSubmit);
   expenseAddForm.addEventListener("submit", onExpenseAddSubmit);
-  wirePopover(btnAddIncome, incomeAddPopover, () => incomeAddForm.reset());
-  wirePopover(btnAddExpense, expenseAddPopover, () => expenseAddForm.reset());
+  wirePopover(btnAddIncome, incomeAddPopover, () => {
+    incomeAddForm.reset();
+    incomeCategoryTouched = false;
+    incomeAddCategory.value = UNCATEGORIZED_INCOME_CATEGORY_ID;
+  });
+  wirePopover(btnAddExpense, expenseAddPopover, () => {
+    expenseAddForm.reset();
+    expenseCategoryTouched = false;
+    expenseAddCategory.value = UNCATEGORIZED_CATEGORY_ID;
+  });
+  incomeAddDescription.addEventListener("input", () => {
+    if (incomeCategoryTouched) return;
+    incomeAddCategory.value = classifyTransactionDescription(incomeAddDescription.value, incomeCategoryRules);
+  });
+  expenseAddDescription.addEventListener("input", () => {
+    if (expenseCategoryTouched) return;
+    expenseAddCategory.value = classifyTransactionDescription(expenseAddDescription.value, expenseCategoryRules);
+  });
+  incomeAddCategory.addEventListener("change", () => { incomeCategoryTouched = true; });
+  expenseAddCategory.addEventListener("change", () => { expenseCategoryTouched = true; });
+  categoryTypeToggle.querySelectorAll<HTMLButtonElement>(".category-type-toggle-btn").forEach((button) => {
+    button.addEventListener("click", () => setActiveCategoryManagerType(button.dataset.type as CategoryType));
+  });
   categoryForm.addEventListener("submit", onCategorySubmit);
   document.addEventListener(EXPENSES_UPDATED_EVENT, () => void loadData());
 

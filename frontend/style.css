@@ -16,6 +16,7 @@
   --accent-strong: #a8c49d;
   --gold: #c9a24b;         /* selo / destaque de segurança */
   --danger: #c97456;       /* erro — terracota apagado, não vermelho puro */
+  --danger-soft: color-mix(in srgb, var(--danger) 75%, transparent);
 
   /* tipografia */
   --font-display: "Fraunces", Georgia, serif;
@@ -258,7 +259,7 @@ html, body {
   z-index: 50;
   width: 300px;
   max-width: calc(100vw - 40px);
-  background: var(--surface-raised);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 16px;
@@ -503,8 +504,15 @@ select {
 }
 
 .dre-card-value.negative { color: var(--danger); }
+#dre-variable.negative { color: var(--danger-soft); }
 
 /* ---------- controle de gastos: categorias ---------- */
+
+.category-breakdown-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
 
 .category-list { display: flex; flex-direction: column; gap: 10px; }
 
@@ -525,6 +533,14 @@ select {
 .category-bar-fill {
   height: 100%;
   background: var(--accent);
+}
+
+.category-list.category-list-expense .category-bar-fill {
+  background: var(--danger);
+}
+
+.category-list.category-list-expense .category-bar-fill-variable {
+  background: var(--danger-soft);
 }
 
 /* ---------- controle de gastos: lançamentos manuais ---------- */
@@ -578,7 +594,8 @@ select {
   text-overflow: ellipsis;
 }
 .transaction-amount { color: var(--danger); white-space: nowrap; flex-shrink: 0; }
-.transaction-category-select { width: 110px; font-size: 12px; padding: 6px 24px 6px 8px; flex-shrink: 0; }
+.transaction-category-select,
+.income-category-select { width: 110px; font-size: 12px; padding: 6px 24px 6px 8px; flex-shrink: 0; }
 .transaction-row .link-button { margin-top: 0; flex-shrink: 0; }
 
 .transaction-row-editing { flex-wrap: wrap; }
@@ -591,7 +608,33 @@ select {
 
 /* ---------- controle de gastos: categorias (CRUD) ---------- */
 
+.category-type-toggle {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 3px;
+  margin-bottom: 16px;
+}
+
+.category-type-toggle-btn {
+  background: none;
+  border: none;
+  border-radius: calc(var(--radius) - 3px);
+  color: var(--text-tertiary);
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 12px;
+  padding: 7px 14px;
+  cursor: pointer;
+}
+
+.category-type-toggle-btn.active {
+  background: var(--surface-raised);
+  color: var(--text-primary);
+}
+
 .category-manager { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.category-manager[hidden] { display: none; }
 
 .category-manager-row {
   display: grid;
@@ -600,6 +643,10 @@ select {
   align-items: center;
   padding: 8px 0;
   border-bottom: 1px solid var(--border-soft);
+}
+
+.category-manager-row[data-type="income"] {
+  grid-template-columns: 1.2fr 1.5fr auto;
 }
 
 .category-manager-row input,
@@ -702,6 +749,8 @@ select {
   #app { width: 100%; padding: 20px; }
   .field-row { grid-template-columns: 1fr; }
   .dre-cards { grid-template-columns: 1fr 1fr; }
-  .category-manager-row { grid-template-columns: 1fr; }
+  .category-breakdown-columns { grid-template-columns: 1fr; }
+  .category-manager-row,
+  .category-manager-row[data-type="income"] { grid-template-columns: 1fr; }
   .transaction-row { flex-wrap: wrap; }
 }

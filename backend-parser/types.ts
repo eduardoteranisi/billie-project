@@ -40,11 +40,20 @@ export type ParseInvoiceInput = PdfParseInput | CsvParseInput;
 
 export type CategoryGroup = "fixed" | "variable";
 
-export interface Category {
+export interface ExpenseCategory {
   id: string;
   label: string;
+  type: "expense";
   group: CategoryGroup;
 }
+
+export interface IncomeCategory {
+  id: string;
+  label: string;
+  type: "income";
+}
+
+export type Category = ExpenseCategory | IncomeCategory;
 
 export interface CategoryRule {
   categoryId: string;

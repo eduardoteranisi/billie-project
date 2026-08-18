@@ -130,11 +130,11 @@
         </div>
         <div class="dre-card">
           <p class="dre-card-label">Despesas Fixas</p>
-          <p class="dre-card-value" id="dre-fixed">R$ 0,00</p>
+          <p class="dre-card-value negative" id="dre-fixed">R$ 0,00</p>
         </div>
         <div class="dre-card">
           <p class="dre-card-label">Despesas Variáveis</p>
-          <p class="dre-card-value" id="dre-variable">R$ 0,00</p>
+          <p class="dre-card-value negative" id="dre-variable">R$ 0,00</p>
         </div>
         <div class="dre-card">
           <p class="dre-card-label">Resultado</p>
@@ -142,10 +142,17 @@
         </div>
       </section>
 
-      <section class="section">
-        <p class="section-label">Gastos por categoria</p>
-        <div class="category-list" id="category-list"></div>
-      </section>
+      <div class="category-breakdown-columns">
+        <section class="section">
+          <p class="section-label">Gastos por categoria</p>
+          <div class="category-list category-list-expense" id="category-list"></div>
+        </section>
+
+        <section class="section">
+          <p class="section-label">Receitas por categoria</p>
+          <div class="category-list" id="income-category-list"></div>
+        </section>
+      </div>
 
     </div>
 
@@ -238,6 +245,10 @@
                   <input type="text" id="income-add-description" required />
                 </div>
                 <div class="field">
+                  <label for="income-add-category">Categoria</label>
+                  <select id="income-add-category"></select>
+                </div>
+                <div class="field">
                   <label for="income-add-amount">Valor</label>
                   <input type="number" id="income-add-amount" step="0.01" min="0.01" required />
                 </div>
@@ -271,6 +282,10 @@
                   <input type="text" id="expense-add-description" required />
                 </div>
                 <div class="field">
+                  <label for="expense-add-category">Categoria</label>
+                  <select id="expense-add-category"></select>
+                </div>
+                <div class="field">
                   <label for="expense-add-amount">Valor</label>
                   <input type="number" id="expense-add-amount" step="0.01" min="0.01" required />
                 </div>
@@ -289,17 +304,25 @@
       <div class="modal modal-wide" role="dialog" aria-modal="true" aria-labelledby="modal-categories-title">
         <p id="modal-categories-title" class="modal-title">Categorias</p>
         <p class="modal-text">
-          Crie, renomeie e defina as palavras-chave que classificam suas despesas automaticamente. Excluir uma
-          categoria move as transações associadas para "Outros / Não categorizado".
+          Crie, renomeie e defina as palavras-chave que classificam suas despesas e receitas automaticamente.
+          Excluir uma categoria move os lançamentos associados para "Outros / Não categorizado".
         </p>
-        <div class="category-manager" id="category-manager"></div>
+
+        <div class="category-type-toggle" id="category-type-toggle">
+          <button type="button" class="category-type-toggle-btn active" data-type="expense">Despesas</button>
+          <button type="button" class="category-type-toggle-btn" data-type="income">Receitas</button>
+        </div>
+
+        <div class="category-manager" id="category-manager-expense"></div>
+        <div class="category-manager" id="category-manager-income" hidden></div>
+
         <form id="category-form" class="category-form">
           <div class="field-row">
             <div class="field">
               <label for="category-label">Nome</label>
               <input type="text" id="category-label" required />
             </div>
-            <div class="field">
+            <div class="field" id="category-group-field">
               <label for="category-group">Grupo</label>
               <select id="category-group">
                 <option value="variable">Variável</option>

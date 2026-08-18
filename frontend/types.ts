@@ -5,6 +5,7 @@ export interface ManualIncomeEntry {
   date: string;
   description: string;
   amount: number;
+  categoryId: string;
 }
 
 export interface StoredTransaction extends CategorizedTransaction {
@@ -16,7 +17,7 @@ export interface StoredTransaction extends CategorizedTransaction {
 export interface CategorySummary {
   categoryId: string;
   label: string;
-  group: CategoryGroup;
+  group?: CategoryGroup;
   total: number;
 }
 
@@ -26,5 +27,6 @@ export interface DreSummary {
   fixedExpenses: number;
   variableExpenses: number;
   result: number;
-  categories: CategorySummary[];
+  expenseCategories: CategorySummary[];
+  incomeCategories: CategorySummary[];
 }

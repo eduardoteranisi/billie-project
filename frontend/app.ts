@@ -1,6 +1,7 @@
 import {
   runPipeline,
   exportToCsv,
+  classifyTransactionDescription,
   classifyTransactionList,
   DEFAULT_CSV_COLUMNS,
   type Bank,
@@ -340,7 +341,7 @@ async function salvarTransacoesNoControle(transactions: Transaction[], origin: S
 }
 
 async function classificarESalvarTransacoes(transactions: Transaction[], origin: StoredTransaction["origin"]) {
-  const rules = await listCategoryRules();
+  const rules = await listCategoryRules("expense");
   const categorized = classifyTransactionList(transactions, rules);
   const storedTransactions: StoredTransaction[] = categorized.map((transaction) => ({
     ...transaction,
@@ -453,11 +454,13 @@ async function processarImportacaoCsv(
   const { added, duplicates } = await classificarESalvarTransacoes(resultado.transactions, "csv");
 
   if (resultado.income && resultado.income.length > 0) {
+    const incomeRules = await listCategoryRules("income");
     const incomeEntries: ManualIncomeEntry[] = resultado.income.map((entry) => ({
       id: entry.id,
       date: entry.date,
       description: entry.merchant,
       amount: entry.amount,
+      categoryId: classifyTransactionDescription(entry.merchant, incomeRules),
     }));
     await saveIncomeEntries(incomeEntries);
   }
@@ -550,6 +553,9 @@ function bindEvents() {
   els.btnTema.addEventListener("click", alternarTema);
   els.btnCategories.addEventListener("click", () => { els.modalCategories.hidden = false; });
   els.modalCategoriesClose.addEventListener("click", () => { els.modalCategories.hidden = true; });
+  els.modalCategories.addEventListener("click", (event) => {
+    if (event.target === els.modalCategories) els.modalCategories.hidden = true;
+  });
   els.tabInvoice.addEventListener("click", () => showView("invoice"));
   els.tabExpenses.addEventListener("click", () => showView("expenses"));
   els.tabTransactions.addEventListener("click", () => showView("transactions"));

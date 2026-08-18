@@ -8,7 +8,10 @@ export {
   classifyTransactionList,
   DEFAULT_CATEGORIES,
   DEFAULT_CATEGORY_RULES,
+  DEFAULT_INCOME_CATEGORIES,
+  DEFAULT_INCOME_CATEGORY_RULES,
   UNCATEGORIZED_CATEGORY_ID,
+  UNCATEGORIZED_INCOME_CATEGORY_ID,
 } from "./services/expense_classifier";
 export type {
   Bank,
@@ -20,4 +23,11 @@ export type {
   RawTransaction,
   Transaction,
 } from "./types";
-export type { Category, CategoryGroup, CategoryRule, CategorizedTransaction } from "./types";
+export type {
+  Category,
+  CategoryGroup,
+  CategoryRule,
+  CategorizedTransaction,
+  ExpenseCategory,
+  IncomeCategory,
+} from "./types";

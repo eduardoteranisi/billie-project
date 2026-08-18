@@ -1,9 +1,18 @@
-import { DEFAULT_CATEGORIES, DEFAULT_CATEGORY_RULES, UNCATEGORIZED_CATEGORY_ID } from "@billie/parser";
+import {
+  DEFAULT_CATEGORIES,
+  DEFAULT_CATEGORY_RULES,
+  DEFAULT_INCOME_CATEGORIES,
+  DEFAULT_INCOME_CATEGORY_RULES,
+  UNCATEGORIZED_CATEGORY_ID,
+  UNCATEGORIZED_INCOME_CATEGORY_ID,
+} from "@billie/parser";
 import type { Category, CategoryGroup, CategoryRule } from "@billie/parser";
 import type { ManualIncomeEntry, StoredTransaction } from "../types";
 
+export type CategoryType = "expense" | "income";
+
 const DATABASE_NAME = "billie-expenses";
-const DATABASE_VERSION = 2;
+const DATABASE_VERSION = 3;
 const TRANSACTIONS_STORE = "transactions";
 const INCOME_STORE = "income";
 const CATEGORIES_STORE = "categories";
@@ -13,7 +22,7 @@ function openDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DATABASE_NAME, DATABASE_VERSION);
 
-    request.onupgradeneeded = () => {
+    request.onupgradeneeded = (event) => {
       const database = request.result;
       if (!database.objectStoreNames.contains(TRANSACTIONS_STORE)) {
         database.createObjectStore(TRANSACTIONS_STORE, { keyPath: "id" });
@@ -26,6 +35,26 @@ function openDatabase(): Promise<IDBDatabase> {
       }
       if (!database.objectStoreNames.contains(CATEGORY_RULES_STORE)) {
         database.createObjectStore(CATEGORY_RULES_STORE, { keyPath: "categoryId" });
+      }
+
+      if (event.oldVersion < 3 && request.transaction) {
+        const categoriesStore = request.transaction.objectStore(CATEGORIES_STORE);
+        categoriesStore.openCursor().onsuccess = (cursorEvent) => {
+          const cursor = (cursorEvent.target as IDBRequest<IDBCursorWithValue | null>).result;
+          if (!cursor) return;
+          if (!cursor.value.type) cursor.update({ ...cursor.value, type: "expense" });
+          cursor.continue();
+        };
+
+        const incomeStore = request.transaction.objectStore(INCOME_STORE);
+        incomeStore.openCursor().onsuccess = (cursorEvent) => {
+          const cursor = (cursorEvent.target as IDBRequest<IDBCursorWithValue | null>).result;
+          if (!cursor) return;
+          if (!cursor.value.categoryId) {
+            cursor.update({ ...cursor.value, categoryId: UNCATEGORIZED_INCOME_CATEGORY_ID });
+          }
+          cursor.continue();
+        };
       }
     };
 
@@ -138,6 +167,19 @@ export async function removeIncome(id: string): Promise<void> {
   await runInStore(INCOME_STORE, "readwrite", (store) => store.delete(id));
 }
 
+export async function updateIncomeCategory(id: string, categoryId: string): Promise<void> {
+  const entry = await runInStore<ManualIncomeEntry>(INCOME_STORE, "readonly", (store) => store.get(id));
+  if (!entry) throw new Error(`receita #${id} não encontrada`);
+
+  const updated: ManualIncomeEntry = { ...entry, categoryId };
+  await runInStore(INCOME_STORE, "readwrite", (store) => store.put(updated));
+}
+
+export async function countIncomeByCategory(categoryId: string): Promise<number> {
+  const entries = await listIncome();
+  return entries.filter((entry) => entry.categoryId === categoryId).length;
+}
+
 export async function updateIncomeFields(
   id: string,
   changes: { date: string; description: string; amount: number }
@@ -151,30 +193,48 @@ export async function updateIncomeFields(
 
 async function ensureCategoriesSeeded(): Promise<void> {
   const existing = await getAll<Category>(CATEGORIES_STORE);
-  if (existing.length > 0) return;
 
-  for (const category of DEFAULT_CATEGORIES) {
-    await runInStore(CATEGORIES_STORE, "readwrite", (store) => store.put(category));
+  if (!existing.some((category) => category.type === "expense")) {
+    for (const category of DEFAULT_CATEGORIES) {
+      await runInStore(CATEGORIES_STORE, "readwrite", (store) => store.put(category));
+    }
+    for (const rule of DEFAULT_CATEGORY_RULES) {
+      await runInStore(CATEGORY_RULES_STORE, "readwrite", (store) => store.put(rule));
+    }
   }
-  for (const rule of DEFAULT_CATEGORY_RULES) {
-    await runInStore(CATEGORY_RULES_STORE, "readwrite", (store) => store.put(rule));
+
+  if (!existing.some((category) => category.type === "income")) {
+    for (const category of DEFAULT_INCOME_CATEGORIES) {
+      await runInStore(CATEGORIES_STORE, "readwrite", (store) => store.put(category));
+    }
+    for (const rule of DEFAULT_INCOME_CATEGORY_RULES) {
+      await runInStore(CATEGORY_RULES_STORE, "readwrite", (store) => store.put(rule));
+    }
   }
 }
 
-export async function listCategories(): Promise<Category[]> {
+export async function listCategories(type: CategoryType): Promise<Category[]> {
   await ensureCategoriesSeeded();
-  return getAll<Category>(CATEGORIES_STORE);
+  const all = await getAll<Category>(CATEGORIES_STORE);
+  return all.filter((category) => category.type === type);
 }
 
-export async function listCategoryRules(): Promise<CategoryRule[]> {
-  await ensureCategoriesSeeded();
-  return getAll<CategoryRule>(CATEGORY_RULES_STORE);
+export async function listCategoryRules(type: CategoryType): Promise<CategoryRule[]> {
+  const categoryIds = new Set((await listCategories(type)).map((category) => category.id));
+  const allRules = await getAll<CategoryRule>(CATEGORY_RULES_STORE);
+  return allRules.filter((rule) => categoryIds.has(rule.categoryId));
 }
 
-export async function createCategory(input: { label: string; group: CategoryGroup; keywords: string[] }): Promise<Category> {
+export async function createCategory(
+  input: { label: string; type: CategoryType; group?: CategoryGroup; keywords: string[] }
+): Promise<Category> {
   await ensureCategoriesSeeded();
 
-  const category: Category = { id: crypto.randomUUID(), label: input.label, group: input.group };
+  const category: Category =
+    input.type === "expense"
+      ? { id: crypto.randomUUID(), label: input.label, type: "expense", group: input.group ?? "variable" }
+      : { id: crypto.randomUUID(), label: input.label, type: "income" };
+
   await runInStore(CATEGORIES_STORE, "readwrite", (store) => store.put(category));
   await runInStore(CATEGORY_RULES_STORE, "readwrite", (store) =>
     store.put({ categoryId: category.id, keywords: input.keywords })
@@ -193,11 +253,10 @@ export async function updateCategory(
     const category = await runInStore<Category>(CATEGORIES_STORE, "readonly", (store) => store.get(id));
     if (!category) throw new Error(`categoria #${id} não encontrada`);
 
-    const updated: Category = {
-      ...category,
-      label: changes.label ?? category.label,
-      group: changes.group ?? category.group,
-    };
+    const updated: Category =
+      category.type === "expense"
+        ? { ...category, label: changes.label ?? category.label, group: changes.group ?? category.group }
+        : { ...category, label: changes.label ?? category.label };
     await runInStore(CATEGORIES_STORE, "readwrite", (store) => store.put(updated));
   }
 
@@ -214,15 +273,27 @@ export async function countTransactionsByCategory(categoryId: string): Promise<n
 }
 
 export async function deleteCategory(id: string): Promise<void> {
-  if (id === UNCATEGORIZED_CATEGORY_ID) {
+  if (id === UNCATEGORIZED_CATEGORY_ID || id === UNCATEGORIZED_INCOME_CATEGORY_ID) {
     throw new Error('a categoria "Outros / Não categorizado" não pode ser excluída');
   }
 
-  const affected = (await listTransactions()).filter((transaction) => transaction.categoryId === id);
-  for (const transaction of affected) {
-    await runInStore(TRANSACTIONS_STORE, "readwrite", (store) =>
-      store.put({ ...transaction, categoryId: UNCATEGORIZED_CATEGORY_ID })
-    );
+  const category = await runInStore<Category>(CATEGORIES_STORE, "readonly", (store) => store.get(id));
+  if (!category) throw new Error(`categoria #${id} não encontrada`);
+
+  if (category.type === "expense") {
+    const affected = (await listTransactions()).filter((transaction) => transaction.categoryId === id);
+    for (const transaction of affected) {
+      await runInStore(TRANSACTIONS_STORE, "readwrite", (store) =>
+        store.put({ ...transaction, categoryId: UNCATEGORIZED_CATEGORY_ID })
+      );
+    }
+  } else {
+    const affected = (await listIncome()).filter((entry) => entry.categoryId === id);
+    for (const entry of affected) {
+      await runInStore(INCOME_STORE, "readwrite", (store) =>
+        store.put({ ...entry, categoryId: UNCATEGORIZED_INCOME_CATEGORY_ID })
+      );
+    }
   }
 
   await runInStore(CATEGORY_RULES_STORE, "readwrite", (store) => store.delete(id));
