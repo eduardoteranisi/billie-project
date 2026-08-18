@@ -9,6 +9,7 @@ export interface CsvColumnConfig {
   date: string;
   merchant: string;
   amount: string;
+  installment?: string;
 }
 
 export interface RawTransaction {
@@ -36,3 +37,29 @@ export interface CsvParseInput {
 }
 
 export type ParseInvoiceInput = PdfParseInput | CsvParseInput;
+
+export type CategoryGroup = "fixed" | "variable";
+
+export interface ExpenseCategory {
+  id: string;
+  label: string;
+  type: "expense";
+  group: CategoryGroup;
+}
+
+export interface IncomeCategory {
+  id: string;
+  label: string;
+  type: "income";
+}
+
+export type Category = ExpenseCategory | IncomeCategory;
+
+export interface CategoryRule {
+  categoryId: string;
+  keywords: string[];
+}
+
+export interface CategorizedTransaction extends Transaction {
+  categoryId: string;
+}

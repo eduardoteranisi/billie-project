@@ -1,5 +1,17 @@
-import { runPipeline, exportToCsv, DEFAULT_CSV_COLUMNS, type Bank, type CsvColumnConfig, type Transaction } from "@billie/parser";
+import {
+  runPipeline,
+  exportToCsv,
+  classifyTransactionDescription,
+  classifyTransactionList,
+  DEFAULT_CSV_COLUMNS,
+  type Bank,
+  type CsvColumnConfig,
+  type Transaction,
+} from "@billie/parser";
 import { checkForUpdates, openExternalLink } from "./services/update_checker";
+import { listCategoryRules, saveTransactions, saveIncomeEntries } from "./services/expense_store";
+import { initExpensesView, EXPENSES_UPDATED_EVENT } from "./screens/expenses";
+import type { ManualIncomeEntry, StoredTransaction } from "./types";
 
 type InvokeFn = (cmd: string, args?: Record<string, unknown>) => Promise<any>;
 
@@ -16,6 +28,16 @@ const els = {
   updateText: byId<HTMLSpanElement>("update-text"),
   btnUpdate: byId<HTMLButtonElement>("btn-update"),
   btnTema: byId<HTMLButtonElement>("btn-tema"),
+  btnCategories: byId<HTMLButtonElement>("btn-categories"),
+  modalCategories: byId<HTMLDivElement>("modal-categories"),
+  modalCategoriesClose: byId<HTMLButtonElement>("modal-categories-close"),
+
+  tabInvoice: byId<HTMLButtonElement>("tab-invoice"),
+  tabExpenses: byId<HTMLButtonElement>("tab-expenses"),
+  tabTransactions: byId<HTMLButtonElement>("tab-transactions"),
+  viewInvoice: byId<HTMLDivElement>("view-invoice"),
+  viewExpenses: byId<HTMLDivElement>("view-expenses"),
+  viewTransactions: byId<HTMLDivElement>("view-transactions"),
 
   fileRow: byId<HTMLButtonElement>("file-row"),
   fileName: byId<HTMLSpanElement>("file-name"),
@@ -32,6 +54,31 @@ const els = {
 
   btnProcessar: byId<HTMLButtonElement>("btn-processar"),
   log: byId<HTMLDivElement>("log"),
+
+  modalSaveExpenses: byId<HTMLDivElement>("modal-save-expenses"),
+  modalSaveExpensesConfirm: byId<HTMLButtonElement>("modal-save-expenses-confirm"),
+  modalSaveExpensesSkip: byId<HTMLButtonElement>("modal-save-expenses-skip"),
+
+  btnImportExtrato: byId<HTMLButtonElement>("btn-import-extrato"),
+  importPopover: byId<HTMLDivElement>("import-popover"),
+  importStepSelect: byId<HTMLDivElement>("import-step-select"),
+  importStepConfirm: byId<HTMLDivElement>("import-step-confirm"),
+  importStepStatus: byId<HTMLDivElement>("import-step-status"),
+  importStepMapping: byId<HTMLDivElement>("import-step-mapping"),
+  btnSelecionarCsv: byId<HTMLButtonElement>("btn-selecionar-csv"),
+  importFileInput: byId<HTMLInputElement>("import-file-input"),
+  importConfirmText: byId<HTMLParagraphElement>("import-confirm-text"),
+  btnConfirmarImportacao: byId<HTMLButtonElement>("btn-confirmar-importacao"),
+  btnCancelarImportacao: byId<HTMLButtonElement>("btn-cancelar-importacao"),
+  importStatus: byId<HTMLParagraphElement>("import-status"),
+  btnFecharImportacao: byId<HTMLButtonElement>("btn-fechar-importacao"),
+
+  mapColData: byId<HTMLSelectElement>("map-col-data"),
+  mapColEstabelecimento: byId<HTMLSelectElement>("map-col-estabelecimento"),
+  mapColValor: byId<HTMLSelectElement>("map-col-valor"),
+  mapColParcela: byId<HTMLSelectElement>("map-col-parcela"),
+  btnConfirmarMapeamento: byId<HTMLButtonElement>("btn-confirmar-mapeamento"),
+  mappingStatus: byId<HTMLParagraphElement>("mapping-status"),
 };
 
 function byId<T extends HTMLElement>(id: string): T {
@@ -41,7 +88,10 @@ function byId<T extends HTMLElement>(id: string): T {
 }
 
 let arquivoPath: string | null = null;
-let arquivoBlob: File | null = null;     
+let arquivoBlob: File | null = null;
+
+let csvImportadoTexto: string | null = null;
+let arquivoParaImportar: File | null = null;
 
 // ---------- inicialização ----------
 
@@ -121,6 +171,19 @@ async function checarAtualizacoes() {
   log(`Nova versão (${version}) disponível.`);
 }
 
+// ---------- abas ----------
+
+type ViewName = "invoice" | "expenses" | "transactions";
+
+function showView(view: ViewName) {
+  els.viewInvoice.hidden = view !== "invoice";
+  els.viewExpenses.hidden = view !== "expenses";
+  els.viewTransactions.hidden = view !== "transactions";
+  els.tabInvoice.classList.toggle("active", view === "invoice");
+  els.tabExpenses.classList.toggle("active", view === "expenses");
+  els.tabTransactions.classList.toggle("active", view === "transactions");
+}
+
 // ---------- tema ----------
 
 const CHAVE_TEMA = "billie:tema";
@@ -189,6 +252,25 @@ function restaurarColunasPadrao() {
   salvarConfigColunas();
 }
 
+// ---------- modal: salvar no controle de gastos ----------
+
+function confirmarSalvarControleGastos(): Promise<boolean> {
+  return new Promise((resolve) => {
+    const finalizar = (resultado: boolean) => {
+      els.modalSaveExpenses.hidden = true;
+      els.modalSaveExpensesConfirm.removeEventListener("click", onConfirm);
+      els.modalSaveExpensesSkip.removeEventListener("click", onSkip);
+      resolve(resultado);
+    };
+    const onConfirm = () => finalizar(true);
+    const onSkip = () => finalizar(false);
+
+    els.modalSaveExpensesConfirm.addEventListener("click", onConfirm);
+    els.modalSaveExpensesSkip.addEventListener("click", onSkip);
+    els.modalSaveExpenses.hidden = false;
+  });
+}
+
 // ---------- processamento ----------
 
 async function processarFatura() {
@@ -206,33 +288,219 @@ async function processarFatura() {
       throw new Error("Seleção de arquivo pelo Tauri ainda não implementada.");
     }
 
-    const pdfBytes = new Uint8Array(await arquivoBlob.arrayBuffer());
-
-    const resultado = await runPipeline({
-      source: "pdf",
-      pdfBytes,
-      password: els.senha.value || undefined,
-      bank: els.banco.value as Bank,
-      year: els.ano.value,
-      onLog: (mensagem) => log(mensagem),
-    });
-
-    if (!resultado.success || !resultado.transactions) {
-      throw new Error(resultado.error ?? "erro desconhecido no processamento");
-    }
-
-    const periodo = periodoFatura(resultado.transactions);
-    const nomeArquivo = nomeArquivoCsv(els.banco.value, periodo);
-    baixarCsv(exportToCsv(resultado.transactions, obterConfigColunasAtual()), nomeArquivo);
-
-    log(`Concluído — ${resultado.transactions.length} transações extraídas.`, "success");
-    log(`Arquivo "${nomeArquivo}" salvo na pasta Downloads.`, "success");
-    els.btnProcessar.textContent = "Processar outra fatura";
+    await processarComoPdf(arquivoBlob);
   } catch (erro) {
     log(`Erro ao processar: ${erro}`, "error");
     els.btnProcessar.textContent = "Tentar novamente";
   } finally {
     els.btnProcessar.disabled = false;
+  }
+}
+
+async function processarComoPdf(arquivo: File) {
+  const pdfBytes = new Uint8Array(await arquivo.arrayBuffer());
+
+  const resultado = await runPipeline({
+    source: "pdf",
+    pdfBytes,
+    password: els.senha.value || undefined,
+    bank: els.banco.value as Bank,
+    year: els.ano.value,
+    onLog: (mensagem) => log(mensagem),
+  });
+
+  if (!resultado.success || !resultado.transactions) {
+    throw new Error(resultado.error ?? "erro desconhecido no processamento");
+  }
+
+  const periodo = periodoFatura(resultado.transactions);
+  const nomeArquivo = nomeArquivoCsv(els.banco.value, periodo);
+  baixarCsv(exportToCsv(resultado.transactions, obterConfigColunasAtual()), nomeArquivo);
+
+  log(`Concluído — ${resultado.transactions.length} transações extraídas.`, "success");
+  log(`Arquivo "${nomeArquivo}" salvo na pasta Downloads.`, "success");
+
+  await salvarTransacoesNoControle(resultado.transactions, "pdf");
+  els.btnProcessar.textContent = "Processar outra fatura";
+}
+
+async function salvarTransacoesNoControle(transactions: Transaction[], origin: StoredTransaction["origin"]) {
+  const salvarNoControle = await confirmarSalvarControleGastos();
+  if (!salvarNoControle) {
+    log("Transações não foram salvas no controle de gastos.");
+    return;
+  }
+
+  const { added, duplicates } = await classificarESalvarTransacoes(transactions, origin);
+  log(
+    `${added} transações novas salvas no controle de gastos${duplicates > 0 ? ` (${duplicates} já existiam)` : ""}.`,
+    "success"
+  );
+
+  document.dispatchEvent(new Event(EXPENSES_UPDATED_EVENT));
+}
+
+async function classificarESalvarTransacoes(transactions: Transaction[], origin: StoredTransaction["origin"]) {
+  const rules = await listCategoryRules("expense");
+  const categorized = classifyTransactionList(transactions, rules);
+  const storedTransactions: StoredTransaction[] = categorized.map((transaction) => ({
+    ...transaction,
+    origin,
+  }));
+  return saveTransactions(storedTransactions);
+}
+
+// ---------- importar extrato (aba transações) ----------
+
+type StatusReporter = (mensagem: string, tipo?: "info" | "success" | "error") => void;
+
+type EtapaImportacao = "select" | "confirm" | "status" | "mapping";
+
+function mostrarEtapaImportacao(etapa: EtapaImportacao) {
+  els.importStepSelect.hidden = etapa !== "select";
+  els.importStepConfirm.hidden = etapa !== "confirm";
+  els.importStepStatus.hidden = etapa !== "status";
+  els.importStepMapping.hidden = etapa !== "mapping";
+}
+
+function resetarFluxoImportacao() {
+  arquivoParaImportar = null;
+  csvImportadoTexto = null;
+  els.mappingStatus.hidden = true;
+  mostrarEtapaImportacao("select");
+}
+
+function fecharPopoverImportacao() {
+  els.importPopover.hidden = true;
+}
+
+function alternarPopoverImportacao(evento: MouseEvent) {
+  evento.stopPropagation();
+  const vaiAbrir = els.importPopover.hidden;
+  els.importPopover.hidden = !els.importPopover.hidden;
+  if (vaiAbrir) resetarFluxoImportacao();
+}
+
+function onCliqueForaPopoverImportacao(evento: MouseEvent) {
+  if (els.importPopover.hidden) return;
+  const alvo = evento.target as Node;
+  if (els.importPopover.contains(alvo) || els.btnImportExtrato.contains(alvo)) return;
+  fecharPopoverImportacao();
+}
+
+const setImportStatus: StatusReporter = (mensagem, tipo = "info") => {
+  els.importStatus.textContent = mensagem;
+  els.importStatus.className = `import-status ${tipo}`;
+  els.btnFecharImportacao.hidden = tipo === "info";
+};
+
+const setMappingStatus: StatusReporter = (mensagem, tipo = "info") => {
+  els.mappingStatus.textContent = mensagem;
+  els.mappingStatus.className = `import-status ${tipo}`;
+  els.mappingStatus.hidden = false;
+};
+
+function onImportFileInputChange() {
+  const arquivo = els.importFileInput.files?.[0];
+  els.importFileInput.value = "";
+  if (!arquivo) return;
+
+  arquivoParaImportar = arquivo;
+  els.importConfirmText.textContent = `Importar o arquivo "${arquivo.name}"?`;
+  mostrarEtapaImportacao("confirm");
+}
+
+function onCancelarImportacaoClick() {
+  arquivoParaImportar = null;
+  mostrarEtapaImportacao("select");
+}
+
+async function onConfirmarImportacaoClick() {
+  if (!arquivoParaImportar) return;
+  const arquivo = arquivoParaImportar;
+  arquivoParaImportar = null;
+
+  mostrarEtapaImportacao("status");
+  setImportStatus("Importando extrato...");
+
+  try {
+    csvImportadoTexto = await arquivo.text();
+    await processarImportacaoCsv(csvImportadoTexto, undefined, setImportStatus);
+  } catch (erro) {
+    setImportStatus(`Erro ao importar extrato: ${erro}`, "error");
+  }
+}
+
+async function processarImportacaoCsv(
+  csvText: string,
+  columns: CsvColumnConfig | undefined,
+  reportar: StatusReporter
+) {
+  const resultado = await runPipeline({
+    source: "csv",
+    csvText,
+    columns,
+    onLog: () => {},
+  });
+
+  if (!resultado.success || !resultado.transactions) {
+    if (resultado.needsColumnMapping) {
+      mostrarMapeamentoManualImportacao(resultado.needsColumnMapping.headers);
+      return;
+    }
+    throw new Error(resultado.error ?? "erro desconhecido no processamento");
+  }
+
+  const { added, duplicates } = await classificarESalvarTransacoes(resultado.transactions, "csv");
+
+  if (resultado.income && resultado.income.length > 0) {
+    const incomeRules = await listCategoryRules("income");
+    const incomeEntries: ManualIncomeEntry[] = resultado.income.map((entry) => ({
+      id: entry.id,
+      date: entry.date,
+      description: entry.merchant,
+      amount: entry.amount,
+      categoryId: classifyTransactionDescription(entry.merchant, incomeRules),
+    }));
+    await saveIncomeEntries(incomeEntries);
+  }
+
+  document.dispatchEvent(new Event(EXPENSES_UPDATED_EVENT));
+  reportar(
+    `${added} transações importadas${duplicates > 0 ? ` (${duplicates} já existiam)` : ""}.`,
+    "success"
+  );
+}
+
+function mostrarMapeamentoManualImportacao(headers: string[]) {
+  const options = headers.map((h) => `<option value="${h}">${h}</option>`).join("");
+  els.mapColData.innerHTML = options;
+  els.mapColEstabelecimento.innerHTML = options;
+  els.mapColValor.innerHTML = options;
+  els.mapColParcela.innerHTML = `<option value="">— nenhuma —</option>${options}`;
+
+  els.mappingStatus.hidden = true;
+  mostrarEtapaImportacao("mapping");
+}
+
+async function onConfirmarMapeamentoImportacao() {
+  if (!csvImportadoTexto) return;
+
+  const columns: CsvColumnConfig = {
+    date: els.mapColData.value,
+    merchant: els.mapColEstabelecimento.value,
+    amount: els.mapColValor.value,
+    installment: els.mapColParcela.value || undefined,
+  };
+
+  els.btnConfirmarMapeamento.disabled = true;
+  setMappingStatus("Importando extrato...");
+  try {
+    await processarImportacaoCsv(csvImportadoTexto, columns, setMappingStatus);
+  } catch (erro) {
+    setMappingStatus(`Erro ao importar extrato: ${erro}`, "error");
+  } finally {
+    els.btnConfirmarMapeamento.disabled = false;
   }
 }
 
@@ -273,7 +541,24 @@ function baixarCsv(csv: string, nomeArquivo: string) {
 // ---------- eventos ----------
 
 function bindEvents() {
+  els.btnImportExtrato.addEventListener("click", alternarPopoverImportacao);
+  els.btnSelecionarCsv.addEventListener("click", () => els.importFileInput.click());
+  els.importFileInput.addEventListener("change", onImportFileInputChange);
+  els.btnConfirmarImportacao.addEventListener("click", onConfirmarImportacaoClick);
+  els.btnCancelarImportacao.addEventListener("click", onCancelarImportacaoClick);
+  els.btnFecharImportacao.addEventListener("click", fecharPopoverImportacao);
+  els.btnConfirmarMapeamento.addEventListener("click", onConfirmarMapeamentoImportacao);
+  document.addEventListener("click", onCliqueForaPopoverImportacao);
+
   els.btnTema.addEventListener("click", alternarTema);
+  els.btnCategories.addEventListener("click", () => { els.modalCategories.hidden = false; });
+  els.modalCategoriesClose.addEventListener("click", () => { els.modalCategories.hidden = true; });
+  els.modalCategories.addEventListener("click", (event) => {
+    if (event.target === els.modalCategories) els.modalCategories.hidden = true;
+  });
+  els.tabInvoice.addEventListener("click", () => showView("invoice"));
+  els.tabExpenses.addEventListener("click", () => showView("expenses"));
+  els.tabTransactions.addEventListener("click", () => showView("transactions"));
   els.fileRow.addEventListener("click", selecionarArquivo);
   els.fileInput.addEventListener("change", onFileInputChange);
   els.btnProcessar.addEventListener("click", processarFatura);
@@ -291,4 +576,6 @@ preencherAnos();
 carregarConfigColunas();
 bindEvents();
 checarAtualizacoes();
+initExpensesView();
+showView("invoice");
 log("Pronto para iniciar. Selecione o arquivo PDF.");
