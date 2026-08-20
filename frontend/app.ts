@@ -472,8 +472,15 @@ async function processarImportacaoCsv(
   );
 }
 
+function escapeHtml(value: string): string {
+  const entities: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+  return value.replace(/[&<>"']/g, (char) => entities[char]);
+}
+
 function mostrarMapeamentoManualImportacao(headers: string[]) {
-  const options = headers.map((h) => `<option value="${h}">${h}</option>`).join("");
+  const options = headers
+    .map((h) => `<option value="${escapeHtml(h)}">${escapeHtml(h)}</option>`)
+    .join("");
   els.mapColData.innerHTML = options;
   els.mapColEstabelecimento.innerHTML = options;
   els.mapColValor.innerHTML = options;
