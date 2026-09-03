@@ -27,7 +27,9 @@ export async function runPipeline(options: RunPipelineOptions): Promise<Pipeline
       const { pdfBytes, password, bank, year } = options;
       onLog(`Iniciando pipeline para o banco: ${bank}`);
       onLog("Desbloqueando e lendo o PDF...");
-      transactions = await routeInvoice({ source: "pdf", pdfBytes, password, bank, year });
+      const result = await routeInvoice({ source: "pdf", pdfBytes, password, bank, year });
+      transactions = result.expenses;
+      income = result.income;
     } else {
       onLog("Iniciando pipeline para importação de CSV...");
       const result = await parseCsvInvoice(options.csvText, options.columns);

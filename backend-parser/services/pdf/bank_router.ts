@@ -3,7 +3,9 @@ import { extractNubank } from "./nubank/nubank_extractor";
 import { extractXpRico } from "./xp-rico/xp_rico_extractor";
 import { extractSantander } from "./santander/santander_extractor";
 
-export async function routeInvoice(input: PdfParseInput): Promise<Transaction[]> {
+export async function routeInvoice(
+  input: PdfParseInput
+): Promise<{ expenses: Transaction[]; income: Transaction[] }> {
   const { pdfBytes, password, bank, year } = input;
 
   console.log(`Iniciando roteamento manual para o banco: ${bank}`);

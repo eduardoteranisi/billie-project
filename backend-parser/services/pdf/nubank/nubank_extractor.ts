@@ -8,7 +8,7 @@ export async function extractNubank(
   pdfBytes: Uint8Array,
   year: string,
   password?: string
-): Promise<Transaction[]> {
+): Promise<{ expenses: Transaction[]; income: Transaction[] }> {
   const lines = await extractPdfLines(pdfBytes, password);
   const rawTransactions: RawTransaction[] = [];
   const now = new Date();
@@ -43,5 +43,5 @@ export async function extractNubank(
     throw new Error("Nenhuma transação encontrada no formato Nubank.");
   }
 
-  return finalizeTransactions(rawTransactions);
+  return { expenses: finalizeTransactions(rawTransactions), income: [] };
 }

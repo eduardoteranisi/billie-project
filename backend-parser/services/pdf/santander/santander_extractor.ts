@@ -8,7 +8,7 @@ export async function extractSantander(
   pdfBytes: Uint8Array,
   year: string,
   password?: string
-): Promise<Transaction[]> {
+): Promise<{ expenses: Transaction[]; income: Transaction[] }> {
   const rawLines = await extractPdfLines(pdfBytes, password);
   const curedText = rawLines
     .join("\n")
@@ -43,5 +43,5 @@ export async function extractSantander(
     throw new Error("Nenhuma transação encontrada no formato Santander.");
   }
 
-  return finalizeTransactions(rawTransactions);
+  return { expenses: finalizeTransactions(rawTransactions), income: [] };
 }

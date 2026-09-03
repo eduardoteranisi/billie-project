@@ -72,7 +72,8 @@ export const DEFAULT_INCOME_CATEGORY_RULES: CategoryRule[] = [
 
 export function classifyTransactionDescription(
   description: string,
-  rules: CategoryRule[] = DEFAULT_CATEGORY_RULES
+  rules: CategoryRule[] = DEFAULT_CATEGORY_RULES,
+  fallbackCategoryId: string = UNCATEGORIZED_CATEGORY_ID
 ): string {
   const normalizedDescription = normalizeText(description);
 
@@ -81,15 +82,16 @@ export function classifyTransactionDescription(
     if (matches) return rule.categoryId;
   }
 
-  return UNCATEGORIZED_CATEGORY_ID;
+  return fallbackCategoryId;
 }
 
 export function classifyTransactionList(
   transactions: Transaction[],
-  rules: CategoryRule[] = DEFAULT_CATEGORY_RULES
+  rules: CategoryRule[] = DEFAULT_CATEGORY_RULES,
+  fallbackCategoryId: string = UNCATEGORIZED_CATEGORY_ID
 ): CategorizedTransaction[] {
   return transactions.map((transaction) => ({
     ...transaction,
-    categoryId: classifyTransactionDescription(transaction.merchant, rules),
+    categoryId: classifyTransactionDescription(transaction.merchant, rules, fallbackCategoryId),
   }));
 }

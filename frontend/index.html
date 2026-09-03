@@ -172,9 +172,9 @@
           <div id="import-popover" class="popover" hidden>
 
             <div id="import-step-select" class="import-step">
-              <p class="modal-text">Selecione um extrato exportado em CSV do seu banco.</p>
-              <button type="button" id="btn-selecionar-csv" class="btn-primary">Selecionar arquivo CSV</button>
-              <input type="file" id="import-file-input" accept=".csv,text/csv" hidden />
+              <p class="modal-text">Selecione um extrato do seu banco em CSV ou PDF.</p>
+              <button type="button" id="btn-selecionar-arquivo" class="btn-primary">Selecionar arquivo</button>
+              <input type="file" id="import-file-input" accept=".csv,text/csv,.pdf,application/pdf" hidden />
             </div>
 
             <div id="import-step-confirm" class="import-step" hidden>
@@ -182,6 +182,22 @@
               <div class="modal-actions">
                 <button type="button" id="btn-confirmar-importacao" class="btn-primary">Confirmar importação</button>
                 <button type="button" id="btn-cancelar-importacao" class="btn-secondary">Cancelar</button>
+              </div>
+            </div>
+
+            <div id="import-step-pdf-details" class="import-step" hidden>
+              <p class="modal-text">Selecione o banco do extrato em PDF.</p>
+              <div class="field">
+                <label for="import-banco">Banco</label>
+                <select id="import-banco">
+                  <option>Nubank</option>
+                  <option>XP / Rico</option>
+                  <option>Santander</option>
+                </select>
+              </div>
+              <div class="modal-actions">
+                <button type="button" id="btn-confirmar-importacao-pdf" class="btn-primary">Confirmar importação</button>
+                <button type="button" id="btn-cancelar-importacao-pdf" class="btn-secondary">Cancelar</button>
               </div>
             </div>
 

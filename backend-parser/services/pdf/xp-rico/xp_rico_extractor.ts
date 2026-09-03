@@ -4,11 +4,16 @@ import { extractPdfLines } from "../pdf_text_extractor";
 import { resolvePurchaseYear } from "../resolve_purchase_year";
 import { finalizeTransactions } from "../../transaction_processor";
 
+export interface XpRicoExtractionResult {
+  expenses: Transaction[];
+  income: Transaction[];
+}
+
 export async function extractXpRico(
   pdfBytes: Uint8Array,
   year: string,
   password?: string
-): Promise<Transaction[]> {
+): Promise<XpRicoExtractionResult> {
   const lines = await extractPdfLines(pdfBytes, password);
 
   return isXpRicoExtratoDocument(lines)
@@ -16,7 +21,7 @@ export async function extractXpRico(
     : extractXpRicoFaturaFromLines(lines, year);
 }
 
-function extractXpRicoFaturaFromLines(lines: string[], year: string): Transaction[] {
+function extractXpRicoFaturaFromLines(lines: string[], year: string): XpRicoExtractionResult {
   const rawTransactions: RawTransaction[] = [];
   const now = new Date();
 
@@ -46,7 +51,7 @@ function extractXpRicoFaturaFromLines(lines: string[], year: string): Transactio
     throw new Error("Nenhuma transação encontrada no formato XP (fatura).");
   }
 
-  return finalizeTransactions(rawTransactions);
+  return { expenses: finalizeTransactions(rawTransactions), income: [] };
 }
 
 function mergeXpRicoExtratoDateLines(lines: string[]): string[] {
@@ -65,9 +70,10 @@ function mergeXpRicoExtratoDateLines(lines: string[]): string[] {
   return merged;
 }
 
-function extractXpRicoExtratoFromLines(lines: string[], year: string): Transaction[] {
+function extractXpRicoExtratoFromLines(lines: string[], year: string): XpRicoExtractionResult {
   const mergedLines = mergeXpRicoExtratoDateLines(lines);
-  const rawTransactions: RawTransaction[] = [];
+  const expenseRows: RawTransaction[] = [];
+  const incomeRows: RawTransaction[] = [];
   const now = new Date();
 
   for (const line of mergedLines) {
@@ -80,18 +86,21 @@ function extractXpRicoExtratoFromLines(lines: string[], year: string): Transacti
     const explicitYear = yearPart ? (yearPart.length === 2 ? Number(yearPart) + 2000 : Number(yearPart)) : undefined;
     const purchaseYear = resolvePurchaseYear(Number(month), year, now, { explicitYear });
 
-    rawTransactions.push({
+    // no extrato, "-" indica débito (despesa); valores sem sinal são créditos (receita).
+    const isExpense = amount.trim().startsWith("-");
+
+    (isExpense ? expenseRows : incomeRows).push({
       date: `${day}/${month}/${purchaseYear}`,
       dirtyDescription: description.trim(),
-      rawAmount: amount,
+      rawAmount: isExpense ? amount.replace("-", "") : amount,
     });
   }
 
-  if (rawTransactions.length === 0) {
+  if (expenseRows.length === 0 && incomeRows.length === 0) {
     throw new Error("Nenhuma transação encontrada no formato XP (extrato).");
   }
 
-  return finalizeTransactions(rawTransactions);
+  return { expenses: finalizeTransactions(expenseRows), income: finalizeTransactions(incomeRows) };
 }
 
 function isXpRicoExtratoDocument(lines: string[]): boolean {

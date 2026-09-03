@@ -621,7 +621,11 @@ export function initExpensesView(): void {
   });
   incomeAddDescription.addEventListener("input", () => {
     if (incomeCategoryTouched) return;
-    incomeAddCategory.value = classifyTransactionDescription(incomeAddDescription.value, incomeCategoryRules);
+    incomeAddCategory.value = classifyTransactionDescription(
+      incomeAddDescription.value,
+      incomeCategoryRules,
+      UNCATEGORIZED_INCOME_CATEGORY_ID
+    );
   });
   expenseAddDescription.addEventListener("input", () => {
     if (expenseCategoryTouched) return;
