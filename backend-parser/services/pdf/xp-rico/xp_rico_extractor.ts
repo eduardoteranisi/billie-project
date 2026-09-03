@@ -4,6 +4,18 @@ import { extractPdfLines } from "../pdf_text_extractor";
 import { resolvePurchaseYear } from "../resolve_purchase_year";
 import { finalizeTransactions } from "../../transaction_processor";
 
+export async function extractXpRico(
+  pdfBytes: Uint8Array,
+  year: string,
+  password?: string
+): Promise<Transaction[]> {
+  const lines = await extractPdfLines(pdfBytes, password);
+
+  return isXpRicoExtratoDocument(lines)
+    ? extractXpRicoExtratoFromLines(lines, year)
+    : extractXpRicoFaturaFromLines(lines, year);
+}
+
 function extractXpRicoFaturaFromLines(lines: string[], year: string): Transaction[] {
   const rawTransactions: RawTransaction[] = [];
   const now = new Date();
@@ -84,16 +96,4 @@ function extractXpRicoExtratoFromLines(lines: string[], year: string): Transacti
 
 function isXpRicoExtratoDocument(lines: string[]): boolean {
   return lines.some((line) => /extrato/i.test(line));
-}
-
-export async function extractXpRico(
-  pdfBytes: Uint8Array,
-  year: string,
-  password?: string
-): Promise<Transaction[]> {
-  const lines = await extractPdfLines(pdfBytes, password);
-
-  return isXpRicoExtratoDocument(lines)
-    ? extractXpRicoExtratoFromLines(lines, year)
-    : extractXpRicoFaturaFromLines(lines, year);
 }
