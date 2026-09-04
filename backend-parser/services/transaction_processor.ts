@@ -110,6 +110,15 @@ function mostFrequent(values: number[]): number {
 }
 
 export function generateTransactionId(date: Date, description: string, amount: number): string {
-  const raw = `${formatIsoDate(date)}${description}${amount}`;
+  const raw = `${formatIsoDate(date)}${normalizeDescriptionForId(description)}${amount}`;
   return SparkMD5.hash(raw);
+}
+
+function normalizeDescriptionForId(description: string): string {
+  return description
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
 }
