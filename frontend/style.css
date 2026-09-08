@@ -330,6 +330,10 @@ html, body {
   margin-bottom: 12px;
 }
 
+#import-step-pdf-details .field {
+  margin-bottom: 12px;
+}
+
 .field-row {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;

@@ -4,6 +4,7 @@ import {
   classifyTransactionDescription,
   classifyTransactionList,
   DEFAULT_CSV_COLUMNS,
+  UNCATEGORIZED_INCOME_CATEGORY_ID,
   type Bank,
   type CsvColumnConfig,
   type Transaction,
@@ -65,11 +66,15 @@ const els = {
   importStepConfirm: byId<HTMLDivElement>("import-step-confirm"),
   importStepStatus: byId<HTMLDivElement>("import-step-status"),
   importStepMapping: byId<HTMLDivElement>("import-step-mapping"),
-  btnSelecionarCsv: byId<HTMLButtonElement>("btn-selecionar-csv"),
+  btnSelecionarArquivo: byId<HTMLButtonElement>("btn-selecionar-arquivo"),
   importFileInput: byId<HTMLInputElement>("import-file-input"),
   importConfirmText: byId<HTMLParagraphElement>("import-confirm-text"),
   btnConfirmarImportacao: byId<HTMLButtonElement>("btn-confirmar-importacao"),
   btnCancelarImportacao: byId<HTMLButtonElement>("btn-cancelar-importacao"),
+  importStepPdfDetails: byId<HTMLDivElement>("import-step-pdf-details"),
+  importBanco: byId<HTMLSelectElement>("import-banco"),
+  btnConfirmarImportacaoPdf: byId<HTMLButtonElement>("btn-confirmar-importacao-pdf"),
+  btnCancelarImportacaoPdf: byId<HTMLButtonElement>("btn-cancelar-importacao-pdf"),
   importStatus: byId<HTMLParagraphElement>("import-status"),
   btnFecharImportacao: byId<HTMLButtonElement>("btn-fechar-importacao"),
 
@@ -92,15 +97,18 @@ let arquivoBlob: File | null = null;
 
 let csvImportadoTexto: string | null = null;
 let arquivoParaImportar: File | null = null;
+let arquivoPdfParaImportar: File | null = null;
 
 // ---------- inicialização ----------
 
-function preencherAnos() {
+const ANO_AUTOMATICO = "Automático (recomendado)";
+
+function preencherAnos(select: HTMLSelectElement) {
   const anoAtual = new Date().getFullYear();
-  const opcoes = ["Automático (recomendado)"];
+  const opcoes = [ANO_AUTOMATICO];
   for (let ano = anoAtual; ano >= 2021; ano--) opcoes.push(String(ano));
 
-  els.ano.innerHTML = opcoes
+  select.innerHTML = opcoes
     .map((o) => `<option value="${o}">${o}</option>`)
     .join("");
 }
@@ -313,25 +321,32 @@ async function processarComoPdf(arquivo: File) {
     throw new Error(resultado.error ?? "erro desconhecido no processamento");
   }
 
-  const periodo = periodoFatura(resultado.transactions);
+  const todasTransacoes = [...resultado.transactions, ...(resultado.income ?? [])];
+  const periodo = periodoFatura(todasTransacoes);
   const nomeArquivo = nomeArquivoCsv(els.banco.value, periodo);
-  baixarCsv(exportToCsv(resultado.transactions, obterConfigColunasAtual()), nomeArquivo);
+  baixarCsv(exportToCsv(todasTransacoes, obterConfigColunasAtual()), nomeArquivo);
 
-  log(`Concluído — ${resultado.transactions.length} transações extraídas.`, "success");
+  log(`Concluído — ${todasTransacoes.length} transações extraídas.`, "success");
   log(`Arquivo "${nomeArquivo}" salvo na pasta Downloads.`, "success");
 
-  await salvarTransacoesNoControle(resultado.transactions, "pdf");
+  await salvarTransacoesNoControle(resultado.transactions, resultado.income, "pdf");
   els.btnProcessar.textContent = "Processar outra fatura";
 }
 
-async function salvarTransacoesNoControle(transactions: Transaction[], origin: StoredTransaction["origin"]) {
+async function salvarTransacoesNoControle(
+  transactions: Transaction[],
+  income: Transaction[] | undefined,
+  origin: StoredTransaction["origin"]
+) {
   const salvarNoControle = await confirmarSalvarControleGastos();
   if (!salvarNoControle) {
     log("Transações não foram salvas no controle de gastos.");
     return;
   }
 
-  const { added, duplicates } = await classificarESalvarTransacoes(transactions, origin);
+  const resultadoTransacoes = await classificarESalvarTransacoes(transactions, origin);
+  const resultadoIncome = await salvarIncomeNoControle(income);
+  const { added, duplicates } = somarResultadosSalvamento(resultadoTransacoes, resultadoIncome);
   log(
     `${added} transações novas salvas no controle de gastos${duplicates > 0 ? ` (${duplicates} já existiam)` : ""}.`,
     "success"
@@ -350,21 +365,48 @@ async function classificarESalvarTransacoes(transactions: Transaction[], origin:
   return saveTransactions(storedTransactions);
 }
 
+async function salvarIncomeNoControle(
+  income: Transaction[] | undefined
+): Promise<{ added: number; duplicates: number }> {
+  if (!income || income.length === 0) return { added: 0, duplicates: 0 };
+
+  const incomeRules = await listCategoryRules("income");
+  const incomeEntries: ManualIncomeEntry[] = income.map((entry) => ({
+    id: entry.id,
+    date: entry.date,
+    description: entry.merchant,
+    amount: entry.amount,
+    categoryId: classifyTransactionDescription(entry.merchant, incomeRules, UNCATEGORIZED_INCOME_CATEGORY_ID),
+  }));
+  return saveIncomeEntries(incomeEntries);
+}
+
+function somarResultadosSalvamento(
+  ...resultados: { added: number; duplicates: number }[]
+): { added: number; duplicates: number } {
+  return resultados.reduce(
+    (total, resultado) => ({ added: total.added + resultado.added, duplicates: total.duplicates + resultado.duplicates }),
+    { added: 0, duplicates: 0 }
+  );
+}
+
 // ---------- importar extrato (aba transações) ----------
 
 type StatusReporter = (mensagem: string, tipo?: "info" | "success" | "error") => void;
 
-type EtapaImportacao = "select" | "confirm" | "status" | "mapping";
+type EtapaImportacao = "select" | "confirm" | "pdfDetails" | "status" | "mapping";
 
 function mostrarEtapaImportacao(etapa: EtapaImportacao) {
   els.importStepSelect.hidden = etapa !== "select";
   els.importStepConfirm.hidden = etapa !== "confirm";
+  els.importStepPdfDetails.hidden = etapa !== "pdfDetails";
   els.importStepStatus.hidden = etapa !== "status";
   els.importStepMapping.hidden = etapa !== "mapping";
 }
 
 function resetarFluxoImportacao() {
   arquivoParaImportar = null;
+  arquivoPdfParaImportar = null;
   csvImportadoTexto = null;
   els.mappingStatus.hidden = true;
   mostrarEtapaImportacao("select");
@@ -400,10 +442,20 @@ const setMappingStatus: StatusReporter = (mensagem, tipo = "info") => {
   els.mappingStatus.hidden = false;
 };
 
+function arquivoEhPdf(arquivo: File): boolean {
+  return arquivo.type === "application/pdf" || arquivo.name.toLowerCase().endsWith(".pdf");
+}
+
 function onImportFileInputChange() {
   const arquivo = els.importFileInput.files?.[0];
   els.importFileInput.value = "";
   if (!arquivo) return;
+
+  if (arquivoEhPdf(arquivo)) {
+    arquivoPdfParaImportar = arquivo;
+    mostrarEtapaImportacao("pdfDetails");
+    return;
+  }
 
   arquivoParaImportar = arquivo;
   els.importConfirmText.textContent = `Importar o arquivo "${arquivo.name}"?`;
@@ -413,6 +465,28 @@ function onImportFileInputChange() {
 function onCancelarImportacaoClick() {
   arquivoParaImportar = null;
   mostrarEtapaImportacao("select");
+}
+
+function onCancelarImportacaoPdfClick() {
+  arquivoPdfParaImportar = null;
+  mostrarEtapaImportacao("select");
+}
+
+async function onConfirmarImportacaoPdfClick() {
+  if (!arquivoPdfParaImportar) return;
+  const arquivo = arquivoPdfParaImportar;
+  arquivoPdfParaImportar = null;
+
+  const bank = els.importBanco.value as Bank;
+
+  mostrarEtapaImportacao("status");
+  setImportStatus("Importando extrato...");
+
+  try {
+    await processarImportacaoPdf(arquivo, bank, setImportStatus);
+  } catch (erro) {
+    setImportStatus(`Erro ao importar extrato: ${erro}`, "error");
+  }
 }
 
 async function onConfirmarImportacaoClick() {
@@ -429,6 +503,32 @@ async function onConfirmarImportacaoClick() {
   } catch (erro) {
     setImportStatus(`Erro ao importar extrato: ${erro}`, "error");
   }
+}
+
+async function processarImportacaoPdf(arquivo: File, bank: Bank, reportar: StatusReporter) {
+  const pdfBytes = new Uint8Array(await arquivo.arrayBuffer());
+
+  const resultado = await runPipeline({
+    source: "pdf",
+    pdfBytes,
+    bank,
+    year: ANO_AUTOMATICO,
+    onLog: () => {},
+  });
+
+  if (!resultado.success || !resultado.transactions) {
+    throw new Error(resultado.error ?? "erro desconhecido no processamento");
+  }
+
+  const resultadoTransacoes = await classificarESalvarTransacoes(resultado.transactions, "pdf");
+  const resultadoIncome = await salvarIncomeNoControle(resultado.income);
+  const { added, duplicates } = somarResultadosSalvamento(resultadoTransacoes, resultadoIncome);
+
+  document.dispatchEvent(new Event(EXPENSES_UPDATED_EVENT));
+  reportar(
+    `${added} registros importados${duplicates > 0 ? ` (${duplicates} já existiam)` : ""}.`,
+    "success"
+  );
 }
 
 async function processarImportacaoCsv(
@@ -451,23 +551,13 @@ async function processarImportacaoCsv(
     throw new Error(resultado.error ?? "erro desconhecido no processamento");
   }
 
-  const { added, duplicates } = await classificarESalvarTransacoes(resultado.transactions, "csv");
-
-  if (resultado.income && resultado.income.length > 0) {
-    const incomeRules = await listCategoryRules("income");
-    const incomeEntries: ManualIncomeEntry[] = resultado.income.map((entry) => ({
-      id: entry.id,
-      date: entry.date,
-      description: entry.merchant,
-      amount: entry.amount,
-      categoryId: classifyTransactionDescription(entry.merchant, incomeRules),
-    }));
-    await saveIncomeEntries(incomeEntries);
-  }
+  const resultadoTransacoes = await classificarESalvarTransacoes(resultado.transactions, "csv");
+  const resultadoIncome = await salvarIncomeNoControle(resultado.income);
+  const { added, duplicates } = somarResultadosSalvamento(resultadoTransacoes, resultadoIncome);
 
   document.dispatchEvent(new Event(EXPENSES_UPDATED_EVENT));
   reportar(
-    `${added} transações importadas${duplicates > 0 ? ` (${duplicates} já existiam)` : ""}.`,
+    `${added} registros importados${duplicates > 0 ? ` (${duplicates} já existiam)` : ""}.`,
     "success"
   );
 }
@@ -549,10 +639,12 @@ function baixarCsv(csv: string, nomeArquivo: string) {
 
 function bindEvents() {
   els.btnImportExtrato.addEventListener("click", alternarPopoverImportacao);
-  els.btnSelecionarCsv.addEventListener("click", () => els.importFileInput.click());
+  els.btnSelecionarArquivo.addEventListener("click", () => els.importFileInput.click());
   els.importFileInput.addEventListener("change", onImportFileInputChange);
   els.btnConfirmarImportacao.addEventListener("click", onConfirmarImportacaoClick);
   els.btnCancelarImportacao.addEventListener("click", onCancelarImportacaoClick);
+  els.btnConfirmarImportacaoPdf.addEventListener("click", onConfirmarImportacaoPdfClick);
+  els.btnCancelarImportacaoPdf.addEventListener("click", onCancelarImportacaoPdfClick);
   els.btnFecharImportacao.addEventListener("click", fecharPopoverImportacao);
   els.btnConfirmarMapeamento.addEventListener("click", onConfirmarMapeamentoImportacao);
   document.addEventListener("click", onCliqueForaPopoverImportacao);
@@ -579,7 +671,7 @@ function bindEvents() {
 // ---------- boot ----------
 
 carregarTema();
-preencherAnos();
+preencherAnos(els.ano);
 carregarConfigColunas();
 bindEvents();
 checarAtualizacoes();

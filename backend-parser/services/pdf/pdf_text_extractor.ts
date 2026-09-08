@@ -4,9 +4,11 @@ interface PositionedTextItem {
   str: string;
   x: number;
   y: number;
+  width: number;
 }
 
 const Y_TOLERANCE = 2;
+const MIN_WORD_GAP = 1;
 
 GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
@@ -41,6 +43,7 @@ export async function extractPdfLines(pdfBytes: Uint8Array, password?: string): 
       str: item.str,
       x: item.transform[4],
       y: item.transform[5],
+      width: item.width,
     }));
 
     lines.push(...groupItemsIntoLines(items));
@@ -59,7 +62,24 @@ function groupItemsIntoLines(items: PositionedTextItem[]): string[] {
     else rows.push([item]);
   }
 
-  return rows.map((row) =>
-    row.sort((a, b) => a.x - b.x).map((i) => i.str).join(" ")
-  );
+  return rows.map((row) => joinRowItems(row.sort((a, b) => a.x - b.x)));
+}
+
+// Some fonts (e.g. the Santander extrato template) split a single word across many
+// text items with near-zero horizontal gaps between letters, so joining every item
+// with a fixed space would fragment words like "PIX" into "P I X". Only insert a
+// space when the gap between items is wide enough to be a real word/column break.
+function joinRowItems(row: PositionedTextItem[]): string {
+  let line = "";
+  for (let i = 0; i < row.length; i++) {
+    const item = row[i];
+    if (i === 0) {
+      line = item.str;
+      continue;
+    }
+    const previous = row[i - 1];
+    const gap = item.x - (previous.x + previous.width);
+    line += (gap > MIN_WORD_GAP ? " " : "") + item.str;
+  }
+  return line;
 }
