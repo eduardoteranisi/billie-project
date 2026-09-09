@@ -1,0 +1,397 @@
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap");
+
+:root {
+  /* cor — paleta "tinta de razão" */
+  --bg: #181c18;
+  --surface: #1f2420;
+  --surface-raised: #262c25;
+  --border: #343b31;
+  --border-soft: #2a3026;
+
+  --text-primary: #ede8dc;
+  --text-secondary: #9c9a8c;
+  --text-tertiary: #6b6a5f;
+
+  --accent: #8fae85;       /* verde-sálvia — ação primária */
+  --accent-strong: #a8c49d;
+  --gold: #c9a24b;         /* selo / destaque de segurança */
+  --danger: #c97456;       /* erro — terracota apagado, não vermelho puro */
+  --danger-soft: color-mix(in srgb, var(--danger) 75%, transparent);
+
+  /* tipografia */
+  --font-display: "Fraunces", Georgia, serif;
+  --font-body: "IBM Plex Sans", -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  --radius: 3px;
+}
+
+:root[data-theme="light"] {
+  /* cor — paleta "tinta de razão" (variante clara) */
+  --bg: #f5f3ec;
+  --surface: #ffffff;
+  --surface-raised: #faf8f2;
+  --border: #d8d4c5;
+  --border-soft: #e5e1d2;
+
+  --text-primary: #1f2420;
+  --text-secondary: #5c5a4d;
+  --text-tertiary: #8a887a;
+
+  --accent: #7fa374;
+  --accent-strong: #4a6640;
+  --gold: #a17f2e;
+  --danger: #a85a3d;
+}
+
+* { box-sizing: border-box; }
+
+/* troca de tema suave — cobre qualquer elemento que não declare sua
+   própria transição; os que já têm (inputs, botão primário, checkbox)
+   mantêm a própria lista abaixo, ampliada para incluir cor/fundo */
+*, *::before, *::after {
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 14px;
+}
+
+#app {
+  width: 600px;
+  margin: 0 auto;
+  padding: 28px 32px 32px;
+  position: relative;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+
+/* ---------- cabeçalho ---------- */
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 28px;
+}
+
+.brand h1 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 30px;
+  letter-spacing: -0.01em;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.brand p {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  color: var(--text-tertiary);
+  letter-spacing: 0.01em;
+}
+
+/* selo "100% local" — elemento de assinatura */
+.stamp {
+  width: 60px;
+  height: 60px;
+  border: 1px solid var(--gold);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  transform: rotate(6deg);
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+.stamp span {
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--gold);
+  line-height: 1.35;
+}
+
+/* ---------- banner de atualização ---------- */
+
+.update-banner {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface);
+  border: 1px solid var(--gold);
+  border-radius: var(--radius);
+  padding: 9px 14px;
+  margin-bottom: 16px;
+  font-size: 12.5px;
+}
+.update-banner.visible { display: flex; }
+.update-banner button {
+  background: none;
+  border: none;
+  color: var(--gold);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+}
+
+/* ---------- botão de link (ação secundária discreta) ---------- */
+
+.link-button {
+  background: none;
+  border: none;
+  color: var(--gold);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+  margin-top: 12px;
+}
+
+.header .link-button {
+  margin-top: 0;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* ---------- botão de ícone (ex.: alternância de tema) ---------- */
+
+.icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+.icon-btn:hover { color: var(--text-primary); border-color: var(--border); }
+.icon-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.icon-btn-labeled {
+  width: auto;
+  gap: 6px;
+  padding: 0 10px;
+}
+.icon-btn-labeled span {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.icon-btn svg { display: block; }
+
+/* ---------- seções ---------- */
+
+.section {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 16px 18px;
+  margin-bottom: 12px;
+}
+
+.section-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin: 0 0 12px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.section-header .section-label { margin-bottom: 0; }
+
+.popover-anchor {
+  position: relative;
+  display: inline-block;
+}
+
+.popover-right { left: auto; right: 0; }
+
+.field-row-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+/* ---------- formulário ---------- */
+
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 14px;
+}
+
+.field label {
+  display: block;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-bottom: 6px;
+  letter-spacing: 0.02em;
+}
+
+input[type="password"],
+input[type="text"],
+input[type="date"],
+input[type="number"],
+select {
+  width: 100%;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 8px 10px;
+  outline: none;
+  transition: border-color 0.15s, background-color 0.25s ease, color 0.25s ease;
+}
+
+input:focus, select:focus {
+  border-color: var(--accent);
+}
+
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--text-tertiary) 50%),
+                     linear-gradient(135deg, var(--text-tertiary) 50%, transparent 50%);
+  background-position: calc(100% - 14px) center, calc(100% - 9px) center;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  cursor: pointer;
+}
+
+/* ---------- checkboxes ---------- */
+
+.checks { display: flex; flex-direction: column; gap: 10px; }
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-secondary);
+  user-select: none;
+}
+
+.check input { position: absolute; opacity: 0; width: 0; height: 0; }
+
+.check .box {
+  width: 15px;
+  height: 15px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.check input:checked + .box {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.check input:checked + .box::after {
+  content: "";
+  width: 4px;
+  height: 7px;
+  border: solid var(--bg);
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg) translate(-1px, -1px);
+}
+.check input:focus-visible + .box { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---------- botão processar ---------- */
+
+.btn-primary {
+  width: 100%;
+  background: var(--accent);
+  color: #161917;
+  border: none;
+  border-radius: var(--radius);
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 14px;
+  padding: 13px;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s, color 0.25s ease;
+  margin-bottom: 12px;
+}
+.btn-primary:hover:not(:disabled) { background: var(--accent-strong); }
+.btn-primary:disabled { opacity: 0.5; cursor: default; }
+
+:root[data-theme="light"] .btn-primary { color: #1c1712; }
+:root[data-theme="light"] .btn-primary:hover:not(:disabled) { background: #93b989; }
+
+/* ---------- abas ---------- */
+
+.tabs {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-tertiary);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 0 0 10px;
+  cursor: pointer;
+}
+
+.tab.active {
+  color: var(--text-primary);
+  border-bottom-color: var(--accent);
+}
+
+.view[hidden] { display: none; }
+
+/* ---------- estado vazio (listas de qualquer aba) ---------- */
+
+.empty-state {
+  color: var(--text-tertiary);
+  font-size: 13px;
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  #app { width: 100%; padding: 20px; }
+  .field-row { grid-template-columns: 1fr; }
+}

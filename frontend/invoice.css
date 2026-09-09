@@ -1,0 +1,54 @@
+/* ---------- linha de arquivo (padrão pontilhado de razão) ---------- */
+
+.file-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  width: 100%;
+  padding: 0;
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.file-row .file-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.file-row.empty .file-name { color: var(--text-tertiary); }
+
+.leader {
+  flex: 1;
+  border-bottom: 1px dotted var(--border);
+  height: 1px;
+  margin-bottom: 5px;
+}
+
+.file-action {
+  flex-shrink: 0;
+  color: var(--accent);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+
+/* ---------- log ---------- */
+
+.log {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+  height: 110px;
+  overflow-y: auto;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+.log .entry { display: block; }
+.log .ts { color: var(--text-tertiary); margin-right: 6px; }
+.log .entry.error { color: var(--danger); }
+.log .entry.success { color: var(--accent-strong); }

@@ -1,0 +1,121 @@
+/* ---------- modal de confirmação (genérico) ---------- */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.modal-overlay[hidden] { display: none; }
+
+.modal {
+  width: 360px;
+  max-width: calc(100% - 40px);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+
+.modal-wide {
+  width: 640px;
+  max-height: 85vh;
+  overflow-y: auto;
+  background: var(--surface);
+}
+
+.modal-title {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 8px;
+  color: var(--text-primary);
+}
+
+.modal-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0 0 18px;
+  line-height: 1.5;
+  overflow-wrap: break-word;
+}
+
+.modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.modal-actions .btn-primary { margin-bottom: 0; }
+
+.btn-secondary {
+  width: 100%;
+  background: none;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 14px;
+  padding: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.btn-secondary:hover { border-color: var(--text-secondary); color: var(--text-primary); }
+
+/* ---------- modal de categorias: gerenciador (CRUD) ---------- */
+
+.category-type-toggle {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 3px;
+  margin-bottom: 16px;
+}
+
+.category-type-toggle-btn {
+  background: none;
+  border: none;
+  border-radius: calc(var(--radius) - 3px);
+  color: var(--text-tertiary);
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 12px;
+  padding: 7px 14px;
+  cursor: pointer;
+}
+
+.category-type-toggle-btn.active {
+  background: var(--surface-raised);
+  color: var(--text-primary);
+}
+
+.category-manager { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.category-manager[hidden] { display: none; }
+
+.category-manager-row {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr 1.5fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.category-manager-row[data-type="income"] {
+  grid-template-columns: 1.2fr 1.5fr auto;
+}
+
+.category-manager-row input,
+.category-manager-row select { font-size: 12px; padding: 6px 8px; }
+.category-manager-row .link-button { margin-top: 0; }
+
+.category-form .field-row { margin-bottom: 12px; }
+
+@media (max-width: 640px) {
+  .category-manager-row,
+  .category-manager-row[data-type="income"] { grid-template-columns: 1fr; }
+}
