@@ -1,0 +1,79 @@
+/* ---------- controle de gastos: cards do DRE ---------- */
+
+.dre-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.dre-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 12px 14px;
+}
+
+.dre-card-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin: 0 0 6px;
+}
+
+.dre-card-value {
+  font-size: clamp(13px, calc(26px - var(--value-length, 7) * 1px), 19px);
+  font-weight: 600;
+  margin: 0;
+  color: var(--accent-strong);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dre-card-value.negative { color: var(--danger); }
+#dre-variable.negative { color: var(--danger-soft); }
+
+/* ---------- controle de gastos: categorias ---------- */
+
+.category-breakdown-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.category-list { display: flex; flex-direction: column; gap: 10px; }
+
+.category-row-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.category-bar {
+  height: 6px;
+  background: var(--surface-raised);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.category-bar-fill {
+  height: 100%;
+  background: var(--accent);
+}
+
+.category-list.category-list-expense .category-bar-fill {
+  background: var(--danger);
+}
+
+.category-list.category-list-expense .category-bar-fill-variable {
+  background: var(--danger-soft);
+}
+
+@media (max-width: 640px) {
+  .dre-cards { grid-template-columns: 1fr 1fr; }
+  .category-breakdown-columns { grid-template-columns: 1fr; }
+}

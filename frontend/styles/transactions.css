@@ -1,0 +1,116 @@
+/* ---------- importar extrato (aba transações) ---------- */
+
+.import-bar { margin-bottom: 12px; }
+
+.import-trigger-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 50;
+  width: 300px;
+  max-width: calc(100vw - 40px);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+.popover[hidden] { display: none; }
+.popover .modal-text { margin-bottom: 12px; }
+.popover .btn-primary { margin-bottom: 0; }
+.popover .modal-actions { margin-top: 0; }
+
+.import-step[hidden] { display: none; }
+
+.import-status {
+  margin: 0 0 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.import-status[hidden] { display: none; }
+.import-status.success { color: var(--accent-strong); }
+.import-status.error { color: var(--danger); }
+
+#mapping-status { margin: 12px 0 0; }
+
+#import-step-mapping .field-row {
+  grid-template-columns: 1fr;
+  margin-bottom: 12px;
+}
+
+#import-step-pdf-details .field {
+  margin-bottom: 12px;
+}
+
+/* ---------- controle de gastos: lançamentos manuais (receitas do período) ---------- */
+
+.manual-entry-form .field-row { margin-bottom: 12px; }
+
+.manual-entry-list { display: flex; flex-direction: column; gap: 8px; }
+
+.manual-entry-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.manual-entry-date { color: var(--text-tertiary); font-family: var(--font-mono); font-size: 12px; }
+.manual-entry-description { flex: 1; }
+.manual-entry-amount.income { color: var(--accent-strong); }
+.manual-entry-amount.expense { color: var(--danger); }
+.manual-entry-row .link-button { margin-top: 0; }
+
+.manual-entry-row-editing { flex-wrap: wrap; }
+.manual-entry-row-editing .manual-entry-edit-date,
+.manual-entry-row-editing .manual-entry-edit-description,
+.manual-entry-row-editing .manual-entry-edit-amount { font-size: 12px; padding: 6px 8px; }
+.manual-entry-row-editing .manual-entry-edit-date { width: 140px; }
+.manual-entry-row-editing .manual-entry-edit-description { flex: 1; min-width: 120px; }
+.manual-entry-row-editing .manual-entry-edit-amount { width: 100px; }
+
+/* ---------- controle de gastos: transações do período (despesas do período) ---------- */
+
+.transaction-list { display: flex; flex-direction: column; gap: 8px; }
+
+.transaction-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.transaction-date { color: var(--text-tertiary); font-family: var(--font-mono); font-size: 12px; flex-shrink: 0; }
+.transaction-description {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.transaction-amount { color: var(--danger); white-space: nowrap; flex-shrink: 0; }
+.transaction-category-select,
+.income-category-select { width: 110px; font-size: 12px; padding: 6px 24px 6px 8px; flex-shrink: 0; }
+.transaction-row .link-button { margin-top: 0; flex-shrink: 0; }
+
+.transaction-row-editing { flex-wrap: wrap; }
+.transaction-row-editing .transaction-edit-date,
+.transaction-row-editing .transaction-edit-description,
+.transaction-row-editing .transaction-edit-amount { font-size: 12px; padding: 6px 8px; }
+.transaction-row-editing .transaction-edit-date { width: 140px; }
+.transaction-row-editing .transaction-edit-description { flex: 1; min-width: 120px; }
+.transaction-row-editing .transaction-edit-amount { width: 100px; }
+
+@media (max-width: 640px) {
+  .transaction-row { flex-wrap: wrap; }
+}
