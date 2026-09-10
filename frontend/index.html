@@ -56,18 +56,18 @@
 
       <!-- ---------- arquivo ---------- -->
       <section class="section">
-        <p class="section-label">Arquivo</p>
+        <p class="section-label">Arquivo <span class="section-label-hint">(PDF ou CSV)</span></p>
         <button id="file-row" class="file-row empty" type="button">
           <span class="file-name" id="file-name">Nenhum arquivo selecionado</span>
           <span class="leader"></span>
-          <span class="file-action" id="file-action-label">Procurar PDF</span>
+          <span class="file-action" id="file-action-label">Procurar fatura</span>
         </button>
-        <input type="file" id="file-input" accept="application/pdf" hidden />
+        <input type="file" id="file-input" accept=".csv,text/csv,.pdf,application/pdf" hidden />
       </section>
 
       <!-- ---------- configurações da fatura ---------- -->
       <section class="section" id="section-pdf-details">
-        <p class="section-label">Detalhes da fatura</p>
+        <p class="section-label">Detalhes da fatura <span class="section-label-hint">(PDF, se necessário)</span></p>
         <div class="field-row">
           <div class="field">
             <label for="senha">Senha do PDF</label>
@@ -88,28 +88,33 @@
         </div>
       </section>
 
-      <!-- ---------- personalização de colunas do csv (exportação) ---------- -->
-      <section class="section" id="section-export-column-names">
-        <p class="section-label">Nomes das colunas (CSV)</p>
-        <div class="field-row">
-          <div class="field">
-            <label for="col-data">Data</label>
-            <input type="text" id="col-data" />
-          </div>
-          <div class="field">
-            <label for="col-estabelecimento">Estabelecimento</label>
-            <input type="text" id="col-estabelecimento" />
-          </div>
-          <div class="field">
-            <label for="col-valor">Valor</label>
-            <input type="text" id="col-valor" />
-          </div>
-        </div>
-        <button id="btn-restaurar-colunas" type="button" class="link-button">Restaurar padrão</button>
-      </section>
-
       <!-- ---------- processar ---------- -->
       <button id="btn-processar" class="btn-primary">Processar fatura</button>
+
+      <!-- ---------- mapeamento manual de colunas (csv, quando a detecção automática falha) ---------- -->
+      <section class="section" id="section-invoice-mapping" hidden>
+        <p class="section-label">Mapeamento de colunas (CSV)</p>
+        <p class="modal-text">Não conseguimos identificar automaticamente todas as colunas. Selecione manualmente:</p>
+        <div class="field-row">
+          <div class="field">
+            <label for="invoice-map-col-data">Data</label>
+            <select id="invoice-map-col-data"></select>
+          </div>
+          <div class="field">
+            <label for="invoice-map-col-estabelecimento">Estabelecimento</label>
+            <select id="invoice-map-col-estabelecimento"></select>
+          </div>
+          <div class="field">
+            <label for="invoice-map-col-valor">Valor</label>
+            <select id="invoice-map-col-valor"></select>
+          </div>
+          <div class="field">
+            <label for="invoice-map-col-parcela">Parcela (opcional)</label>
+            <select id="invoice-map-col-parcela"></select>
+          </div>
+        </div>
+        <button type="button" id="btn-confirmar-mapeamento-fatura" class="btn-primary">Confirmar colunas e processar</button>
+      </section>
 
       <!-- ---------- log ---------- -->
       <section class="section">
@@ -364,10 +369,37 @@
     <div id="modal-save-expenses" class="modal-overlay" hidden>
       <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-save-expenses-title">
         <p id="modal-save-expenses-title" class="modal-title">Salvar no Controle?</p>
-        <p class="modal-text">O CSV já foi gerado. Deseja também salvar essas transações no Controle?</p>
+        <p class="modal-text">Deseja salvar essas transações no Controle de Gastos?</p>
         <div class="modal-actions">
           <button id="modal-save-expenses-confirm" type="button" class="btn-primary">Salvar no Controle</button>
           <button id="modal-save-expenses-skip" type="button" class="btn-secondary">Somente gerar CSV</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ---------- modal: nomes das colunas do csv de saída ---------- -->
+    <div id="modal-csv-columns" class="modal-overlay" hidden>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-csv-columns-title">
+        <p id="modal-csv-columns-title" class="modal-title">Nomes das colunas (CSV)</p>
+        <p class="modal-text">Personalize os nomes das colunas antes de gerar o arquivo.</p>
+        <div class="field-row">
+          <div class="field">
+            <label for="col-data">Data</label>
+            <input type="text" id="col-data" />
+          </div>
+          <div class="field">
+            <label for="col-estabelecimento">Estabelecimento</label>
+            <input type="text" id="col-estabelecimento" />
+          </div>
+          <div class="field">
+            <label for="col-valor">Valor</label>
+            <input type="text" id="col-valor" />
+          </div>
+        </div>
+        <button id="btn-restaurar-colunas" type="button" class="link-button">Restaurar padrão</button>
+        <div class="modal-actions">
+          <button id="modal-csv-columns-confirm" type="button" class="btn-primary">Gerar CSV</button>
+          <button id="modal-csv-columns-cancel" type="button" class="btn-secondary">Cancelar</button>
         </div>
       </div>
     </div>
