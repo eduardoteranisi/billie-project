@@ -2,6 +2,7 @@ import type { CsvColumnConfig, Transaction } from "../../types";
 import { parseCsvText } from "./csv_tokenizer";
 import { resolveColumns, isColumnResolutionFailure } from "./csv_column_resolver";
 import { CsvColumnMappingError } from "./csv_column_mapping_error";
+import { detectCsvDocumentType, isNoiseRow } from "./csv_document_type";
 import { finalizeCsvTransactions, parseAmount, type CsvRowInput } from "../transaction_processor";
 
 export interface CsvParseResult {
@@ -31,6 +32,16 @@ export async function parseCsvInvoice(csvText: string, columns?: CsvColumnConfig
     throw new Error("Nenhuma transação válida encontrada no CSV.");
   }
 
+  const documentType = detectCsvDocumentType(validRows.map((row) => row.merchant));
+  return documentType === "fatura" ? finalizeFaturaRows(validRows) : finalizeExtratoRows(validRows);
+}
+
+function finalizeFaturaRows(validRows: CsvRowInput[]): CsvParseResult {
+  const expenseRows = validRows.filter((row) => !isNoiseRow(row.merchant));
+  return { expenses: finalizeCsvTransactions(expenseRows), income: [] };
+}
+
+function finalizeExtratoRows(validRows: CsvRowInput[]): CsvParseResult {
   const expenseRows = validRows
     .filter((row) => parseAmount(row.rawAmount) < 0)
     .map((row) => ({ ...row, rawAmount: row.rawAmount.replace("-", "") }));
