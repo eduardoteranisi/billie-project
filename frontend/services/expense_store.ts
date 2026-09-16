@@ -7,7 +7,8 @@ import {
   UNCATEGORIZED_INCOME_CATEGORY_ID,
 } from "@billie/parser";
 import type { Category, CategoryGroup, CategoryRule } from "@billie/parser";
-import type { ManualIncomeEntry, StoredTransaction } from "../types";
+import { BACKUP_SCHEMA_VERSION } from "../types";
+import type { BackupPayload, ManualIncomeEntry, StoredTransaction } from "../types";
 
 export type CategoryType = "expense" | "income";
 
@@ -298,4 +299,62 @@ export async function deleteCategory(id: string): Promise<void> {
 
   await runInStore(CATEGORY_RULES_STORE, "readwrite", (store) => store.delete(id));
   await runInStore(CATEGORIES_STORE, "readwrite", (store) => store.delete(id));
+}
+
+export class BackupValidationError extends Error {}
+
+export async function exportBackupData(): Promise<BackupPayload> {
+  await ensureCategoriesSeeded();
+
+  const [transactions, income, categories, categoryRules] = await Promise.all([
+    listTransactions(),
+    listIncome(),
+    getAll<Category>(CATEGORIES_STORE),
+    getAll<CategoryRule>(CATEGORY_RULES_STORE),
+  ]);
+
+  return {
+    schemaVersion: BACKUP_SCHEMA_VERSION,
+    exportedAt: new Date().toISOString(),
+    transactions,
+    income,
+    categories,
+    categoryRules,
+  };
+}
+
+function validateBackupPayload(payload: unknown): asserts payload is BackupPayload {
+  if (typeof payload !== "object" || payload === null) {
+    throw new BackupValidationError("arquivo de backup inválido");
+  }
+
+  const candidate = payload as Partial<BackupPayload>;
+  if (candidate.schemaVersion !== BACKUP_SCHEMA_VERSION) {
+    throw new BackupValidationError("versão do arquivo de backup não suportada");
+  }
+  if (
+    !Array.isArray(candidate.transactions) ||
+    !Array.isArray(candidate.income) ||
+    !Array.isArray(candidate.categories) ||
+    !Array.isArray(candidate.categoryRules)
+  ) {
+    throw new BackupValidationError("arquivo de backup inválido");
+  }
+}
+
+export async function restoreBackupData(payload: unknown): Promise<void> {
+  validateBackupPayload(payload);
+
+  for (const transaction of payload.transactions) {
+    await runInStore(TRANSACTIONS_STORE, "readwrite", (store) => store.put(transaction));
+  }
+  for (const entry of payload.income) {
+    await runInStore(INCOME_STORE, "readwrite", (store) => store.put(entry));
+  }
+  for (const category of payload.categories) {
+    await runInStore(CATEGORIES_STORE, "readwrite", (store) => store.put(category));
+  }
+  for (const rule of payload.categoryRules) {
+    await runInStore(CATEGORY_RULES_STORE, "readwrite", (store) => store.put(rule));
+  }
 }
