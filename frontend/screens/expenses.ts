@@ -102,6 +102,10 @@ export function initExpensesView(): void {
   const btnImportarBackup = byId<HTMLButtonElement>("btn-importar-backup");
   const backupFileInput = byId<HTMLInputElement>("backup-file-input");
   const backupStatus = byId<HTMLParagraphElement>("backup-status");
+  const modalConfirm = byId<HTMLDivElement>("modal-confirm");
+  const modalConfirmMessage = byId<HTMLParagraphElement>("modal-confirm-message");
+  const modalConfirmConfirm = byId<HTMLButtonElement>("modal-confirm-confirm");
+  const modalConfirmCancel = byId<HTMLButtonElement>("modal-confirm-cancel");
 
   let transactions: StoredTransaction[] = [];
   let income: ManualIncomeEntry[] = [];
@@ -114,6 +118,25 @@ export function initExpensesView(): void {
   let activeCategoryManagerType: CategoryType = "expense";
   let incomeCategoryTouched = false;
   let expenseCategoryTouched = false;
+
+  function confirmarAcao(mensagem: string): Promise<boolean> {
+    modalConfirmMessage.textContent = mensagem;
+
+    return new Promise((resolve) => {
+      const finalizar = (resultado: boolean) => {
+        modalConfirm.hidden = true;
+        modalConfirmConfirm.removeEventListener("click", onConfirm);
+        modalConfirmCancel.removeEventListener("click", onCancel);
+        resolve(resultado);
+      };
+      const onConfirm = () => finalizar(true);
+      const onCancel = () => finalizar(false);
+
+      modalConfirmConfirm.addEventListener("click", onConfirm);
+      modalConfirmCancel.addEventListener("click", onCancel);
+      modalConfirm.hidden = false;
+    });
+  }
 
   async function loadData(): Promise<void> {
     [transactions, income, expenseCategories, incomeCategories, expenseCategoryRules, incomeCategoryRules] =
@@ -266,7 +289,7 @@ export function initExpensesView(): void {
           row.querySelector(".transaction-description")?.textContent ??
           row.querySelector<HTMLInputElement>(".transaction-edit-description")?.value ??
           "";
-        if (!window.confirm(`Excluir a transação "${description}"?`)) return;
+        if (!(await confirmarAcao(`Excluir a transação "${description}"?`))) return;
 
         await removeTransaction(row.dataset.id);
         editingTransactionId = null;
@@ -367,7 +390,7 @@ export function initExpensesView(): void {
           row.querySelector(".manual-entry-description")?.textContent ??
           row.querySelector<HTMLInputElement>(".manual-entry-edit-description")?.value ??
           "";
-        if (!window.confirm(`Excluir a receita "${description}"?`)) return;
+        if (!(await confirmarAcao(`Excluir a receita "${description}"?`))) return;
 
         await removeIncome(row.dataset.id);
         editingIncomeId = null;
@@ -526,7 +549,7 @@ export function initExpensesView(): void {
             ? `Excluir "${label}"? ${count} lançamento(s) serão movidos para "Outros / Não categorizado".`
             : `Excluir "${label}"?`;
 
-        if (!window.confirm(confirmMessage)) return;
+        if (!(await confirmarAcao(confirmMessage))) return;
 
         await deleteCategory(id);
         await loadData();
@@ -637,7 +660,9 @@ export function initExpensesView(): void {
 
   async function onExportarBackupClick(): Promise<void> {
     const payload = await exportBackupData();
-    baixarArquivo(JSON.stringify(payload, null, 2), nomeArquivoBackup(), "application/json");
+    const nomeArquivo = nomeArquivoBackup();
+    baixarArquivo(JSON.stringify(payload, null, 2), nomeArquivo, "application/json");
+    exibirStatusBackup(`Backup exportado: ${nomeArquivo}`, "success");
   }
 
   async function onBackupFileSelected(): Promise<void> {
@@ -655,7 +680,7 @@ export function initExpensesView(): void {
       return;
     }
 
-    const confirmado = window.confirm(
+    const confirmado = await confirmarAcao(
       "Restaurar este backup? Lançamentos e categorias com o mesmo identificador do arquivo serão sobrescritos; o restante dos dados atuais é preservado."
     );
     if (!confirmado) return;
