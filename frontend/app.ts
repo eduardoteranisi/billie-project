@@ -104,4 +104,4 @@ initTransactionsView();
 checarAtualizacoes();
 initExpensesView();
 showView("invoice");
-log("Pronto para iniciar. Selecione o arquivo PDF.");
+log("Pronto para iniciar. Selecione a fatura em PDF ou CSV.");

@@ -47,6 +47,15 @@ export function log(mensagem: string, tipo: "info" | "error" | "success" = "info
   logEl.scrollTop = logEl.scrollHeight;
 }
 
+function arquivoEhPdf(arquivo: File): boolean {
+  return arquivo.type === "application/pdf" || arquivo.name.toLowerCase().endsWith(".pdf");
+}
+
+function escapeHtml(value: string): string {
+  const entities: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+  return value.replace(/[&<>"']/g, (char) => entities[char]);
+}
+
 export function initInvoiceView(): void {
   const els = {
     fileRow: byId<HTMLButtonElement>("file-row"),
@@ -67,10 +76,22 @@ export function initInvoiceView(): void {
     modalSaveExpenses: byId<HTMLDivElement>("modal-save-expenses"),
     modalSaveExpensesConfirm: byId<HTMLButtonElement>("modal-save-expenses-confirm"),
     modalSaveExpensesSkip: byId<HTMLButtonElement>("modal-save-expenses-skip"),
+
+    modalCsvColumns: byId<HTMLDivElement>("modal-csv-columns"),
+    modalCsvColumnsConfirm: byId<HTMLButtonElement>("modal-csv-columns-confirm"),
+    modalCsvColumnsCancel: byId<HTMLButtonElement>("modal-csv-columns-cancel"),
+
+    sectionInvoiceMapping: byId<HTMLDivElement>("section-invoice-mapping"),
+    mapColData: byId<HTMLSelectElement>("invoice-map-col-data"),
+    mapColEstabelecimento: byId<HTMLSelectElement>("invoice-map-col-estabelecimento"),
+    mapColValor: byId<HTMLSelectElement>("invoice-map-col-valor"),
+    mapColParcela: byId<HTMLSelectElement>("invoice-map-col-parcela"),
+    btnConfirmarMapeamento: byId<HTMLButtonElement>("btn-confirmar-mapeamento-fatura"),
   };
 
   let arquivoPath: string | null = null;
   let arquivoBlob: File | null = null;
+  let csvTextoPendente: string | null = null;
 
   function preencherAnos(select: HTMLSelectElement) {
     const anoAtual = new Date().getFullYear();
@@ -173,6 +194,23 @@ export function initInvoiceView(): void {
     });
   }
 
+  function abrirPopupNomesColunas(): Promise<CsvColumnConfig | null> {
+    return new Promise((resolve) => {
+      const finalizar = (config: CsvColumnConfig | null) => {
+        els.modalCsvColumns.hidden = true;
+        els.modalCsvColumnsConfirm.removeEventListener("click", onConfirm);
+        els.modalCsvColumnsCancel.removeEventListener("click", onCancel);
+        resolve(config);
+      };
+      const onConfirm = () => finalizar(obterConfigColunasAtual());
+      const onCancel = () => finalizar(null);
+
+      els.modalCsvColumnsConfirm.addEventListener("click", onConfirm);
+      els.modalCsvColumnsCancel.addEventListener("click", onCancel);
+      els.modalCsvColumns.hidden = false;
+    });
+  }
+
   async function processarFatura() {
     if (!temArquivoSelecionado()) {
       log("Nenhum arquivo selecionado.", "error");
@@ -181,6 +219,7 @@ export function initInvoiceView(): void {
 
     els.btnProcessar.disabled = true;
     els.btnProcessar.textContent = "Processando...";
+    els.sectionInvoiceMapping.hidden = true;
     log("Processando fatura...");
 
     try {
@@ -188,7 +227,12 @@ export function initInvoiceView(): void {
         throw new Error("Seleção de arquivo pelo Tauri ainda não implementada.");
       }
 
-      await processarComoPdf(arquivoBlob);
+      if (arquivoEhPdf(arquivoBlob)) {
+        await processarComoPdf(arquivoBlob);
+      } else {
+        csvTextoPendente = await arquivoBlob.text();
+        await processarComoCsv(csvTextoPendente, undefined);
+      }
     } catch (erro) {
       log(`Erro ao processar: ${erro}`, "error");
       els.btnProcessar.textContent = "Tentar novamente";
@@ -214,28 +258,85 @@ export function initInvoiceView(): void {
     }
 
     const todasTransacoes = [...resultado.transactions, ...(resultado.income ?? [])];
-    const periodo = periodoFatura(todasTransacoes);
-    const nomeArquivo = nomeArquivoCsv(els.banco.value, periodo);
-    baixarCsv(exportToCsv(todasTransacoes, obterConfigColunasAtual()), nomeArquivo);
 
-    log(`Concluído — ${todasTransacoes.length} transações extraídas.`, "success");
-    log(`Arquivo "${nomeArquivo}" salvo na pasta Downloads.`, "success");
+    const salvarNoControle = await confirmarSalvarControleGastos();
+    if (salvarNoControle) {
+      await salvarTransacoesClassificadas(resultado.transactions, resultado.income, "pdf");
+    } else {
+      const config = await abrirPopupNomesColunas();
+      if (config) {
+        const periodo = periodoFatura(todasTransacoes);
+        const nomeArquivo = nomeArquivoCsv(els.banco.value, periodo);
+        baixarCsv(exportToCsv(todasTransacoes, config), nomeArquivo);
+        log(`Arquivo "${nomeArquivo}" salvo na pasta Downloads.`, "success");
+      } else {
+        log("Geração de CSV cancelada.");
+      }
+    }
 
-    await salvarTransacoesNoControle(resultado.transactions, resultado.income, "pdf");
     els.btnProcessar.textContent = "Processar outra fatura";
   }
 
-  async function salvarTransacoesNoControle(
+  async function processarComoCsv(csvText: string, columns: CsvColumnConfig | undefined) {
+    const resultado = await runPipeline({
+      source: "csv",
+      csvText,
+      columns,
+      onLog: (mensagem) => log(mensagem),
+    });
+
+    if (!resultado.success || !resultado.transactions) {
+      if (resultado.needsColumnMapping) {
+        mostrarMapeamentoManual(resultado.needsColumnMapping.headers);
+        return;
+      }
+      throw new Error(resultado.error ?? "erro desconhecido no processamento");
+    }
+
+    els.sectionInvoiceMapping.hidden = true;
+    await salvarTransacoesClassificadas(resultado.transactions, resultado.income, "csv");
+    log("Salvo no Controle de Gastos.", "success");
+    els.btnProcessar.textContent = "Processar outra fatura";
+  }
+
+  function mostrarMapeamentoManual(headers: string[]) {
+    const options = headers
+      .map((h) => `<option value="${escapeHtml(h)}">${escapeHtml(h)}</option>`)
+      .join("");
+    els.mapColData.innerHTML = options;
+    els.mapColEstabelecimento.innerHTML = options;
+    els.mapColValor.innerHTML = options;
+    els.mapColParcela.innerHTML = `<option value="">— nenhuma —</option>${options}`;
+
+    els.sectionInvoiceMapping.hidden = false;
+    log("⚠️ Não foi possível identificar as colunas automaticamente.", "error");
+  }
+
+  async function onConfirmarMapeamentoClick() {
+    if (!csvTextoPendente) return;
+
+    const columns: CsvColumnConfig = {
+      date: els.mapColData.value,
+      merchant: els.mapColEstabelecimento.value,
+      amount: els.mapColValor.value,
+      installment: els.mapColParcela.value || undefined,
+    };
+
+    els.btnConfirmarMapeamento.disabled = true;
+    try {
+      await processarComoCsv(csvTextoPendente, columns);
+    } catch (erro) {
+      log(`Erro ao processar: ${erro}`, "error");
+    } finally {
+      els.btnConfirmarMapeamento.disabled = false;
+    }
+  }
+
+  async function salvarTransacoesClassificadas(
     transactions: Transaction[],
     income: Transaction[] | undefined,
     origin: StoredTransaction["origin"]
   ) {
-    const salvarNoControle = await confirmarSalvarControleGastos();
-    if (!salvarNoControle) {
-      log("Transações não foram salvas no controle de gastos.");
-      return;
-    }
-
     const resultadoTransacoes = await classificarESalvarTransacoes(transactions, origin);
     const resultadoIncome = await salvarIncomeNoControle(income);
     const { added, duplicates } = somarResultadosSalvamento(resultadoTransacoes, resultadoIncome);
@@ -290,6 +391,8 @@ export function initInvoiceView(): void {
     els.colEstabelecimento.addEventListener("blur", salvarConfigColunas);
     els.colValor.addEventListener("blur", salvarConfigColunas);
     els.btnRestaurarColunas.addEventListener("click", restaurarColunasPadrao);
+
+    els.btnConfirmarMapeamento.addEventListener("click", onConfirmarMapeamentoClick);
   }
 
   preencherAnos(els.ano);

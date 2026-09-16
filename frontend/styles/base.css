@@ -229,6 +229,11 @@ html, body {
 }
 .section-header .section-label { margin-bottom: 0; }
 
+.section-label-hint {
+  opacity: 0.65;
+  font-weight: 400;
+}
+
 .popover-anchor {
   position: relative;
   display: inline-block;

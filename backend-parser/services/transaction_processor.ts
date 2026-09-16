@@ -30,7 +30,7 @@ export function finalizeTransactions(rawTransactions: RawTransaction[]): Transac
   return finalizeParsedTransactions(
     rawTransactions,
     (t) => ({
-      date: parseBrazilianDate(t.date),
+      date: parseTransactionDate(t.date),
       dirtyDescription: t.dirtyDescription,
       amount: parseAmount(t.rawAmount),
     }),
@@ -42,7 +42,7 @@ export function finalizeCsvTransactions(rows: CsvRowInput[]): Transaction[] {
   return finalizeParsedTransactions(
     rows,
     (row) => ({
-      date: parseBrazilianDate(row.date),
+      date: parseTransactionDate(row.date),
       dirtyDescription: row.merchant,
       amount: parseAmount(row.rawAmount),
     }),
@@ -60,14 +60,22 @@ function finalizeParsed(parsed: ParsedTransaction[]): Transaction[] {
 }
 
 export function parseAmount(rawAmount: string): number {
-  const cleaned = rawAmount.replace(/R\$\s*/i, "").trim();
+  const cleaned = rawAmount.replace(/R\$\s*/i, "").replace(/\s+/g, "");
   if (cleaned.includes(",")) {
     return parseFloat(cleaned.replace(/\./g, "").replace(",", "."));
   }
   return parseFloat(cleaned);
 }
 
-export function parseBrazilianDate(dateStr: string): Date {
+const isoDatePattern = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+export function parseTransactionDate(dateStr: string): Date {
+  const isoMatch = isoDatePattern.exec(dateStr.trim());
+  if (isoMatch) {
+    const [, year, month, day] = isoMatch;
+    return new Date(Number(year), Number(month) - 1, Number(day));
+  }
+
   const [day, month, yearPart] = dateStr.split("/").map(Number);
 
   let year = yearPart;
