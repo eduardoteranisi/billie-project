@@ -1,4 +1,4 @@
-import type { CategorizedTransaction, CategoryGroup } from "@billie/parser";
+import type { Category, CategorizedTransaction, CategoryGroup, CategoryRule } from "@billie/parser";
 
 export interface ManualIncomeEntry {
   id: string;
@@ -29,4 +29,15 @@ export interface DreSummary {
   result: number;
   expenseCategories: CategorySummary[];
   incomeCategories: CategorySummary[];
+}
+
+export const BACKUP_SCHEMA_VERSION = 1;
+
+export interface BackupPayload {
+  schemaVersion: typeof BACKUP_SCHEMA_VERSION;
+  exportedAt: string;
+  transactions: StoredTransaction[];
+  income: ManualIncomeEntry[];
+  categories: Category[];
+  categoryRules: CategoryRule[];
 }

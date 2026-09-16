@@ -13,6 +13,10 @@ const els = {
   btnCategories: byId<HTMLButtonElement>("btn-categories"),
   modalCategories: byId<HTMLDivElement>("modal-categories"),
   modalCategoriesClose: byId<HTMLButtonElement>("modal-categories-close"),
+  btnBackup: byId<HTMLButtonElement>("btn-backup"),
+  modalBackup: byId<HTMLDivElement>("modal-backup"),
+  modalBackupClose: byId<HTMLButtonElement>("modal-backup-close"),
+  backupStatus: byId<HTMLParagraphElement>("backup-status"),
 
   tabInvoice: byId<HTMLButtonElement>("tab-invoice"),
   tabExpenses: byId<HTMLButtonElement>("tab-expenses"),
@@ -89,6 +93,14 @@ function bindEvents() {
   els.modalCategoriesClose.addEventListener("click", () => { els.modalCategories.hidden = true; });
   els.modalCategories.addEventListener("click", (event) => {
     if (event.target === els.modalCategories) els.modalCategories.hidden = true;
+  });
+  els.btnBackup.addEventListener("click", () => {
+    els.modalBackup.hidden = false;
+    els.backupStatus.hidden = true;
+  });
+  els.modalBackupClose.addEventListener("click", () => { els.modalBackup.hidden = true; });
+  els.modalBackup.addEventListener("click", (event) => {
+    if (event.target === els.modalBackup) els.modalBackup.hidden = true;
   });
   els.tabInvoice.addEventListener("click", () => showView("invoice"));
   els.tabExpenses.addEventListener("click", () => showView("expenses"));

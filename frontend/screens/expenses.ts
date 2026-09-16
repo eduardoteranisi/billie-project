@@ -2,16 +2,19 @@ import { classifyTransactionDescription, UNCATEGORIZED_CATEGORY_ID, UNCATEGORIZE
 import type { Category, CategoryGroup, CategoryRule } from "@billie/parser";
 import { calculateDre, listAvailablePeriods } from "../services/dre_aggregator";
 import {
+  BackupValidationError,
   countIncomeByCategory,
   countTransactionsByCategory,
   createCategory,
   deleteCategory,
+  exportBackupData,
   listCategories,
   listCategoryRules,
   listIncome,
   listTransactions,
   removeIncome,
   removeTransaction,
+  restoreBackupData,
   saveIncome,
   saveTransactions,
   updateCategory,
@@ -44,6 +47,22 @@ function byId<T extends HTMLElement>(id: string): T {
   const el = document.getElementById(id);
   if (!el) throw new Error(`elemento #${id} não encontrado`);
   return el as T;
+}
+
+function baixarArquivo(conteudo: string, nomeArquivo: string, tipo: string): void {
+  const blob = new Blob([conteudo], { type: tipo });
+  const url = URL.createObjectURL(blob);
+
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = nomeArquivo;
+  link.click();
+
+  URL.revokeObjectURL(url);
+}
+
+function nomeArquivoBackup(): string {
+  return `billie-backup-${new Date().toISOString().slice(0, 10)}.json`;
 }
 
 export function initExpensesView(): void {
@@ -79,6 +98,14 @@ export function initExpensesView(): void {
   const categoryLabelInput = byId<HTMLInputElement>("category-label");
   const categoryGroupSelect = byId<HTMLSelectElement>("category-group");
   const categoryKeywordsInput = byId<HTMLInputElement>("category-keywords");
+  const btnExportarBackup = byId<HTMLButtonElement>("btn-exportar-backup");
+  const btnImportarBackup = byId<HTMLButtonElement>("btn-importar-backup");
+  const backupFileInput = byId<HTMLInputElement>("backup-file-input");
+  const backupStatus = byId<HTMLParagraphElement>("backup-status");
+  const modalConfirm = byId<HTMLDivElement>("modal-confirm");
+  const modalConfirmMessage = byId<HTMLParagraphElement>("modal-confirm-message");
+  const modalConfirmConfirm = byId<HTMLButtonElement>("modal-confirm-confirm");
+  const modalConfirmCancel = byId<HTMLButtonElement>("modal-confirm-cancel");
 
   let transactions: StoredTransaction[] = [];
   let income: ManualIncomeEntry[] = [];
@@ -91,6 +118,25 @@ export function initExpensesView(): void {
   let activeCategoryManagerType: CategoryType = "expense";
   let incomeCategoryTouched = false;
   let expenseCategoryTouched = false;
+
+  function confirmarAcao(mensagem: string): Promise<boolean> {
+    modalConfirmMessage.textContent = mensagem;
+
+    return new Promise((resolve) => {
+      const finalizar = (resultado: boolean) => {
+        modalConfirm.hidden = true;
+        modalConfirmConfirm.removeEventListener("click", onConfirm);
+        modalConfirmCancel.removeEventListener("click", onCancel);
+        resolve(resultado);
+      };
+      const onConfirm = () => finalizar(true);
+      const onCancel = () => finalizar(false);
+
+      modalConfirmConfirm.addEventListener("click", onConfirm);
+      modalConfirmCancel.addEventListener("click", onCancel);
+      modalConfirm.hidden = false;
+    });
+  }
 
   async function loadData(): Promise<void> {
     [transactions, income, expenseCategories, incomeCategories, expenseCategoryRules, incomeCategoryRules] =
@@ -243,7 +289,7 @@ export function initExpensesView(): void {
           row.querySelector(".transaction-description")?.textContent ??
           row.querySelector<HTMLInputElement>(".transaction-edit-description")?.value ??
           "";
-        if (!window.confirm(`Excluir a transação "${description}"?`)) return;
+        if (!(await confirmarAcao(`Excluir a transação "${description}"?`))) return;
 
         await removeTransaction(row.dataset.id);
         editingTransactionId = null;
@@ -344,7 +390,7 @@ export function initExpensesView(): void {
           row.querySelector(".manual-entry-description")?.textContent ??
           row.querySelector<HTMLInputElement>(".manual-entry-edit-description")?.value ??
           "";
-        if (!window.confirm(`Excluir a receita "${description}"?`)) return;
+        if (!(await confirmarAcao(`Excluir a receita "${description}"?`))) return;
 
         await removeIncome(row.dataset.id);
         editingIncomeId = null;
@@ -503,7 +549,7 @@ export function initExpensesView(): void {
             ? `Excluir "${label}"? ${count} lançamento(s) serão movidos para "Outros / Não categorizado".`
             : `Excluir "${label}"?`;
 
-        if (!window.confirm(confirmMessage)) return;
+        if (!(await confirmarAcao(confirmMessage))) return;
 
         await deleteCategory(id);
         await loadData();
@@ -605,6 +651,50 @@ export function initExpensesView(): void {
     await loadData();
   }
 
+  function exibirStatusBackup(mensagem: string, tipo: "success" | "error"): void {
+    backupStatus.textContent = mensagem;
+    backupStatus.classList.toggle("success", tipo === "success");
+    backupStatus.classList.toggle("error", tipo === "error");
+    backupStatus.hidden = false;
+  }
+
+  async function onExportarBackupClick(): Promise<void> {
+    const payload = await exportBackupData();
+    const nomeArquivo = nomeArquivoBackup();
+    baixarArquivo(JSON.stringify(payload, null, 2), nomeArquivo, "application/json");
+    exibirStatusBackup(`Backup exportado: ${nomeArquivo}`, "success");
+  }
+
+  async function onBackupFileSelected(): Promise<void> {
+    const arquivo = backupFileInput.files?.[0];
+    backupFileInput.value = "";
+    if (!arquivo) return;
+
+    backupStatus.hidden = true;
+
+    let payload: unknown;
+    try {
+      payload = JSON.parse(await arquivo.text());
+    } catch {
+      exibirStatusBackup("Arquivo inválido: não é um JSON válido.", "error");
+      return;
+    }
+
+    const confirmado = await confirmarAcao(
+      "Restaurar este backup? Lançamentos e categorias com o mesmo identificador do arquivo serão sobrescritos; o restante dos dados atuais é preservado."
+    );
+    if (!confirmado) return;
+
+    try {
+      await restoreBackupData(payload);
+      await loadData();
+      exibirStatusBackup("Backup restaurado com sucesso.", "success");
+    } catch (error) {
+      const mensagem = error instanceof BackupValidationError ? error.message : "Não foi possível restaurar o backup.";
+      exibirStatusBackup(mensagem, "error");
+    }
+  }
+
   periodSelect.addEventListener("change", onPeriodChange);
   transactionsPeriodSelect.addEventListener("change", onPeriodChange);
   incomeAddForm.addEventListener("submit", onIncomeAddSubmit);
@@ -637,6 +727,9 @@ export function initExpensesView(): void {
     button.addEventListener("click", () => setActiveCategoryManagerType(button.dataset.type as CategoryType));
   });
   categoryForm.addEventListener("submit", onCategorySubmit);
+  btnExportarBackup.addEventListener("click", () => void onExportarBackupClick());
+  btnImportarBackup.addEventListener("click", () => backupFileInput.click());
+  backupFileInput.addEventListener("change", () => void onBackupFileSelected());
   document.addEventListener(EXPENSES_UPDATED_EVENT, () => void loadData());
 
   void loadData();
