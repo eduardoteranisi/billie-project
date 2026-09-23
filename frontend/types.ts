@@ -1,4 +1,4 @@
-import type { Category, CategorizedTransaction, CategoryGroup, CategoryRule } from "@billie/parser";
+import type { Bank, Category, CategorizedTransaction, CategoryGroup, CategoryRule } from "@billie/parser";
 
 export interface ManualIncomeEntry {
   id: string;
@@ -6,6 +6,7 @@ export interface ManualIncomeEntry {
   description: string;
   amount: number;
   categoryId: string;
+  bank?: Bank;
 }
 
 export interface StoredTransaction extends CategorizedTransaction {

@@ -1,6 +1,12 @@
 /* ---------- importar extrato (aba transações) ---------- */
 
-.import-bar { margin-bottom: 12px; }
+.import-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
 
 .import-trigger-wrap {
   position: relative;
@@ -44,6 +50,7 @@
   margin-bottom: 12px;
 }
 
+#import-step-confirm .field,
 #import-step-pdf-details .field {
   margin-bottom: 12px;
 }
@@ -79,7 +86,43 @@
 
 /* ---------- controle de gastos: transações do período (despesas do período) ---------- */
 
+.field-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.field-inline label {
+  margin-bottom: 0;
+  white-space: nowrap;
+}
+.field-inline select {
+  width: auto;
+  padding: 4px 22px 4px 8px;
+  font-size: 12px;
+}
+
 .transaction-list { display: flex; flex-direction: column; gap: 8px; }
+
+.transaction-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
+.transaction-group:last-child { margin-bottom: 0; }
+
+.transaction-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  margin-bottom: 4px;
+  background: var(--surface-raised);
+  border-radius: var(--radius);
+  border-bottom: 2px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.transaction-group-subtotal { color: var(--text-secondary); font-weight: 600; }
 
 .transaction-row {
   display: flex;

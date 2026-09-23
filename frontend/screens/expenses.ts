@@ -1,6 +1,8 @@
 import { classifyTransactionDescription, UNCATEGORIZED_CATEGORY_ID, UNCATEGORIZED_INCOME_CATEGORY_ID } from "@billie/parser";
 import type { Category, CategoryGroup, CategoryRule } from "@billie/parser";
 import { calculateDre, listAvailablePeriods } from "../services/dre_aggregator";
+import { groupTransactionsByBank, groupTransactionsByDay } from "../services/transaction_grouping";
+import type { TransactionGroup } from "../services/transaction_grouping";
 import {
   BackupValidationError,
   countIncomeByCategory,
@@ -74,6 +76,7 @@ export function initExpensesView(): void {
   const categoryList = byId<HTMLDivElement>("category-list");
   const incomeCategoryList = byId<HTMLDivElement>("income-category-list");
   const transactionsPeriodSelect = byId<HTMLSelectElement>("transactions-period");
+  const transactionsGroupModeSelect = byId<HTMLSelectElement>("transactions-group-mode");
   const transactionList = byId<HTMLDivElement>("transaction-list");
   const incomeList = byId<HTMLDivElement>("income-entry-list");
   const btnAddIncome = byId<HTMLButtonElement>("btn-add-income");
@@ -118,6 +121,7 @@ export function initExpensesView(): void {
   let activeCategoryManagerType: CategoryType = "expense";
   let incomeCategoryTouched = false;
   let expenseCategoryTouched = false;
+  let transactionGroupMode: "none" | "bank" | "day" = "none";
 
   function confirmarAcao(mensagem: string): Promise<boolean> {
     modalConfirmMessage.textContent = mensagem;
@@ -256,6 +260,38 @@ export function initExpensesView(): void {
       .join("");
   }
 
+  function transactionRowsHtml(rows: StoredTransaction[]): string {
+    return rows
+      .map((row) => (row.id === editingTransactionId ? transactionEditRowHtml(row) : transactionViewRowHtml(row)))
+      .join("");
+  }
+
+  function groupHeaderLabel(group: TransactionGroup<unknown>): string {
+    return transactionGroupMode === "day"
+      ? new Date(`${group.key}T00:00:00`).toLocaleDateString("pt-BR", {
+          weekday: "long",
+          day: "2-digit",
+          month: "2-digit",
+        })
+      : group.label;
+  }
+
+  function groupedListHtml<T>(groups: TransactionGroup<T>[], rowsHtml: (rows: T[]) => string): string {
+    return groups
+      .map(
+        (group) => `
+          <div class="transaction-group">
+            <div class="transaction-group-header">
+              <span>${escapeHtml(groupHeaderLabel(group))}</span>
+              <span class="transaction-group-subtotal">${formatCurrency(group.total)}</span>
+            </div>
+            ${rowsHtml(group.transactions)}
+          </div>
+        `
+      )
+      .join("");
+  }
+
   function renderTransactionList(period: string): void {
     const rows = transactions
       .filter((transaction) => transaction.date.slice(0, 7) === period)
@@ -266,10 +302,26 @@ export function initExpensesView(): void {
       return;
     }
 
-    transactionList.innerHTML = rows
-      .map((row) => (row.id === editingTransactionId ? transactionEditRowHtml(row) : transactionViewRowHtml(row)))
-      .join("");
+    if (transactionGroupMode === "bank") {
+      transactionList.innerHTML = groupedListHtml(groupTransactionsByBank(rows), transactionRowsHtml);
+    } else if (transactionGroupMode === "day") {
+      transactionList.innerHTML = groupedListHtml(groupTransactionsByDay(rows), transactionRowsHtml);
+    } else {
+      transactionList.innerHTML = transactionRowsHtml(rows);
+    }
 
+    wireTransactionListEvents();
+  }
+
+  function onTransactionGroupModeChange(): void {
+    transactionGroupMode = transactionsGroupModeSelect.value as "none" | "bank" | "day";
+    editingTransactionId = null;
+    editingIncomeId = null;
+    renderTransactionList(periodSelect.value);
+    renderIncomeList(periodSelect.value);
+  }
+
+  function wireTransactionListEvents(): void {
     transactionList.querySelectorAll<HTMLSelectElement>(".transaction-category-select").forEach((select) => {
       select.addEventListener("change", async () => {
         const row = select.closest<HTMLElement>(".transaction-row");
@@ -357,6 +409,10 @@ export function initExpensesView(): void {
     `;
   }
 
+  function incomeRowsHtml(rows: ManualIncomeEntry[]): string {
+    return rows.map((row) => (row.id === editingIncomeId ? incomeEditRowHtml(row) : incomeViewRowHtml(row))).join("");
+  }
+
   function renderIncomeList(period: string): void {
     const rows = income
       .filter((entry) => entry.date.slice(0, 7) === period)
@@ -367,10 +423,18 @@ export function initExpensesView(): void {
       return;
     }
 
-    incomeList.innerHTML = rows
-      .map((row) => (row.id === editingIncomeId ? incomeEditRowHtml(row) : incomeViewRowHtml(row)))
-      .join("");
+    if (transactionGroupMode === "bank") {
+      incomeList.innerHTML = groupedListHtml(groupTransactionsByBank(rows), incomeRowsHtml);
+    } else if (transactionGroupMode === "day") {
+      incomeList.innerHTML = groupedListHtml(groupTransactionsByDay(rows), incomeRowsHtml);
+    } else {
+      incomeList.innerHTML = incomeRowsHtml(rows);
+    }
 
+    wireIncomeListEvents();
+  }
+
+  function wireIncomeListEvents(): void {
     incomeList.querySelectorAll<HTMLSelectElement>(".income-category-select").forEach((select) => {
       select.addEventListener("change", async () => {
         const row = select.closest<HTMLElement>(".manual-entry-row");
@@ -697,6 +761,7 @@ export function initExpensesView(): void {
 
   periodSelect.addEventListener("change", onPeriodChange);
   transactionsPeriodSelect.addEventListener("change", onPeriodChange);
+  transactionsGroupModeSelect.addEventListener("change", onTransactionGroupModeChange);
   incomeAddForm.addEventListener("submit", onIncomeAddSubmit);
   expenseAddForm.addEventListener("submit", onExpenseAddSubmit);
   wirePopover(btnAddIncome, incomeAddPopover, () => {

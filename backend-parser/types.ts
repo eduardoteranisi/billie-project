@@ -3,6 +3,7 @@ export interface Transaction {
   date: string;
   merchant: string;
   amount: number;
+  bank?: Bank;
 }
 
 export interface CsvColumnConfig {
@@ -34,6 +35,7 @@ export interface CsvParseInput {
   source: "csv";
   csvText: string;
   columns?: CsvColumnConfig; // mapeamento inverso ao uso em csv_exporter.ts (que nomeia colunas de saída)
+  bank?: Bank; // escolhido manualmente pelo usuário na UI; não influencia o parsing, só rotula as transações
 }
 
 export type ParseInvoiceInput = PdfParseInput | CsvParseInput;

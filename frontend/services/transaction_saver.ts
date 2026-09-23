@@ -32,6 +32,7 @@ export async function salvarIncomeNoControle(
     description: entry.merchant,
     amount: entry.amount,
     categoryId: classifyTransactionDescription(entry.merchant, incomeRules, UNCATEGORIZED_INCOME_CATEGORY_ID),
+    bank: entry.bank,
   }));
   return saveIncomeEntries(incomeEntries);
 }

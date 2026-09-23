@@ -28,6 +28,7 @@ export function initTransactionsView(): void {
     btnSelecionarArquivo: byId<HTMLButtonElement>("btn-selecionar-arquivo"),
     importFileInput: byId<HTMLInputElement>("import-file-input"),
     importConfirmText: byId<HTMLParagraphElement>("import-confirm-text"),
+    importBancoCsv: byId<HTMLSelectElement>("import-banco-csv"),
     btnConfirmarImportacao: byId<HTMLButtonElement>("btn-confirmar-importacao"),
     btnCancelarImportacao: byId<HTMLButtonElement>("btn-cancelar-importacao"),
     importStepPdfDetails: byId<HTMLDivElement>("import-step-pdf-details"),
@@ -146,13 +147,14 @@ export function initTransactionsView(): void {
     if (!arquivoParaImportar) return;
     const arquivo = arquivoParaImportar;
     arquivoParaImportar = null;
+    const bank = els.importBancoCsv.value as Bank;
 
     mostrarEtapaImportacao("status");
     setImportStatus("Importando extrato...");
 
     try {
       csvImportadoTexto = await arquivo.text();
-      await processarImportacaoCsv(csvImportadoTexto, undefined, setImportStatus);
+      await processarImportacaoCsv(csvImportadoTexto, undefined, bank, setImportStatus);
     } catch (erro) {
       setImportStatus(`Erro ao importar extrato: ${erro}`, "error");
     }
@@ -187,12 +189,14 @@ export function initTransactionsView(): void {
   async function processarImportacaoCsv(
     csvText: string,
     columns: CsvColumnConfig | undefined,
+    bank: Bank,
     reportar: StatusReporter
   ) {
     const resultado = await runPipeline({
       source: "csv",
       csvText,
       columns,
+      bank,
       onLog: () => {},
     });
 
@@ -242,11 +246,12 @@ export function initTransactionsView(): void {
       amount: els.mapColValor.value,
       installment: els.mapColParcela.value || undefined,
     };
+    const bank = els.importBancoCsv.value as Bank;
 
     els.btnConfirmarMapeamento.disabled = true;
     setMappingStatus("Importando extrato...");
     try {
-      await processarImportacaoCsv(csvImportadoTexto, columns, setMappingStatus);
+      await processarImportacaoCsv(csvImportadoTexto, columns, bank, setMappingStatus);
     } catch (erro) {
       setMappingStatus(`Erro ao importar extrato: ${erro}`, "error");
     } finally {
