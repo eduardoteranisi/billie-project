@@ -9,12 +9,14 @@ export interface ManualIncomeEntry {
   bank?: Bank;
   categoryOverridden?: boolean;
   detailsOverridden?: boolean;
+  bankOverridden?: boolean;
 }
 
 export interface StoredTransaction extends CategorizedTransaction {
   origin: "pdf" | "manual" | "csv";
   categoryOverridden?: boolean;
   detailsOverridden?: boolean;
+  bankOverridden?: boolean;
 }
 
 export interface CategorySummary {

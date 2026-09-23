@@ -6,7 +6,7 @@ import {
   UNCATEGORIZED_CATEGORY_ID,
   UNCATEGORIZED_INCOME_CATEGORY_ID,
 } from "@billie/parser";
-import type { Category, CategoryGroup, CategoryRule } from "@billie/parser";
+import type { Bank, Category, CategoryGroup, CategoryRule } from "@billie/parser";
 import { BACKUP_SCHEMA_VERSION } from "../types";
 import type { BackupPayload, ManualIncomeEntry, StoredTransaction } from "../types";
 
@@ -120,6 +120,7 @@ function mergeReimportedTransaction(existing: StoredTransaction, incoming: Store
       amount: existing.amount,
       detailsOverridden: true,
     }),
+    ...(existing.bankOverridden && { bank: existing.bank, bankOverridden: true }),
   };
 }
 
@@ -147,6 +148,14 @@ export async function updateTransactionFields(
   if (!transaction) throw new Error(`transação #${id} não encontrada`);
 
   const updated: StoredTransaction = { ...transaction, ...changes, detailsOverridden: true };
+  await runInStore(TRANSACTIONS_STORE, "readwrite", (store) => store.put(updated));
+}
+
+export async function updateTransactionBank(id: string, bank: Bank | undefined): Promise<void> {
+  const transaction = await runInStore<StoredTransaction>(TRANSACTIONS_STORE, "readonly", (store) => store.get(id));
+  if (!transaction) throw new Error(`transação #${id} não encontrada`);
+
+  const updated: StoredTransaction = { ...transaction, bank, bankOverridden: true };
   await runInStore(TRANSACTIONS_STORE, "readwrite", (store) => store.put(updated));
 }
 
@@ -189,6 +198,7 @@ function mergeReimportedIncomeEntry(existing: ManualIncomeEntry, incoming: Manua
       amount: existing.amount,
       detailsOverridden: true,
     }),
+    ...(existing.bankOverridden && { bank: existing.bank, bankOverridden: true }),
   };
 }
 
@@ -221,6 +231,14 @@ export async function updateIncomeFields(
   if (!entry) throw new Error(`receita #${id} não encontrada`);
 
   const updated: ManualIncomeEntry = { ...entry, ...changes, detailsOverridden: true };
+  await runInStore(INCOME_STORE, "readwrite", (store) => store.put(updated));
+}
+
+export async function updateIncomeBank(id: string, bank: Bank | undefined): Promise<void> {
+  const entry = await runInStore<ManualIncomeEntry>(INCOME_STORE, "readonly", (store) => store.get(id));
+  if (!entry) throw new Error(`receita #${id} não encontrada`);
+
+  const updated: ManualIncomeEntry = { ...entry, bank, bankOverridden: true };
   await runInStore(INCOME_STORE, "readwrite", (store) => store.put(updated));
 }
 

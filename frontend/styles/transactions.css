@@ -83,6 +83,7 @@
 .manual-entry-row-editing .manual-entry-edit-date { width: 140px; }
 .manual-entry-row-editing .manual-entry-edit-description { flex: 1; min-width: 120px; }
 .manual-entry-row-editing .manual-entry-edit-amount { width: 100px; }
+.manual-entry-row-editing .manual-entry-edit-bank { font-size: 12px; }
 
 /* ---------- controle de gastos: transações do período (despesas do período) ---------- */
 
@@ -153,6 +154,7 @@
 .transaction-row-editing .transaction-edit-date { width: 140px; }
 .transaction-row-editing .transaction-edit-description { flex: 1; min-width: 120px; }
 .transaction-row-editing .transaction-edit-amount { width: 100px; }
+.transaction-row-editing .transaction-edit-bank { font-size: 12px; }
 
 @media (max-width: 640px) {
   .transaction-row { flex-wrap: wrap; }

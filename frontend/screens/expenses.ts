@@ -1,7 +1,7 @@
 import { classifyTransactionDescription, UNCATEGORIZED_CATEGORY_ID, UNCATEGORIZED_INCOME_CATEGORY_ID } from "@billie/parser";
-import type { Category, CategoryGroup, CategoryRule } from "@billie/parser";
+import type { Bank, Category, CategoryGroup, CategoryRule } from "@billie/parser";
 import { calculateDre, listAvailablePeriods } from "../services/dre_aggregator";
-import { groupTransactionsByBank, groupTransactionsByDay } from "../services/transaction_grouping";
+import { groupTransactionsByBank, groupTransactionsByDay, UNKNOWN_BANK_LABEL } from "../services/transaction_grouping";
 import type { TransactionGroup } from "../services/transaction_grouping";
 import {
   BackupValidationError,
@@ -20,8 +20,10 @@ import {
   saveIncome,
   saveTransactions,
   updateCategory,
+  updateIncomeBank,
   updateIncomeCategory,
   updateIncomeFields,
+  updateTransactionBank,
   updateTransactionCategory,
   updateTransactionFields,
 } from "../services/expense_store";
@@ -29,6 +31,8 @@ import type { CategoryType } from "../services/expense_store";
 import type { CategorySummary, DreSummary, ManualIncomeEntry, StoredTransaction } from "../types";
 
 export const EXPENSES_UPDATED_EVENT = "billie:expenses-updated";
+
+const BANK_OPTIONS: Bank[] = ["Nubank", "XP / Rico", "Santander"];
 
 function formatCurrency(value: number): string {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -321,6 +325,14 @@ export function initExpensesView(): void {
     renderIncomeList(periodSelect.value);
   }
 
+  function bankOptionsHtml(selectedBank: Bank | undefined): string {
+    const unknownOption = `<option value="" ${selectedBank ? "" : "selected"}>${escapeHtml(UNKNOWN_BANK_LABEL)}</option>`;
+    const bankOptions = BANK_OPTIONS.map(
+      (bank) => `<option value="${escapeHtml(bank)}" ${bank === selectedBank ? "selected" : ""}>${escapeHtml(bank)}</option>`
+    );
+    return [unknownOption, ...bankOptions].join("");
+  }
+
   function wireTransactionListEvents(): void {
     transactionList.querySelectorAll<HTMLSelectElement>(".transaction-category-select").forEach((select) => {
       select.addEventListener("change", async () => {
@@ -374,9 +386,16 @@ export function initExpensesView(): void {
         const date = row.querySelector<HTMLInputElement>(".transaction-edit-date")?.value ?? "";
         const merchant = row.querySelector<HTMLInputElement>(".transaction-edit-description")?.value.trim() ?? "";
         const amount = parseFloat(row.querySelector<HTMLInputElement>(".transaction-edit-amount")?.value ?? "");
+        const bank = (row.querySelector<HTMLSelectElement>(".transaction-edit-bank")?.value || undefined) as Bank | undefined;
         if (!date || !merchant || Number.isNaN(amount) || amount <= 0) return;
 
-        await updateTransactionFields(row.dataset.id, { date, merchant, amount });
+        const original = transactions.find((transaction) => transaction.id === row.dataset.id);
+        if (!original || date !== original.date || merchant !== original.merchant || amount !== original.amount) {
+          await updateTransactionFields(row.dataset.id, { date, merchant, amount });
+        }
+        if (bank !== original?.bank) {
+          await updateTransactionBank(row.dataset.id, bank);
+        }
         editingTransactionId = null;
         await loadData();
       });
@@ -401,6 +420,7 @@ export function initExpensesView(): void {
         <input type="date" class="transaction-edit-date" value="${row.date}" />
         <input type="text" class="transaction-edit-description" value="${escapeHtml(row.merchant)}" />
         <input type="number" step="0.01" min="0.01" class="transaction-edit-amount" value="${row.amount}" />
+        <select class="transaction-edit-bank" title="Banco">${bankOptionsHtml(row.bank)}</select>
         <select class="transaction-category-select">${categoryOptionsHtml(expenseCategories, row.categoryId)}</select>
         <button type="button" class="link-button transaction-save">Salvar</button>
         <button type="button" class="link-button transaction-cancel">Cancelar</button>
@@ -487,9 +507,16 @@ export function initExpensesView(): void {
         const date = row.querySelector<HTMLInputElement>(".manual-entry-edit-date")?.value ?? "";
         const description = row.querySelector<HTMLInputElement>(".manual-entry-edit-description")?.value.trim() ?? "";
         const amount = parseFloat(row.querySelector<HTMLInputElement>(".manual-entry-edit-amount")?.value ?? "");
+        const bank = (row.querySelector<HTMLSelectElement>(".manual-entry-edit-bank")?.value || undefined) as Bank | undefined;
         if (!date || !description || Number.isNaN(amount) || amount <= 0) return;
 
-        await updateIncomeFields(row.dataset.id, { date, description, amount });
+        const original = income.find((entry) => entry.id === row.dataset.id);
+        if (!original || date !== original.date || description !== original.description || amount !== original.amount) {
+          await updateIncomeFields(row.dataset.id, { date, description, amount });
+        }
+        if (bank !== original?.bank) {
+          await updateIncomeBank(row.dataset.id, bank);
+        }
         editingIncomeId = null;
         await loadData();
       });
@@ -514,6 +541,7 @@ export function initExpensesView(): void {
         <input type="date" class="manual-entry-edit-date" value="${row.date}" />
         <input type="text" class="manual-entry-edit-description" value="${escapeHtml(row.description)}" />
         <input type="number" step="0.01" min="0.01" class="manual-entry-edit-amount" value="${row.amount}" />
+        <select class="manual-entry-edit-bank" title="Banco">${bankOptionsHtml(row.bank)}</select>
         <select class="income-category-select">${categoryOptionsHtml(incomeCategories, row.categoryId)}</select>
         <button type="button" class="link-button income-save">Salvar</button>
         <button type="button" class="link-button income-cancel">Cancelar</button>
