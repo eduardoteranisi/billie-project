@@ -98,15 +98,29 @@ export async function saveTransactions(
 
     if (existing) {
       duplicates++;
-      if (existing.categoryOverridden || existing.detailsOverridden) continue;
     } else {
       added++;
     }
 
-    await runInStore(TRANSACTIONS_STORE, "readwrite", (store) => store.put(transaction));
+    const merged = existing ? mergeReimportedTransaction(existing, transaction) : transaction;
+    await runInStore(TRANSACTIONS_STORE, "readwrite", (store) => store.put(merged));
   }
 
   return { added, duplicates };
+}
+
+function mergeReimportedTransaction(existing: StoredTransaction, incoming: StoredTransaction): StoredTransaction {
+  const keepCategory = existing.categoryOverridden || existing.detailsOverridden;
+  return {
+    ...incoming,
+    ...(keepCategory && { categoryId: existing.categoryId, categoryOverridden: existing.categoryOverridden }),
+    ...(existing.detailsOverridden && {
+      date: existing.date,
+      merchant: existing.merchant,
+      amount: existing.amount,
+      detailsOverridden: true,
+    }),
+  };
 }
 
 export function listTransactions(): Promise<StoredTransaction[]> {
@@ -143,21 +157,39 @@ export async function saveIncome(entry: ManualIncomeEntry): Promise<void> {
 export async function saveIncomeEntries(
   entries: ManualIncomeEntry[]
 ): Promise<{ added: number; duplicates: number }> {
-  const existingIds = new Set((await listIncome()).map((entry) => entry.id));
+  const existingById = new Map((await listIncome()).map((entry) => [entry.id, entry]));
 
   let added = 0;
   let duplicates = 0;
 
   for (const entry of entries) {
-    if (existingIds.has(entry.id)) {
+    const existing = existingById.get(entry.id);
+
+    if (existing) {
       duplicates++;
     } else {
       added++;
     }
-    await runInStore(INCOME_STORE, "readwrite", (store) => store.put(entry));
+
+    const merged = existing ? mergeReimportedIncomeEntry(existing, entry) : entry;
+    await runInStore(INCOME_STORE, "readwrite", (store) => store.put(merged));
   }
 
   return { added, duplicates };
+}
+
+function mergeReimportedIncomeEntry(existing: ManualIncomeEntry, incoming: ManualIncomeEntry): ManualIncomeEntry {
+  const keepCategory = existing.categoryOverridden || existing.detailsOverridden;
+  return {
+    ...incoming,
+    ...(keepCategory && { categoryId: existing.categoryId, categoryOverridden: existing.categoryOverridden }),
+    ...(existing.detailsOverridden && {
+      date: existing.date,
+      description: existing.description,
+      amount: existing.amount,
+      detailsOverridden: true,
+    }),
+  };
 }
 
 export function listIncome(): Promise<ManualIncomeEntry[]> {
@@ -172,7 +204,7 @@ export async function updateIncomeCategory(id: string, categoryId: string): Prom
   const entry = await runInStore<ManualIncomeEntry>(INCOME_STORE, "readonly", (store) => store.get(id));
   if (!entry) throw new Error(`receita #${id} não encontrada`);
 
-  const updated: ManualIncomeEntry = { ...entry, categoryId };
+  const updated: ManualIncomeEntry = { ...entry, categoryId, categoryOverridden: true };
   await runInStore(INCOME_STORE, "readwrite", (store) => store.put(updated));
 }
 
@@ -188,7 +220,7 @@ export async function updateIncomeFields(
   const entry = await runInStore<ManualIncomeEntry>(INCOME_STORE, "readonly", (store) => store.get(id));
   if (!entry) throw new Error(`receita #${id} não encontrada`);
 
-  const updated: ManualIncomeEntry = { ...entry, ...changes };
+  const updated: ManualIncomeEntry = { ...entry, ...changes, detailsOverridden: true };
   await runInStore(INCOME_STORE, "readwrite", (store) => store.put(updated));
 }
 

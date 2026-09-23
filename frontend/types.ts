@@ -7,6 +7,8 @@ export interface ManualIncomeEntry {
   amount: number;
   categoryId: string;
   bank?: Bank;
+  categoryOverridden?: boolean;
+  detailsOverridden?: boolean;
 }
 
 export interface StoredTransaction extends CategorizedTransaction {
