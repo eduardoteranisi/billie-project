@@ -34,6 +34,13 @@ export const EXPENSES_UPDATED_EVENT = "billie:expenses-updated";
 
 const BANK_OPTIONS: Bank[] = ["Nubank", "XP / Rico", "Santander"];
 
+const BANK_BADGE_LABELS: Record<Bank, string> = {
+  Nubank: "NU",
+  "XP / Rico": "XP",
+  Santander: "SAN",
+};
+const UNKNOWN_BANK_BADGE_LABEL = "?";
+
 function formatCurrency(value: number): string {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
@@ -193,6 +200,12 @@ export function initExpensesView(): void {
 
   function renderPeriod(): void {
     const period = periodSelect.value;
+    renderDreSummary(period);
+    renderTransactionList(period);
+    renderIncomeList(period);
+  }
+
+  function renderDreSummary(period: string): void {
     const summary: DreSummary = period
       ? calculateDre(period, transactions, income, [...expenseCategories, ...incomeCategories])
       : {
@@ -223,8 +236,6 @@ export function initExpensesView(): void {
       "Nenhuma receita categorizada neste período.",
       summary.totalIncome
     );
-    renderTransactionList(period);
-    renderIncomeList(period);
   }
 
   function renderCategoryBreakdown(
@@ -333,6 +344,12 @@ export function initExpensesView(): void {
     return [unknownOption, ...bankOptions].join("");
   }
 
+  function bankBadgeHtml(bank: Bank | undefined): string {
+    const label = bank ? BANK_BADGE_LABELS[bank] : UNKNOWN_BANK_BADGE_LABEL;
+    const title = bank ?? UNKNOWN_BANK_LABEL;
+    return `<span class="bank-badge${bank ? "" : " bank-badge-unknown"}" title="${escapeHtml(title)}">${escapeHtml(label)}</span>`;
+  }
+
   function wireTransactionListEvents(): void {
     transactionList.querySelectorAll<HTMLSelectElement>(".transaction-category-select").forEach((select) => {
       select.addEventListener("change", async () => {
@@ -340,7 +357,30 @@ export function initExpensesView(): void {
         if (!row?.dataset.id) return;
 
         await updateTransactionCategory(row.dataset.id, select.value);
+
+        const transaction = transactions.find((candidate) => candidate.id === row.dataset.id);
+        if (transaction && row.dataset.id === editingTransactionId) {
+          // Sem recarregar a lista: preserva o que já foi digitado nos outros campos da edição.
+          transaction.categoryId = select.value;
+          transaction.categoryOverridden = true;
+          renderDreSummary(periodSelect.value);
+          return;
+        }
         await loadData();
+      });
+    });
+
+    transactionList.querySelectorAll<HTMLSelectElement>(".transaction-edit-bank").forEach((select) => {
+      select.addEventListener("change", async () => {
+        const row = select.closest<HTMLElement>(".transaction-row");
+        const transaction = transactions.find((candidate) => candidate.id === row?.dataset.id);
+        if (!transaction) return;
+
+        // Sem recarregar a lista: preserva o que já foi digitado nos outros campos da edição.
+        const bank = (select.value || undefined) as Bank | undefined;
+        await updateTransactionBank(transaction.id, bank);
+        transaction.bank = bank;
+        transaction.bankOverridden = true;
       });
     });
 
@@ -386,15 +426,11 @@ export function initExpensesView(): void {
         const date = row.querySelector<HTMLInputElement>(".transaction-edit-date")?.value ?? "";
         const merchant = row.querySelector<HTMLInputElement>(".transaction-edit-description")?.value.trim() ?? "";
         const amount = parseFloat(row.querySelector<HTMLInputElement>(".transaction-edit-amount")?.value ?? "");
-        const bank = (row.querySelector<HTMLSelectElement>(".transaction-edit-bank")?.value || undefined) as Bank | undefined;
         if (!date || !merchant || Number.isNaN(amount) || amount <= 0) return;
 
         const original = transactions.find((transaction) => transaction.id === row.dataset.id);
         if (!original || date !== original.date || merchant !== original.merchant || amount !== original.amount) {
           await updateTransactionFields(row.dataset.id, { date, merchant, amount });
-        }
-        if (bank !== original?.bank) {
-          await updateTransactionBank(row.dataset.id, bank);
         }
         editingTransactionId = null;
         await loadData();
@@ -406,6 +442,7 @@ export function initExpensesView(): void {
     return `
       <div class="transaction-row" data-id="${row.id}">
         <span class="transaction-date">${row.date}</span>
+        ${bankBadgeHtml(row.bank)}
         <span class="transaction-description" title="${escapeHtml(row.merchant)}">${escapeHtml(row.merchant)}</span>
         <span class="transaction-amount">${formatCurrency(row.amount)}</span>
         <select class="transaction-category-select">${categoryOptionsHtml(expenseCategories, row.categoryId)}</select>
@@ -417,14 +454,18 @@ export function initExpensesView(): void {
   function transactionEditRowHtml(row: StoredTransaction): string {
     return `
       <div class="transaction-row transaction-row-editing" data-id="${row.id}">
-        <input type="date" class="transaction-edit-date" value="${row.date}" />
-        <input type="text" class="transaction-edit-description" value="${escapeHtml(row.merchant)}" />
-        <input type="number" step="0.01" min="0.01" class="transaction-edit-amount" value="${row.amount}" />
-        <select class="transaction-edit-bank" title="Banco">${bankOptionsHtml(row.bank)}</select>
-        <select class="transaction-category-select">${categoryOptionsHtml(expenseCategories, row.categoryId)}</select>
-        <button type="button" class="link-button transaction-save">Salvar</button>
-        <button type="button" class="link-button transaction-cancel">Cancelar</button>
-        <button type="button" class="link-button transaction-remove">Excluir</button>
+        <div class="row-edit-line">
+          <input type="date" class="transaction-edit-date" value="${row.date}" />
+          <select class="transaction-edit-bank" title="Banco de origem">${bankOptionsHtml(row.bank)}</select>
+          <input type="text" class="transaction-edit-description" value="${escapeHtml(row.merchant)}" />
+          <input type="number" step="0.01" min="0.01" class="transaction-edit-amount" value="${row.amount}" />
+          <select class="transaction-category-select" title="Categoria">${categoryOptionsHtml(expenseCategories, row.categoryId)}</select>
+        </div>
+        <div class="row-edit-actions">
+          <button type="button" class="link-button transaction-save">Salvar</button>
+          <button type="button" class="link-button transaction-cancel">Cancelar</button>
+          <button type="button" class="link-button transaction-remove">Excluir</button>
+        </div>
       </div>
     `;
   }
@@ -461,7 +502,30 @@ export function initExpensesView(): void {
         if (!row?.dataset.id) return;
 
         await updateIncomeCategory(row.dataset.id, select.value);
+
+        const entry = income.find((candidate) => candidate.id === row.dataset.id);
+        if (entry && row.dataset.id === editingIncomeId) {
+          // Sem recarregar a lista: preserva o que já foi digitado nos outros campos da edição.
+          entry.categoryId = select.value;
+          entry.categoryOverridden = true;
+          renderDreSummary(periodSelect.value);
+          return;
+        }
         await loadData();
+      });
+    });
+
+    incomeList.querySelectorAll<HTMLSelectElement>(".manual-entry-edit-bank").forEach((select) => {
+      select.addEventListener("change", async () => {
+        const row = select.closest<HTMLElement>(".manual-entry-row");
+        const entry = income.find((candidate) => candidate.id === row?.dataset.id);
+        if (!entry) return;
+
+        // Sem recarregar a lista: preserva o que já foi digitado nos outros campos da edição.
+        const bank = (select.value || undefined) as Bank | undefined;
+        await updateIncomeBank(entry.id, bank);
+        entry.bank = bank;
+        entry.bankOverridden = true;
       });
     });
 
@@ -507,15 +571,11 @@ export function initExpensesView(): void {
         const date = row.querySelector<HTMLInputElement>(".manual-entry-edit-date")?.value ?? "";
         const description = row.querySelector<HTMLInputElement>(".manual-entry-edit-description")?.value.trim() ?? "";
         const amount = parseFloat(row.querySelector<HTMLInputElement>(".manual-entry-edit-amount")?.value ?? "");
-        const bank = (row.querySelector<HTMLSelectElement>(".manual-entry-edit-bank")?.value || undefined) as Bank | undefined;
         if (!date || !description || Number.isNaN(amount) || amount <= 0) return;
 
         const original = income.find((entry) => entry.id === row.dataset.id);
         if (!original || date !== original.date || description !== original.description || amount !== original.amount) {
           await updateIncomeFields(row.dataset.id, { date, description, amount });
-        }
-        if (bank !== original?.bank) {
-          await updateIncomeBank(row.dataset.id, bank);
         }
         editingIncomeId = null;
         await loadData();
@@ -527,6 +587,7 @@ export function initExpensesView(): void {
     return `
       <div class="manual-entry-row" data-id="${row.id}">
         <span class="manual-entry-date">${row.date}</span>
+        ${bankBadgeHtml(row.bank)}
         <span class="manual-entry-description" title="${escapeHtml(row.description)}">${escapeHtml(row.description)}</span>
         <span class="manual-entry-amount income">${formatCurrency(row.amount)}</span>
         <select class="income-category-select">${categoryOptionsHtml(incomeCategories, row.categoryId)}</select>
@@ -538,14 +599,18 @@ export function initExpensesView(): void {
   function incomeEditRowHtml(row: ManualIncomeEntry): string {
     return `
       <div class="manual-entry-row manual-entry-row-editing" data-id="${row.id}">
-        <input type="date" class="manual-entry-edit-date" value="${row.date}" />
-        <input type="text" class="manual-entry-edit-description" value="${escapeHtml(row.description)}" />
-        <input type="number" step="0.01" min="0.01" class="manual-entry-edit-amount" value="${row.amount}" />
-        <select class="manual-entry-edit-bank" title="Banco">${bankOptionsHtml(row.bank)}</select>
-        <select class="income-category-select">${categoryOptionsHtml(incomeCategories, row.categoryId)}</select>
-        <button type="button" class="link-button income-save">Salvar</button>
-        <button type="button" class="link-button income-cancel">Cancelar</button>
-        <button type="button" class="link-button income-remove">Excluir</button>
+        <div class="row-edit-line">
+          <input type="date" class="manual-entry-edit-date" value="${row.date}" />
+          <select class="manual-entry-edit-bank" title="Banco de origem">${bankOptionsHtml(row.bank)}</select>
+          <input type="text" class="manual-entry-edit-description" value="${escapeHtml(row.description)}" />
+          <input type="number" step="0.01" min="0.01" class="manual-entry-edit-amount" value="${row.amount}" />
+          <select class="income-category-select" title="Categoria">${categoryOptionsHtml(incomeCategories, row.categoryId)}</select>
+        </div>
+        <div class="row-edit-actions">
+          <button type="button" class="link-button income-save">Salvar</button>
+          <button type="button" class="link-button income-cancel">Cancelar</button>
+          <button type="button" class="link-button income-remove">Excluir</button>
+        </div>
       </div>
     `;
   }

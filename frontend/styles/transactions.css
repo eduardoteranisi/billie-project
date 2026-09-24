@@ -83,7 +83,6 @@
 .manual-entry-row-editing .manual-entry-edit-date { width: 140px; }
 .manual-entry-row-editing .manual-entry-edit-description { flex: 1; min-width: 120px; }
 .manual-entry-row-editing .manual-entry-edit-amount { width: 100px; }
-.manual-entry-row-editing .manual-entry-edit-bank { font-size: 12px; }
 
 /* ---------- controle de gastos: transações do período (despesas do período) ---------- */
 
@@ -154,7 +153,40 @@
 .transaction-row-editing .transaction-edit-date { width: 140px; }
 .transaction-row-editing .transaction-edit-description { flex: 1; min-width: 120px; }
 .transaction-row-editing .transaction-edit-amount { width: 100px; }
-.transaction-row-editing .transaction-edit-bank { font-size: 12px; }
+
+/* linha em edição (despesas e receitas): campos / ações */
+.transaction-row-editing,
+.manual-entry-row-editing { flex-direction: column; align-items: stretch; gap: 8px; }
+
+.row-edit-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.row-edit-actions { display: flex; justify-content: flex-end; gap: 12px; }
+.row-edit-actions .link-button { margin-top: 0; }
+
+/* selo do banco de origem, ao lado da data; vira o select na edição */
+.bank-badge {
+  flex-shrink: 0;
+  min-width: 34px;
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-align: center;
+  color: var(--text-secondary);
+  cursor: default;
+}
+.bank-badge-unknown { color: var(--text-tertiary); border-style: dashed; }
+
+.transaction-edit-bank,
+.manual-entry-edit-bank { width: auto; max-width: 140px; font-size: 12px; padding: 6px 24px 6px 8px; flex-shrink: 0; }
 
 @media (max-width: 640px) {
   .transaction-row { flex-wrap: wrap; }
