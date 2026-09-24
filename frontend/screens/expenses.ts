@@ -1,6 +1,8 @@
 import { classifyTransactionDescription, UNCATEGORIZED_CATEGORY_ID, UNCATEGORIZED_INCOME_CATEGORY_ID } from "@billie/parser";
-import type { Category, CategoryGroup, CategoryRule } from "@billie/parser";
+import type { Bank, Category, CategoryGroup, CategoryRule } from "@billie/parser";
 import { calculateDre, listAvailablePeriods } from "../services/dre_aggregator";
+import { groupTransactionsByBank, groupTransactionsByDay, UNKNOWN_BANK_LABEL } from "../services/transaction_grouping";
+import type { TransactionGroup } from "../services/transaction_grouping";
 import {
   BackupValidationError,
   countIncomeByCategory,
@@ -18,8 +20,10 @@ import {
   saveIncome,
   saveTransactions,
   updateCategory,
+  updateIncomeBank,
   updateIncomeCategory,
   updateIncomeFields,
+  updateTransactionBank,
   updateTransactionCategory,
   updateTransactionFields,
 } from "../services/expense_store";
@@ -27,6 +31,15 @@ import type { CategoryType } from "../services/expense_store";
 import type { CategorySummary, DreSummary, ManualIncomeEntry, StoredTransaction } from "../types";
 
 export const EXPENSES_UPDATED_EVENT = "billie:expenses-updated";
+
+const BANK_OPTIONS: Bank[] = ["Nubank", "XP / Rico", "Santander"];
+
+const BANK_BADGE_LABELS: Record<Bank, string> = {
+  Nubank: "NU",
+  "XP / Rico": "XP",
+  Santander: "SAN",
+};
+const UNKNOWN_BANK_BADGE_LABEL = "?";
 
 function formatCurrency(value: number): string {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -74,6 +87,7 @@ export function initExpensesView(): void {
   const categoryList = byId<HTMLDivElement>("category-list");
   const incomeCategoryList = byId<HTMLDivElement>("income-category-list");
   const transactionsPeriodSelect = byId<HTMLSelectElement>("transactions-period");
+  const transactionsGroupModeSelect = byId<HTMLSelectElement>("transactions-group-mode");
   const transactionList = byId<HTMLDivElement>("transaction-list");
   const incomeList = byId<HTMLDivElement>("income-entry-list");
   const btnAddIncome = byId<HTMLButtonElement>("btn-add-income");
@@ -118,6 +132,7 @@ export function initExpensesView(): void {
   let activeCategoryManagerType: CategoryType = "expense";
   let incomeCategoryTouched = false;
   let expenseCategoryTouched = false;
+  let transactionGroupMode: "none" | "bank" | "day" = "none";
 
   function confirmarAcao(mensagem: string): Promise<boolean> {
     modalConfirmMessage.textContent = mensagem;
@@ -185,6 +200,12 @@ export function initExpensesView(): void {
 
   function renderPeriod(): void {
     const period = periodSelect.value;
+    renderDreSummary(period);
+    renderTransactionList(period);
+    renderIncomeList(period);
+  }
+
+  function renderDreSummary(period: string): void {
     const summary: DreSummary = period
       ? calculateDre(period, transactions, income, [...expenseCategories, ...incomeCategories])
       : {
@@ -215,8 +236,6 @@ export function initExpensesView(): void {
       "Nenhuma receita categorizada neste período.",
       summary.totalIncome
     );
-    renderTransactionList(period);
-    renderIncomeList(period);
   }
 
   function renderCategoryBreakdown(
@@ -256,6 +275,38 @@ export function initExpensesView(): void {
       .join("");
   }
 
+  function transactionRowsHtml(rows: StoredTransaction[]): string {
+    return rows
+      .map((row) => (row.id === editingTransactionId ? transactionEditRowHtml(row) : transactionViewRowHtml(row)))
+      .join("");
+  }
+
+  function groupHeaderLabel(group: TransactionGroup<unknown>): string {
+    return transactionGroupMode === "day"
+      ? new Date(`${group.key}T00:00:00`).toLocaleDateString("pt-BR", {
+          weekday: "long",
+          day: "2-digit",
+          month: "2-digit",
+        })
+      : group.label;
+  }
+
+  function groupedListHtml<T>(groups: TransactionGroup<T>[], rowsHtml: (rows: T[]) => string): string {
+    return groups
+      .map(
+        (group) => `
+          <div class="transaction-group">
+            <div class="transaction-group-header">
+              <span>${escapeHtml(groupHeaderLabel(group))}</span>
+              <span class="transaction-group-subtotal">${formatCurrency(group.total)}</span>
+            </div>
+            ${rowsHtml(group.transactions)}
+          </div>
+        `
+      )
+      .join("");
+  }
+
   function renderTransactionList(period: string): void {
     const rows = transactions
       .filter((transaction) => transaction.date.slice(0, 7) === period)
@@ -266,17 +317,70 @@ export function initExpensesView(): void {
       return;
     }
 
-    transactionList.innerHTML = rows
-      .map((row) => (row.id === editingTransactionId ? transactionEditRowHtml(row) : transactionViewRowHtml(row)))
-      .join("");
+    if (transactionGroupMode === "bank") {
+      transactionList.innerHTML = groupedListHtml(groupTransactionsByBank(rows), transactionRowsHtml);
+    } else if (transactionGroupMode === "day") {
+      transactionList.innerHTML = groupedListHtml(groupTransactionsByDay(rows), transactionRowsHtml);
+    } else {
+      transactionList.innerHTML = transactionRowsHtml(rows);
+    }
 
+    wireTransactionListEvents();
+  }
+
+  function onTransactionGroupModeChange(): void {
+    transactionGroupMode = transactionsGroupModeSelect.value as "none" | "bank" | "day";
+    editingTransactionId = null;
+    editingIncomeId = null;
+    renderTransactionList(periodSelect.value);
+    renderIncomeList(periodSelect.value);
+  }
+
+  function bankOptionsHtml(selectedBank: Bank | undefined): string {
+    const unknownOption = `<option value="" ${selectedBank ? "" : "selected"}>${escapeHtml(UNKNOWN_BANK_LABEL)}</option>`;
+    const bankOptions = BANK_OPTIONS.map(
+      (bank) => `<option value="${escapeHtml(bank)}" ${bank === selectedBank ? "selected" : ""}>${escapeHtml(bank)}</option>`
+    );
+    return [unknownOption, ...bankOptions].join("");
+  }
+
+  function bankBadgeHtml(bank: Bank | undefined): string {
+    const label = bank ? BANK_BADGE_LABELS[bank] : UNKNOWN_BANK_BADGE_LABEL;
+    const title = bank ?? UNKNOWN_BANK_LABEL;
+    return `<span class="bank-badge${bank ? "" : " bank-badge-unknown"}" title="${escapeHtml(title)}">${escapeHtml(label)}</span>`;
+  }
+
+  function wireTransactionListEvents(): void {
     transactionList.querySelectorAll<HTMLSelectElement>(".transaction-category-select").forEach((select) => {
       select.addEventListener("change", async () => {
         const row = select.closest<HTMLElement>(".transaction-row");
         if (!row?.dataset.id) return;
 
         await updateTransactionCategory(row.dataset.id, select.value);
+
+        const transaction = transactions.find((candidate) => candidate.id === row.dataset.id);
+        if (transaction && row.dataset.id === editingTransactionId) {
+          // Sem recarregar a lista: preserva o que já foi digitado nos outros campos da edição.
+          transaction.categoryId = select.value;
+          transaction.categoryOverridden = true;
+          renderDreSummary(periodSelect.value);
+          return;
+        }
         await loadData();
+      });
+    });
+
+    transactionList.querySelectorAll<HTMLSelectElement>(".transaction-edit-bank").forEach((select) => {
+      select.addEventListener("change", async () => {
+        const row = select.closest<HTMLElement>(".transaction-row");
+        const transaction = transactions.find((candidate) => candidate.id === row?.dataset.id);
+        if (!transaction) return;
+
+        // Sem recarregar a lista: preserva o que já foi digitado nos outros campos da edição.
+        const bank = (select.value || undefined) as Bank | undefined;
+        await updateTransactionBank(transaction.id, bank);
+        transaction.bank = bank;
+        transaction.bankOverridden = true;
       });
     });
 
@@ -324,7 +428,10 @@ export function initExpensesView(): void {
         const amount = parseFloat(row.querySelector<HTMLInputElement>(".transaction-edit-amount")?.value ?? "");
         if (!date || !merchant || Number.isNaN(amount) || amount <= 0) return;
 
-        await updateTransactionFields(row.dataset.id, { date, merchant, amount });
+        const original = transactions.find((transaction) => transaction.id === row.dataset.id);
+        if (!original || date !== original.date || merchant !== original.merchant || amount !== original.amount) {
+          await updateTransactionFields(row.dataset.id, { date, merchant, amount });
+        }
         editingTransactionId = null;
         await loadData();
       });
@@ -335,6 +442,7 @@ export function initExpensesView(): void {
     return `
       <div class="transaction-row" data-id="${row.id}">
         <span class="transaction-date">${row.date}</span>
+        ${bankBadgeHtml(row.bank)}
         <span class="transaction-description" title="${escapeHtml(row.merchant)}">${escapeHtml(row.merchant)}</span>
         <span class="transaction-amount">${formatCurrency(row.amount)}</span>
         <select class="transaction-category-select">${categoryOptionsHtml(expenseCategories, row.categoryId)}</select>
@@ -346,15 +454,24 @@ export function initExpensesView(): void {
   function transactionEditRowHtml(row: StoredTransaction): string {
     return `
       <div class="transaction-row transaction-row-editing" data-id="${row.id}">
-        <input type="date" class="transaction-edit-date" value="${row.date}" />
-        <input type="text" class="transaction-edit-description" value="${escapeHtml(row.merchant)}" />
-        <input type="number" step="0.01" min="0.01" class="transaction-edit-amount" value="${row.amount}" />
-        <select class="transaction-category-select">${categoryOptionsHtml(expenseCategories, row.categoryId)}</select>
-        <button type="button" class="link-button transaction-save">Salvar</button>
-        <button type="button" class="link-button transaction-cancel">Cancelar</button>
-        <button type="button" class="link-button transaction-remove">Excluir</button>
+        <div class="row-edit-line">
+          <input type="date" class="transaction-edit-date" value="${row.date}" />
+          <select class="transaction-edit-bank" title="Banco de origem">${bankOptionsHtml(row.bank)}</select>
+          <input type="text" class="transaction-edit-description" value="${escapeHtml(row.merchant)}" />
+          <input type="number" step="0.01" min="0.01" class="transaction-edit-amount" value="${row.amount}" />
+          <select class="transaction-category-select" title="Categoria">${categoryOptionsHtml(expenseCategories, row.categoryId)}</select>
+        </div>
+        <div class="row-edit-actions">
+          <button type="button" class="link-button transaction-save">Salvar</button>
+          <button type="button" class="link-button transaction-cancel">Cancelar</button>
+          <button type="button" class="link-button transaction-remove">Excluir</button>
+        </div>
       </div>
     `;
+  }
+
+  function incomeRowsHtml(rows: ManualIncomeEntry[]): string {
+    return rows.map((row) => (row.id === editingIncomeId ? incomeEditRowHtml(row) : incomeViewRowHtml(row))).join("");
   }
 
   function renderIncomeList(period: string): void {
@@ -367,17 +484,48 @@ export function initExpensesView(): void {
       return;
     }
 
-    incomeList.innerHTML = rows
-      .map((row) => (row.id === editingIncomeId ? incomeEditRowHtml(row) : incomeViewRowHtml(row)))
-      .join("");
+    if (transactionGroupMode === "bank") {
+      incomeList.innerHTML = groupedListHtml(groupTransactionsByBank(rows), incomeRowsHtml);
+    } else if (transactionGroupMode === "day") {
+      incomeList.innerHTML = groupedListHtml(groupTransactionsByDay(rows), incomeRowsHtml);
+    } else {
+      incomeList.innerHTML = incomeRowsHtml(rows);
+    }
 
+    wireIncomeListEvents();
+  }
+
+  function wireIncomeListEvents(): void {
     incomeList.querySelectorAll<HTMLSelectElement>(".income-category-select").forEach((select) => {
       select.addEventListener("change", async () => {
         const row = select.closest<HTMLElement>(".manual-entry-row");
         if (!row?.dataset.id) return;
 
         await updateIncomeCategory(row.dataset.id, select.value);
+
+        const entry = income.find((candidate) => candidate.id === row.dataset.id);
+        if (entry && row.dataset.id === editingIncomeId) {
+          // Sem recarregar a lista: preserva o que já foi digitado nos outros campos da edição.
+          entry.categoryId = select.value;
+          entry.categoryOverridden = true;
+          renderDreSummary(periodSelect.value);
+          return;
+        }
         await loadData();
+      });
+    });
+
+    incomeList.querySelectorAll<HTMLSelectElement>(".manual-entry-edit-bank").forEach((select) => {
+      select.addEventListener("change", async () => {
+        const row = select.closest<HTMLElement>(".manual-entry-row");
+        const entry = income.find((candidate) => candidate.id === row?.dataset.id);
+        if (!entry) return;
+
+        // Sem recarregar a lista: preserva o que já foi digitado nos outros campos da edição.
+        const bank = (select.value || undefined) as Bank | undefined;
+        await updateIncomeBank(entry.id, bank);
+        entry.bank = bank;
+        entry.bankOverridden = true;
       });
     });
 
@@ -425,7 +573,10 @@ export function initExpensesView(): void {
         const amount = parseFloat(row.querySelector<HTMLInputElement>(".manual-entry-edit-amount")?.value ?? "");
         if (!date || !description || Number.isNaN(amount) || amount <= 0) return;
 
-        await updateIncomeFields(row.dataset.id, { date, description, amount });
+        const original = income.find((entry) => entry.id === row.dataset.id);
+        if (!original || date !== original.date || description !== original.description || amount !== original.amount) {
+          await updateIncomeFields(row.dataset.id, { date, description, amount });
+        }
         editingIncomeId = null;
         await loadData();
       });
@@ -436,6 +587,7 @@ export function initExpensesView(): void {
     return `
       <div class="manual-entry-row" data-id="${row.id}">
         <span class="manual-entry-date">${row.date}</span>
+        ${bankBadgeHtml(row.bank)}
         <span class="manual-entry-description" title="${escapeHtml(row.description)}">${escapeHtml(row.description)}</span>
         <span class="manual-entry-amount income">${formatCurrency(row.amount)}</span>
         <select class="income-category-select">${categoryOptionsHtml(incomeCategories, row.categoryId)}</select>
@@ -447,13 +599,18 @@ export function initExpensesView(): void {
   function incomeEditRowHtml(row: ManualIncomeEntry): string {
     return `
       <div class="manual-entry-row manual-entry-row-editing" data-id="${row.id}">
-        <input type="date" class="manual-entry-edit-date" value="${row.date}" />
-        <input type="text" class="manual-entry-edit-description" value="${escapeHtml(row.description)}" />
-        <input type="number" step="0.01" min="0.01" class="manual-entry-edit-amount" value="${row.amount}" />
-        <select class="income-category-select">${categoryOptionsHtml(incomeCategories, row.categoryId)}</select>
-        <button type="button" class="link-button income-save">Salvar</button>
-        <button type="button" class="link-button income-cancel">Cancelar</button>
-        <button type="button" class="link-button income-remove">Excluir</button>
+        <div class="row-edit-line">
+          <input type="date" class="manual-entry-edit-date" value="${row.date}" />
+          <select class="manual-entry-edit-bank" title="Banco de origem">${bankOptionsHtml(row.bank)}</select>
+          <input type="text" class="manual-entry-edit-description" value="${escapeHtml(row.description)}" />
+          <input type="number" step="0.01" min="0.01" class="manual-entry-edit-amount" value="${row.amount}" />
+          <select class="income-category-select" title="Categoria">${categoryOptionsHtml(incomeCategories, row.categoryId)}</select>
+        </div>
+        <div class="row-edit-actions">
+          <button type="button" class="link-button income-save">Salvar</button>
+          <button type="button" class="link-button income-cancel">Cancelar</button>
+          <button type="button" class="link-button income-remove">Excluir</button>
+        </div>
       </div>
     `;
   }
@@ -697,6 +854,7 @@ export function initExpensesView(): void {
 
   periodSelect.addEventListener("change", onPeriodChange);
   transactionsPeriodSelect.addEventListener("change", onPeriodChange);
+  transactionsGroupModeSelect.addEventListener("change", onTransactionGroupModeChange);
   incomeAddForm.addEventListener("submit", onIncomeAddSubmit);
   expenseAddForm.addEventListener("submit", onExpenseAddSubmit);
   wirePopover(btnAddIncome, incomeAddPopover, () => {

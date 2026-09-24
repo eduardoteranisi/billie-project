@@ -28,13 +28,13 @@ export async function runPipeline(options: RunPipelineOptions): Promise<Pipeline
       onLog(`Iniciando pipeline para o banco: ${bank}`);
       onLog("Desbloqueando e lendo o PDF...");
       const result = await routeInvoice({ source: "pdf", pdfBytes, password, bank, year });
-      transactions = result.expenses;
-      income = result.income;
+      transactions = result.expenses.map((transaction) => ({ ...transaction, bank }));
+      income = result.income.map((transaction) => ({ ...transaction, bank }));
     } else {
       onLog("Iniciando pipeline para importação de CSV...");
       const result = await parseCsvInvoice(options.csvText, options.columns);
-      transactions = result.expenses;
-      income = result.income;
+      transactions = result.expenses.map((transaction) => ({ ...transaction, bank: options.bank }));
+      income = result.income.map((transaction) => ({ ...transaction, bank: options.bank }));
     }
 
     onLog(`✅ Extração concluída: ${transactions.length} transações encontradas.`);

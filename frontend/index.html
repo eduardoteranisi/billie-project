@@ -75,7 +75,7 @@
 
       <!-- ---------- configurações da fatura ---------- -->
       <section class="section" id="section-pdf-details">
-        <p class="section-label">Detalhes da fatura <span class="section-label-hint">(PDF, se necessário)</span></p>
+        <p class="section-label">Detalhes da fatura</p>
         <div class="field-row">
           <div class="field">
             <label for="senha">Senha do PDF</label>
@@ -196,6 +196,14 @@
 
             <div id="import-step-confirm" class="import-step" hidden>
               <p class="modal-text" id="import-confirm-text"></p>
+              <div class="field">
+                <label for="import-banco-csv">Banco</label>
+                <select id="import-banco-csv">
+                  <option>Nubank</option>
+                  <option>XP / Rico</option>
+                  <option>Santander</option>
+                </select>
+              </div>
               <div class="modal-actions">
                 <button type="button" id="btn-confirmar-importacao" class="btn-primary">Confirmar importação</button>
                 <button type="button" id="btn-cancelar-importacao" class="btn-secondary">Cancelar</button>
@@ -248,6 +256,15 @@
             </div>
 
           </div>
+        </div>
+
+        <div class="field field-inline">
+          <label for="transactions-group-mode">Agrupar por</label>
+          <select id="transactions-group-mode">
+            <option value="none">Nenhum</option>
+            <option value="bank">Por banco</option>
+            <option value="day">Por dia</option>
+          </select>
         </div>
       </div>
 

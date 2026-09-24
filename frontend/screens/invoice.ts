@@ -282,6 +282,7 @@ export function initInvoiceView(): void {
       source: "csv",
       csvText,
       columns,
+      bank: els.banco.value as Bank,
       onLog: (mensagem) => log(mensagem),
     });
 
