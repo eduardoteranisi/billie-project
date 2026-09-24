@@ -1,6 +1,7 @@
 import { classifyTransactionDescription, UNCATEGORIZED_CATEGORY_ID, UNCATEGORIZED_INCOME_CATEGORY_ID } from "@billie/parser";
 import type { Bank, Category, CategoryGroup, CategoryRule } from "@billie/parser";
 import { calculateDre, listAvailablePeriods } from "../services/dre_aggregator";
+import { groupPossibleDuplicateRows } from "../services/duplicate_detection";
 import { groupTransactionsByBank, groupTransactionsByDay, UNKNOWN_BANK_LABEL } from "../services/transaction_grouping";
 import type { TransactionGroup } from "../services/transaction_grouping";
 import {
@@ -14,6 +15,8 @@ import {
   listCategoryRules,
   listIncome,
   listTransactions,
+  markIncomeIdListAsNotDuplicate,
+  markTransactionIdListAsNotDuplicate,
   removeIncome,
   removeTransaction,
   restoreBackupData,
@@ -133,6 +136,8 @@ export function initExpensesView(): void {
   let incomeCategoryTouched = false;
   let expenseCategoryTouched = false;
   let transactionGroupMode: "none" | "bank" | "day" = "none";
+  let possibleDuplicateTransactionIds = new Set<string>();
+  let possibleDuplicateIncomeIds = new Set<string>();
 
   function confirmarAcao(mensagem: string): Promise<boolean> {
     modalConfirmMessage.textContent = mensagem;
@@ -317,13 +322,19 @@ export function initExpensesView(): void {
       return;
     }
 
+    // Calculado sobre o período inteiro, antes de agrupar: um par em grupos diferentes continua sinalizado.
+    const duplicateGroups = groupPossibleDuplicateRows(rows);
+    possibleDuplicateTransactionIds = new Set(duplicateGroups.flat().map((row) => row.id));
+
+    let listHtml: string;
     if (transactionGroupMode === "bank") {
-      transactionList.innerHTML = groupedListHtml(groupTransactionsByBank(rows), transactionRowsHtml);
+      listHtml = groupedListHtml(groupTransactionsByBank(rows), transactionRowsHtml);
     } else if (transactionGroupMode === "day") {
-      transactionList.innerHTML = groupedListHtml(groupTransactionsByDay(rows), transactionRowsHtml);
+      listHtml = groupedListHtml(groupTransactionsByDay(rows), transactionRowsHtml);
     } else {
-      transactionList.innerHTML = transactionRowsHtml(rows);
+      listHtml = transactionRowsHtml(rows);
     }
+    transactionList.innerHTML = duplicateNoticeHtml(duplicateGroups) + listHtml;
 
     wireTransactionListEvents();
   }
@@ -350,7 +361,55 @@ export function initExpensesView(): void {
     return `<span class="bank-badge${bank ? "" : " bank-badge-unknown"}" title="${escapeHtml(title)}">${escapeHtml(label)}</span>`;
   }
 
+  function duplicateNoticeHtml(duplicateGroups: { id: string; date: string; amount: number }[][]): string {
+    if (duplicateGroups.length === 0) return "";
+
+    const groupItemsHtml = duplicateGroups
+      .map((group) => {
+        const { date, amount } = group[0];
+        const dateLabel = new Date(`${date}T00:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+        const ids = group.map((row) => row.id).join(",");
+        return `
+          <li class="duplicate-notice-item">
+            <span>${dateLabel} · ${formatCurrency(amount)} · ${group.length} lançamentos</span>
+            <button type="button" class="link-button duplicate-dismiss" data-ids="${escapeHtml(ids)}">Não é duplicado</button>
+          </li>
+        `;
+      })
+      .join("");
+
+    return `
+      <div class="duplicate-notice" role="status">
+        <p class="duplicate-notice-text">
+          <span class="duplicate-notice-icon" aria-hidden="true">⚠</span>
+          Possíveis duplicados neste período: lançamentos com o mesmo valor e a mesma data, marcados com uma barra na lateral.
+        </p>
+        <ul class="duplicate-notice-list">${groupItemsHtml}</ul>
+      </div>
+    `;
+  }
+
+  function duplicateDismissIdList(button: HTMLButtonElement): string[] {
+    return (button.dataset.ids ?? "").split(",").filter(Boolean);
+  }
+
+  function possibleDuplicateRowAttributes(isPossibleDuplicate: boolean): { className: string; title: string } {
+    return isPossibleDuplicate
+      ? {
+          className: " row-possible-duplicate",
+          title: ` title="Possível duplicado: outro lançamento com o mesmo valor e data"`,
+        }
+      : { className: "", title: "" };
+  }
+
   function wireTransactionListEvents(): void {
+    transactionList.querySelectorAll<HTMLButtonElement>(".duplicate-dismiss").forEach((button) => {
+      button.addEventListener("click", async () => {
+        await markTransactionIdListAsNotDuplicate(duplicateDismissIdList(button));
+        await loadData();
+      });
+    });
+
     transactionList.querySelectorAll<HTMLSelectElement>(".transaction-category-select").forEach((select) => {
       select.addEventListener("change", async () => {
         const row = select.closest<HTMLElement>(".transaction-row");
@@ -439,8 +498,9 @@ export function initExpensesView(): void {
   }
 
   function transactionViewRowHtml(row: StoredTransaction): string {
+    const duplicate = possibleDuplicateRowAttributes(possibleDuplicateTransactionIds.has(row.id));
     return `
-      <div class="transaction-row" data-id="${row.id}">
+      <div class="transaction-row${duplicate.className}"${duplicate.title} data-id="${row.id}">
         <span class="transaction-date">${row.date}</span>
         ${bankBadgeHtml(row.bank)}
         <span class="transaction-description" title="${escapeHtml(row.merchant)}">${escapeHtml(row.merchant)}</span>
@@ -484,18 +544,30 @@ export function initExpensesView(): void {
       return;
     }
 
+    const duplicateGroups = groupPossibleDuplicateRows(rows);
+    possibleDuplicateIncomeIds = new Set(duplicateGroups.flat().map((row) => row.id));
+
+    let listHtml: string;
     if (transactionGroupMode === "bank") {
-      incomeList.innerHTML = groupedListHtml(groupTransactionsByBank(rows), incomeRowsHtml);
+      listHtml = groupedListHtml(groupTransactionsByBank(rows), incomeRowsHtml);
     } else if (transactionGroupMode === "day") {
-      incomeList.innerHTML = groupedListHtml(groupTransactionsByDay(rows), incomeRowsHtml);
+      listHtml = groupedListHtml(groupTransactionsByDay(rows), incomeRowsHtml);
     } else {
-      incomeList.innerHTML = incomeRowsHtml(rows);
+      listHtml = incomeRowsHtml(rows);
     }
+    incomeList.innerHTML = duplicateNoticeHtml(duplicateGroups) + listHtml;
 
     wireIncomeListEvents();
   }
 
   function wireIncomeListEvents(): void {
+    incomeList.querySelectorAll<HTMLButtonElement>(".duplicate-dismiss").forEach((button) => {
+      button.addEventListener("click", async () => {
+        await markIncomeIdListAsNotDuplicate(duplicateDismissIdList(button));
+        await loadData();
+      });
+    });
+
     incomeList.querySelectorAll<HTMLSelectElement>(".income-category-select").forEach((select) => {
       select.addEventListener("change", async () => {
         const row = select.closest<HTMLElement>(".manual-entry-row");
@@ -584,8 +656,9 @@ export function initExpensesView(): void {
   }
 
   function incomeViewRowHtml(row: ManualIncomeEntry): string {
+    const duplicate = possibleDuplicateRowAttributes(possibleDuplicateIncomeIds.has(row.id));
     return `
-      <div class="manual-entry-row" data-id="${row.id}">
+      <div class="manual-entry-row${duplicate.className}"${duplicate.title} data-id="${row.id}">
         <span class="manual-entry-date">${row.date}</span>
         ${bankBadgeHtml(row.bank)}
         <span class="manual-entry-description" title="${escapeHtml(row.description)}">${escapeHtml(row.description)}</span>

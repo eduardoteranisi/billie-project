@@ -185,6 +185,39 @@
 }
 .bank-badge-unknown { color: var(--text-tertiary); border-style: dashed; }
 
+/* possível duplicado: aviso no topo da lista + barra lateral nas linhas envolvidas */
+.duplicate-notice {
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--gold);
+  border-left-width: 3px;
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--gold) 8%, transparent);
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+.duplicate-notice-text { margin: 0 0 6px; }
+.duplicate-notice-icon { color: var(--gold); margin-right: 4px; }
+
+.duplicate-notice-list { list-style: none; margin: 0; padding: 0; }
+.duplicate-notice-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0;
+  border-top: 1px solid color-mix(in srgb, var(--gold) 25%, transparent);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.duplicate-notice-item .link-button { margin-top: 0; flex-shrink: 0; }
+
+.row-possible-duplicate {
+  border-left: 2px solid var(--gold);
+  padding-left: 6px;
+}
+
 .transaction-edit-bank,
 .manual-entry-edit-bank { width: auto; max-width: 140px; font-size: 12px; padding: 6px 24px 6px 8px; flex-shrink: 0; }
 
