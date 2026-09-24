@@ -121,6 +121,7 @@ function mergeReimportedTransaction(existing: StoredTransaction, incoming: Store
       detailsOverridden: true,
     }),
     ...(existing.bankOverridden && { bank: existing.bank, bankOverridden: true }),
+    ...(existing.duplicateDismissed && { duplicateDismissed: true }),
   };
 }
 
@@ -147,7 +148,13 @@ export async function updateTransactionFields(
   const transaction = await runInStore<StoredTransaction>(TRANSACTIONS_STORE, "readonly", (store) => store.get(id));
   if (!transaction) throw new Error(`transação #${id} não encontrada`);
 
-  const updated: StoredTransaction = { ...transaction, ...changes, detailsOverridden: true };
+  const updated: StoredTransaction = {
+    ...transaction,
+    ...changes,
+    detailsOverridden: true,
+    // O "não é duplicado" valia para a data/valor antigos: mudou algum deles, a verificação recomeça.
+    ...((changes.date !== transaction.date || changes.amount !== transaction.amount) && { duplicateDismissed: false }),
+  };
   await runInStore(TRANSACTIONS_STORE, "readwrite", (store) => store.put(updated));
 }
 
@@ -157,6 +164,16 @@ export async function updateTransactionBank(id: string, bank: Bank | undefined):
 
   const updated: StoredTransaction = { ...transaction, bank, bankOverridden: true };
   await runInStore(TRANSACTIONS_STORE, "readwrite", (store) => store.put(updated));
+}
+
+export async function markTransactionIdListAsNotDuplicate(ids: string[]): Promise<void> {
+  for (const id of ids) {
+    const transaction = await runInStore<StoredTransaction>(TRANSACTIONS_STORE, "readonly", (store) => store.get(id));
+    if (!transaction) continue;
+
+    const updated: StoredTransaction = { ...transaction, duplicateDismissed: true };
+    await runInStore(TRANSACTIONS_STORE, "readwrite", (store) => store.put(updated));
+  }
 }
 
 export async function saveIncome(entry: ManualIncomeEntry): Promise<void> {
@@ -199,6 +216,7 @@ function mergeReimportedIncomeEntry(existing: ManualIncomeEntry, incoming: Manua
       detailsOverridden: true,
     }),
     ...(existing.bankOverridden && { bank: existing.bank, bankOverridden: true }),
+    ...(existing.duplicateDismissed && { duplicateDismissed: true }),
   };
 }
 
@@ -230,7 +248,13 @@ export async function updateIncomeFields(
   const entry = await runInStore<ManualIncomeEntry>(INCOME_STORE, "readonly", (store) => store.get(id));
   if (!entry) throw new Error(`receita #${id} não encontrada`);
 
-  const updated: ManualIncomeEntry = { ...entry, ...changes, detailsOverridden: true };
+  const updated: ManualIncomeEntry = {
+    ...entry,
+    ...changes,
+    detailsOverridden: true,
+    // O "não é duplicado" valia para a data/valor antigos: mudou algum deles, a verificação recomeça.
+    ...((changes.date !== entry.date || changes.amount !== entry.amount) && { duplicateDismissed: false }),
+  };
   await runInStore(INCOME_STORE, "readwrite", (store) => store.put(updated));
 }
 
@@ -240,6 +264,16 @@ export async function updateIncomeBank(id: string, bank: Bank | undefined): Prom
 
   const updated: ManualIncomeEntry = { ...entry, bank, bankOverridden: true };
   await runInStore(INCOME_STORE, "readwrite", (store) => store.put(updated));
+}
+
+export async function markIncomeIdListAsNotDuplicate(ids: string[]): Promise<void> {
+  for (const id of ids) {
+    const entry = await runInStore<ManualIncomeEntry>(INCOME_STORE, "readonly", (store) => store.get(id));
+    if (!entry) continue;
+
+    const updated: ManualIncomeEntry = { ...entry, duplicateDismissed: true };
+    await runInStore(INCOME_STORE, "readwrite", (store) => store.put(updated));
+  }
 }
 
 async function ensureCategoriesSeeded(): Promise<void> {

@@ -10,6 +10,7 @@ export interface ManualIncomeEntry {
   categoryOverridden?: boolean;
   detailsOverridden?: boolean;
   bankOverridden?: boolean;
+  duplicateDismissed?: boolean;
 }
 
 export interface StoredTransaction extends CategorizedTransaction {
@@ -17,6 +18,7 @@ export interface StoredTransaction extends CategorizedTransaction {
   categoryOverridden?: boolean;
   detailsOverridden?: boolean;
   bankOverridden?: boolean;
+  duplicateDismissed?: boolean;
 }
 
 export interface CategorySummary {
