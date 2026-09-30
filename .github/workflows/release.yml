@@ -10,6 +10,8 @@ permissions:
 
 jobs:
   publish-tauri:
+    # Updater signing secrets live in the "release" environment, restricted to v* tags.
+    environment: release
     strategy:
       fail-fast: false
       matrix:
@@ -59,6 +61,8 @@ jobs:
         uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: 'Billie ${{ github.ref_name }}'

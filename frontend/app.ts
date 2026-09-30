@@ -1,5 +1,11 @@
 import { installSelectPickerMenu } from "./components/select_picker";
-import { checkForUpdates, openExternalLink } from "./services/update_checker";
+import type { Update } from "@tauri-apps/plugin-updater";
+import {
+  checkForAvailableUpdate,
+  installUpdateAndRelaunch,
+  openExternalLink,
+  RELEASES_PAGE_URL,
+} from "./services/update_checker";
 import { initExpensesView } from "./screens/expenses";
 import { initInvoiceView, log } from "./screens/invoice";
 import { initTransactionsView } from "./screens/transactions";
@@ -36,13 +42,32 @@ function byId<T extends HTMLElement>(id: string): T {
 // ---------- atualizações ----------
 
 async function checarAtualizacoes() {
-  const { hasUpdate, version, url } = await checkForUpdates();
-  if (!hasUpdate || !url) return;
+  const atualizacao = await checkForAvailableUpdate();
+  if (!atualizacao) return;
 
-  els.updateText.textContent = `Versão ${version} disponível`;
+  els.updateText.textContent = `Versão ${atualizacao.version} disponível`;
   els.updateBanner.classList.add("visible");
-  els.btnUpdate.onclick = () => openExternalLink(url);
-  log(`Nova versão (${version}) disponível.`);
+  els.btnUpdate.onclick = () => instalarAtualizacao(atualizacao);
+  log(`Nova versão (${atualizacao.version}) disponível.`);
+}
+
+async function instalarAtualizacao(atualizacao: Update) {
+  els.btnUpdate.disabled = true;
+  els.updateText.textContent = "Baixando atualização...";
+
+  try {
+    await installUpdateAndRelaunch(atualizacao, (percentual) => {
+      els.updateText.textContent =
+        percentual === null ? "Baixando atualização..." : `Baixando atualização... ${percentual}%`;
+    });
+  } catch (erro) {
+    // ex.: senha do pkexec cancelada no .deb, ou sem entrada para este instalador no latest.json
+    log(`Falha ao instalar a atualização: ${erro}`);
+    els.updateText.textContent = `Não foi possível atualizar automaticamente. Baixe a versão ${atualizacao.version} manualmente.`;
+    els.btnUpdate.textContent = "Baixar";
+    els.btnUpdate.disabled = false;
+    els.btnUpdate.onclick = () => openExternalLink(RELEASES_PAGE_URL);
+  }
 }
 
 // ---------- abas ----------

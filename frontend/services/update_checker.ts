@@ -1,37 +1,42 @@
-const CURRENT_VERSION = "v2.1.0";
-const GITHUB_REPO = "eduardoteranisi/billie-project";
+import { isTauri } from "@tauri-apps/api/core";
+import { relaunch } from "@tauri-apps/plugin-process";
+import { check, type Update } from "@tauri-apps/plugin-updater";
 
-export interface UpdateCheckResult {
-  hasUpdate: boolean;
-  version: string;
-  url: string | null;
-}
+export const RELEASES_PAGE_URL = "https://github.com/eduardoteranisi/billie-project/releases/latest";
 
-export async function checkForUpdates(): Promise<UpdateCheckResult> {
+const UPDATE_CHECK_TIMEOUT_MS = 5000;
+
+// A versão instalada vem do tauri.conf.json: o plugin compara com o latest.json da última Release publicada
+// e só aceita o download se a assinatura bater com a chave pública do tauri.conf.json.
+// No navegador (npm run dev) não existe updater, então não há o que checar.
+export async function checkForAvailableUpdate(): Promise<Update | null> {
+  if (!isTauri()) return null;
+
   try {
-    const response = await fetch(
-      `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`,
-      { signal: AbortSignal.timeout(3000) }
-    );
-
-    if (!response.ok) return noUpdateAvailable();
-
-    const data = await response.json();
-    const cloudVersion: string | undefined = data.tag_name;
-    const downloadUrl: string | undefined = data.html_url;
-
-    if (cloudVersion && cloudVersion !== CURRENT_VERSION) {
-      return { hasUpdate: true, version: cloudVersion, url: downloadUrl ?? null };
-    }
-
-    return noUpdateAvailable();
+    return await check({ timeout: UPDATE_CHECK_TIMEOUT_MS });
   } catch {
-    return noUpdateAvailable();
+    return null;
   }
 }
 
-function noUpdateAvailable(): UpdateCheckResult {
-  return { hasUpdate: false, version: CURRENT_VERSION, url: null };
+// No Windows o instalador fecha o app sozinho, então o relaunch só chega a rodar no Linux.
+export async function installUpdateAndRelaunch(
+  update: Update,
+  onDownloadProgress: (percent: number | null) => void
+): Promise<void> {
+  let totalBytes = 0;
+  let downloadedBytes = 0;
+
+  await update.downloadAndInstall((event) => {
+    if (event.event === "Started") {
+      totalBytes = event.data.contentLength ?? 0;
+    } else if (event.event === "Progress") {
+      downloadedBytes += event.data.chunkLength;
+      onDownloadProgress(totalBytes ? Math.round((downloadedBytes / totalBytes) * 100) : null);
+    }
+  });
+
+  await relaunch();
 }
 
 export function openExternalLink(url: string): void {
