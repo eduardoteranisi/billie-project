@@ -25,7 +25,10 @@ export async function extractNubank(
   password?: string
 ): Promise<NubankExtractionResult> {
   const lines = await extractPdfLines(pdfBytes, password);
+  return extractNubankFromLines(lines, year);
+}
 
+export function extractNubankFromLines(lines: string[], year: string): NubankExtractionResult {
   return isNubankExtratoDocument(lines)
     ? extractNubankExtratoFromLines(lines)
     : extractNubankFaturaFromLines(lines, year);

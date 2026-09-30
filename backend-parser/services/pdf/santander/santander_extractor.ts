@@ -23,7 +23,10 @@ export async function extractSantander(
   password?: string
 ): Promise<SantanderExtractionResult> {
   const lines = await extractPdfLines(pdfBytes, password);
+  return extractSantanderFromLines(lines, year);
+}
 
+export function extractSantanderFromLines(lines: string[], year: string): SantanderExtractionResult {
   return isSantanderExtratoDocument(lines)
     ? extractSantanderExtratoFromLines(lines, year)
     : extractSantanderFaturaFromLines(lines, year);

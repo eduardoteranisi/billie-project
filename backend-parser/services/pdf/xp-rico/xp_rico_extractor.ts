@@ -15,7 +15,10 @@ export async function extractXpRico(
   password?: string
 ): Promise<XpRicoExtractionResult> {
   const lines = await extractPdfLines(pdfBytes, password);
+  return extractXpRicoFromLines(lines, year);
+}
 
+export function extractXpRicoFromLines(lines: string[], year: string): XpRicoExtractionResult {
   return isXpRicoExtratoDocument(lines)
     ? extractXpRicoExtratoFromLines(lines, year)
     : extractXpRicoFaturaFromLines(lines, year);
