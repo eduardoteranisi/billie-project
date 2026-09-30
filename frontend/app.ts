@@ -1,3 +1,4 @@
+import { installSelectPickerMenu } from "./components/select_picker";
 import { checkForUpdates, openExternalLink } from "./services/update_checker";
 import { initExpensesView } from "./screens/expenses";
 import { initInvoiceView, log } from "./screens/invoice";
@@ -110,6 +111,7 @@ function bindEvents() {
 // ---------- boot ----------
 
 carregarTema();
+installSelectPickerMenu();
 bindEvents();
 initInvoiceView();
 initTransactionsView();

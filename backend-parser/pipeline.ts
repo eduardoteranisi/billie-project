@@ -1,6 +1,7 @@
 import { routeInvoice } from "./services/pdf/bank_router";
 import { parseCsvInvoice } from "./services/csv/csv_reader";
 import { CsvColumnMappingError } from "./services/csv/csv_column_mapping_error";
+import { removeCardBillPaymentList } from "./services/card_bill_payment_filter";
 import type { CsvColumnRole } from "./services/csv/csv_column_resolver";
 import type { LogFn, PdfParseInput, CsvParseInput, Transaction } from "./types";
 
@@ -35,6 +36,13 @@ export async function runPipeline(options: RunPipelineOptions): Promise<Pipeline
       const result = await parseCsvInvoice(options.csvText, options.columns);
       transactions = result.expenses.map((transaction) => ({ ...transaction, bank: options.bank }));
       income = result.income.map((transaction) => ({ ...transaction, bank: options.bank }));
+    }
+
+    const extractedExpenseCount = transactions.length;
+    transactions = removeCardBillPaymentList(transactions);
+    const ignoredBillPaymentCount = extractedExpenseCount - transactions.length;
+    if (ignoredBillPaymentCount > 0) {
+      onLog(`🧾 ${ignoredBillPaymentCount} pagamento(s) de fatura de cartão ignorado(s) para não duplicar as compras.`);
     }
 
     onLog(`✅ Extração concluída: ${transactions.length} transações encontradas.`);
