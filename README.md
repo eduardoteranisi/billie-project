@@ -60,14 +60,14 @@ This opens Billie in a native window instead of a browser tab.
 
 Installers are **not** built or committed manually — they're produced by CI and attached to a GitHub Release.
 
-1. Bump `version` in `src-tauri/tauri.conf.json` and `CURRENT_VERSION` in `frontend/services/update_checker.ts` so they match.
+1. Bump `version` in `src-tauri/tauri.conf.json` (the only place the app version lives — the in-app updater compares against it).
 2. Tag the commit and push the tag:
    ```bash
    git tag v0.1.0
    git push --tags
    ```
-3. Pushing a `v*` tag triggers `.github/workflows/release.yml`, which builds Billie on both `windows-latest` and `ubuntu-latest` runners and uploads the installers (`.msi`/`.nsis` for Windows, `.deb`/`.AppImage` for Linux) as assets on a **draft** GitHub Release matching the tag.
-4. Go to the repo's [Releases page](https://github.com/eduardoteranisi/billie-project/releases), review the draft, edit the notes if needed, and click **Publish release**. Only then do testers see it — the update checker in the app also relies on the release being published, not just drafted.
+3. Pushing a `v*` tag triggers `.github/workflows/release.yml`, which builds Billie on both `windows-latest` and `ubuntu-latest` runners and uploads the installers (`.msi`/`.nsis` for Windows, `.deb`/`.AppImage` for Linux) as assets on a **draft** GitHub Release matching the tag. Each installer is signed with the updater key (`TAURI_SIGNING_PRIVATE_KEY`/`TAURI_SIGNING_PRIVATE_KEY_PASSWORD`, stored as secrets of the `release` GitHub environment, which only accepts `v*` tags), and a `latest.json` manifest is attached for the in-app updater.
+4. Go to the repo's [Releases page](https://github.com/eduardoteranisi/billie-project/releases), review the draft, edit the notes if needed, and click **Publish release**. Only then do testers see it — the in-app updater reads `releases/latest/download/latest.json`, which only resolves published releases, so installed apps offer the update on their next launch (Windows and AppImage install silently; `.deb` asks for the admin password via `pkexec`). Installs older than the first updater-enabled version still have to download the new installer manually.
 5. Testers download the installer for their OS directly from that Releases page — no site, no account, no upload.
 
 ---
@@ -80,7 +80,7 @@ To keep the codebase consistent, follow these conventions when adding folders, f
 * **Files** → all lowercase, snake_case (e.g. `pdf_reader.ts`)
 * **Functions** → all lowercase, camelCase (e.g. `runPipeline`)
 * **Variables** → all lowercase, camelCase (e.g. `pdfBytes`)
-* **Constants** → SCREAMING_CASE (e.g. `CURRENT_VERSION`)
+* **Constants** → SCREAMING_CASE (e.g. `RELEASES_PAGE_URL`)
 
 ---
 
