@@ -52,6 +52,9 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
+      - name: Run tests
+        run: npm test
+
       - name: Build and release Tauri app
         uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # v1
         env:
