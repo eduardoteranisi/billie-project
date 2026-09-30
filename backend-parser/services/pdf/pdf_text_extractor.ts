@@ -1,6 +1,6 @@
 import { getDocument, GlobalWorkerOptions, PasswordException } from "pdfjs-dist/build/pdf.mjs";
 
-interface PositionedTextItem {
+export interface PositionedTextItem {
   str: string;
   x: number;
   y: number;
@@ -24,6 +24,9 @@ export async function extractPdfLines(pdfBytes: Uint8Array, password?: string): 
       data: pdfBytes,
       password,
       standardFontDataUrl: STANDARD_FONT_DATA_URL,
+      // O pdfjs-dist 6 removeu esta opção (não usa mais eval), então ela não existe nos tipos.
+      // Mantida como proteção caso o pdfjs-dist volte a uma versão que ainda a aceite.
+      // @ts-expect-error
       isEvalSupported: false,
     }).promise;
   } catch (error) {
@@ -52,7 +55,7 @@ export async function extractPdfLines(pdfBytes: Uint8Array, password?: string): 
   return lines;
 }
 
-function groupItemsIntoLines(items: PositionedTextItem[]): string[] {
+export function groupItemsIntoLines(items: PositionedTextItem[]): string[] {
   const sorted = [...items].sort((a, b) => b.y - a.y || a.x - b.x);
   const rows: PositionedTextItem[][] = [];
 
