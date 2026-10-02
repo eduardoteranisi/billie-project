@@ -13,7 +13,8 @@ import {
 } from "../services/transaction_saver";
 import { EXPENSES_UPDATED_EVENT } from "./expenses";
 import type { StoredTransaction } from "../types";
-import { getRequiredElementById } from "../utils/dom_helpers";
+import { escapeHtmlSpecialCharacters, getRequiredElementById } from "../utils/dom_helpers";
+import { isPdf } from "../utils/file_helpers";
 
 type InvokeFn = (cmd: string, args?: Record<string, unknown>) => Promise<any>;
 
@@ -40,15 +41,6 @@ export function log(mensagem: string, tipo: "info" | "error" | "success" = "info
 
   logEl.appendChild(entry);
   logEl.scrollTop = logEl.scrollHeight;
-}
-
-function arquivoEhPdf(arquivo: File): boolean {
-  return arquivo.type === "application/pdf" || arquivo.name.toLowerCase().endsWith(".pdf");
-}
-
-function escapeHtml(value: string): string {
-  const entities: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
-  return value.replace(/[&<>"']/g, (char) => entities[char]);
 }
 
 export function initInvoiceView(): void {
@@ -222,7 +214,7 @@ export function initInvoiceView(): void {
         throw new Error("Seleção de arquivo pelo Tauri ainda não implementada.");
       }
 
-      if (arquivoEhPdf(arquivoBlob)) {
+      if (isPdf(arquivoBlob)) {
         await processarComoPdf(arquivoBlob);
       } else {
         csvTextoPendente = await arquivoBlob.text();
@@ -297,7 +289,7 @@ export function initInvoiceView(): void {
 
   function mostrarMapeamentoManual(headers: string[]) {
     const options = headers
-      .map((h) => `<option value="${escapeHtml(h)}">${escapeHtml(h)}</option>`)
+      .map((h) => `<option value="${escapeHtmlSpecialCharacters(h)}">${escapeHtmlSpecialCharacters(h)}</option>`)
       .join("");
     els.mapColData.innerHTML = options;
     els.mapColEstabelecimento.innerHTML = options;

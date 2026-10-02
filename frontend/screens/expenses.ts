@@ -32,7 +32,7 @@ import {
 } from "../services/expense_store";
 import type { CategoryType } from "../services/expense_store";
 import type { CategorySummary, DreSummary, ManualIncomeEntry, StoredTransaction } from "../types";
-import { getRequiredElementById } from "../utils/dom_helpers";
+import { escapeHtmlSpecialCharacters, getRequiredElementById } from "../utils/dom_helpers";
 
 export const EXPENSES_UPDATED_EVENT = "billie:expenses-updated";
 
@@ -47,11 +47,6 @@ const UNKNOWN_BANK_BADGE_LABEL = "?";
 
 function formatCurrency(value: number): string {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
-function escapeHtml(value: string): string {
-  const entities: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
-  return value.replace(/[&<>"']/g, (char) => entities[char]);
 }
 
 function setCardValue(el: HTMLElement, value: number): void {
@@ -256,7 +251,7 @@ export function initExpensesView(): void {
         return `
           <div class="category-row">
             <div class="category-row-header">
-              <span>${escapeHtml(category.label)}</span>
+              <span>${escapeHtmlSpecialCharacters(category.label)}</span>
               <span>${formatCurrency(category.total)}</span>
             </div>
             <div class="category-bar"><div class="category-bar-fill${fillGroupClass}" style="width: ${barWidth}%"></div></div>
@@ -270,7 +265,7 @@ export function initExpensesView(): void {
     return categories
       .map(
         (category) =>
-          `<option value="${category.id}" ${category.id === selectedCategoryId ? "selected" : ""}>${escapeHtml(category.label)}</option>`
+          `<option value="${escapeHtmlSpecialCharacters(category.id)}" ${category.id === selectedCategoryId ? "selected" : ""}>${escapeHtmlSpecialCharacters(category.label)}</option>`
       )
       .join("");
   }
@@ -297,7 +292,7 @@ export function initExpensesView(): void {
         (group) => `
           <div class="transaction-group">
             <div class="transaction-group-header">
-              <span>${escapeHtml(groupHeaderLabel(group))}</span>
+              <span>${escapeHtmlSpecialCharacters(groupHeaderLabel(group))}</span>
               <span class="transaction-group-subtotal">${formatCurrency(group.total)}</span>
             </div>
             ${rowsHtml(group.transactions)}
@@ -343,9 +338,9 @@ export function initExpensesView(): void {
   }
 
   function bankOptionsHtml(selectedBank: Bank | undefined): string {
-    const unknownOption = `<option value="" ${selectedBank ? "" : "selected"}>${escapeHtml(UNKNOWN_BANK_LABEL)}</option>`;
+    const unknownOption = `<option value="" ${selectedBank ? "" : "selected"}>${escapeHtmlSpecialCharacters(UNKNOWN_BANK_LABEL)}</option>`;
     const bankOptions = BANK_OPTIONS.map(
-      (bank) => `<option value="${escapeHtml(bank)}" ${bank === selectedBank ? "selected" : ""}>${escapeHtml(bank)}</option>`
+      (bank) => `<option value="${escapeHtmlSpecialCharacters(bank)}" ${bank === selectedBank ? "selected" : ""}>${escapeHtmlSpecialCharacters(bank)}</option>`
     );
     return [unknownOption, ...bankOptions].join("");
   }
@@ -353,7 +348,7 @@ export function initExpensesView(): void {
   function bankBadgeHtml(bank: Bank | undefined): string {
     const label = bank ? BANK_BADGE_LABELS[bank] : UNKNOWN_BANK_BADGE_LABEL;
     const title = bank ?? UNKNOWN_BANK_LABEL;
-    return `<span class="bank-badge${bank ? "" : " bank-badge-unknown"}" title="${escapeHtml(title)}">${escapeHtml(label)}</span>`;
+    return `<span class="bank-badge${bank ? "" : " bank-badge-unknown"}" title="${escapeHtmlSpecialCharacters(title)}">${escapeHtmlSpecialCharacters(label)}</span>`;
   }
 
   function duplicateNoticeHtml(duplicateGroups: { id: string; date: string; amount: number }[][]): string {
@@ -367,7 +362,7 @@ export function initExpensesView(): void {
         return `
           <li class="duplicate-notice-item">
             <span>${dateLabel} · ${formatCurrency(amount)} · ${group.length} lançamentos</span>
-            <button type="button" class="link-button duplicate-dismiss" data-ids="${escapeHtml(ids)}">Não é duplicado</button>
+            <button type="button" class="link-button duplicate-dismiss" data-ids="${escapeHtmlSpecialCharacters(ids)}">Não é duplicado</button>
           </li>
         `;
       })
@@ -498,7 +493,7 @@ export function initExpensesView(): void {
       <div class="transaction-row${duplicate.className}"${duplicate.title} data-id="${row.id}">
         <span class="transaction-date">${row.date}</span>
         ${bankBadgeHtml(row.bank)}
-        <span class="transaction-description" title="${escapeHtml(row.merchant)}">${escapeHtml(row.merchant)}</span>
+        <span class="transaction-description" title="${escapeHtmlSpecialCharacters(row.merchant)}">${escapeHtmlSpecialCharacters(row.merchant)}</span>
         <span class="transaction-amount">${formatCurrency(row.amount)}</span>
         <select class="transaction-category-select">${categoryOptionsHtml(expenseCategories, row.categoryId)}</select>
         <button type="button" class="link-button transaction-edit">Editar</button>
@@ -512,7 +507,7 @@ export function initExpensesView(): void {
         <div class="row-edit-line">
           <input type="date" class="transaction-edit-date" value="${row.date}" />
           <select class="transaction-edit-bank" title="Banco de origem">${bankOptionsHtml(row.bank)}</select>
-          <input type="text" class="transaction-edit-description" value="${escapeHtml(row.merchant)}" />
+          <input type="text" class="transaction-edit-description" value="${escapeHtmlSpecialCharacters(row.merchant)}" />
           <input type="number" step="0.01" min="0.01" class="transaction-edit-amount" value="${row.amount}" />
           <select class="transaction-category-select" title="Categoria">${categoryOptionsHtml(expenseCategories, row.categoryId)}</select>
         </div>
@@ -656,7 +651,7 @@ export function initExpensesView(): void {
       <div class="manual-entry-row${duplicate.className}"${duplicate.title} data-id="${row.id}">
         <span class="manual-entry-date">${row.date}</span>
         ${bankBadgeHtml(row.bank)}
-        <span class="manual-entry-description" title="${escapeHtml(row.description)}">${escapeHtml(row.description)}</span>
+        <span class="manual-entry-description" title="${escapeHtmlSpecialCharacters(row.description)}">${escapeHtmlSpecialCharacters(row.description)}</span>
         <span class="manual-entry-amount income">${formatCurrency(row.amount)}</span>
         <select class="income-category-select">${categoryOptionsHtml(incomeCategories, row.categoryId)}</select>
         <button type="button" class="link-button income-edit">Editar</button>
@@ -670,7 +665,7 @@ export function initExpensesView(): void {
         <div class="row-edit-line">
           <input type="date" class="manual-entry-edit-date" value="${row.date}" />
           <select class="manual-entry-edit-bank" title="Banco de origem">${bankOptionsHtml(row.bank)}</select>
-          <input type="text" class="manual-entry-edit-description" value="${escapeHtml(row.description)}" />
+          <input type="text" class="manual-entry-edit-description" value="${escapeHtmlSpecialCharacters(row.description)}" />
           <input type="number" step="0.01" min="0.01" class="manual-entry-edit-amount" value="${row.amount}" />
           <select class="income-category-select" title="Categoria">${categoryOptionsHtml(incomeCategories, row.categoryId)}</select>
         </div>
@@ -712,13 +707,13 @@ export function initExpensesView(): void {
             : "";
 
         return `
-          <div class="category-manager-row" data-id="${category.id}" data-type="${type}">
-            <input type="text" class="category-manager-label" value="${escapeHtml(category.label)}" />
+          <div class="category-manager-row" data-id="${escapeHtmlSpecialCharacters(category.id)}" data-type="${type}">
+            <input type="text" class="category-manager-label" value="${escapeHtmlSpecialCharacters(category.label)}" />
             ${groupSelectHtml}
             <input
               type="text"
               class="category-manager-keywords"
-              value="${escapeHtml(keywords)}"
+              value="${escapeHtmlSpecialCharacters(keywords)}"
               placeholder="palavras-chave separadas por vírgula"
             />
             <button type="button" class="link-button category-manager-delete">Excluir</button>

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getRequiredElementById } from "../../utils/dom_helpers";
+import { escapeHtmlSpecialCharacters, getRequiredElementById } from "../../utils/dom_helpers";
 
 function stubDocumentWithElements(elementsById: Record<string, object>): void {
   vi.stubGlobal("document", {
@@ -23,5 +23,17 @@ describe("getRequiredElementById", () => {
     stubDocumentWithElements({});
 
     expect(() => getRequiredElementById("inexistente")).toThrow("elemento #inexistente não encontrado");
+  });
+});
+
+describe("escapeHtmlSpecialCharacters", () => {
+  it("escapa os cinco caracteres especiais do HTML", () => {
+    expect(escapeHtmlSpecialCharacters(`<a href="x">Tom & Jerry's</a>`)).toBe(
+      "&lt;a href=&quot;x&quot;&gt;Tom &amp; Jerry&#39;s&lt;/a&gt;"
+    );
+  });
+
+  it("mantém texto sem caracteres especiais inalterado", () => {
+    expect(escapeHtmlSpecialCharacters("Padaria São João 123")).toBe("Padaria São João 123");
   });
 });
