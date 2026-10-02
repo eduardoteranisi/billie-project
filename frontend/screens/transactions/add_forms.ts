@@ -11,7 +11,7 @@ import type { ManualIncomeEntry, StoredTransaction } from "../../types";
 import { getRequiredElementById } from "../../utils/dom_helpers";
 import { buildCategoryOptionsHtml } from "./category_options_html";
 
-export function initEntryAddForms(): void {
+export function initTransactionAddForms(): void {
   const btnAddIncome = getRequiredElementById<HTMLButtonElement>("btn-add-income");
   const incomeAddPopover = getRequiredElementById<HTMLDivElement>("income-add-popover");
   const incomeAddForm = getRequiredElementById<HTMLFormElement>("income-add-form");

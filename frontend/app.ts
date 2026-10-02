@@ -10,7 +10,7 @@ import { initBackupModal } from "./screens/backup_modal";
 import { initCategoryManagerModal } from "./screens/category_manager_modal";
 import { initInvoiceView, log } from "./screens/invoice";
 import { initOverviewView } from "./screens/overview";
-import { initTransactionsView } from "./screens/transactions/transactions_view";
+import { initTransactionsView } from "./screens/transactions";
 import { getRequiredElementById } from "./utils/dom_helpers";
 
 // ---------- referências de DOM ----------

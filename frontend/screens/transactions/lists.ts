@@ -42,7 +42,7 @@ const BANK_BADGE_LABELS: Record<Bank, string> = {
 };
 const UNKNOWN_BANK_BADGE_LABEL = "?";
 
-export function initEntryLists(): void {
+export function initTransactionLists(): void {
   const periodSelect = getRequiredElementById<HTMLSelectElement>("transactions-period");
   const groupModeSelect = getRequiredElementById<HTMLSelectElement>("transactions-group-mode");
   const transactionList = getRequiredElementById<HTMLDivElement>("transaction-list");
