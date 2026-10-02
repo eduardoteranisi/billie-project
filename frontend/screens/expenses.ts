@@ -2,7 +2,7 @@ import { classifyTransactionDescription, UNCATEGORIZED_CATEGORY_ID, UNCATEGORIZE
 import type { Bank, Category, CategoryGroup, CategoryRule } from "@billie/parser";
 import { calculateDre, listAvailablePeriods } from "../services/dre_aggregator";
 import { groupPossibleDuplicateRows } from "../services/duplicate_detection";
-import { EXPENSES_UPDATED_EVENT } from "../services/statement_importer";
+import { listenStoredDataUpdated } from "../services/stored_data_events";
 import { groupTransactionsByBank, groupTransactionsByDay, UNKNOWN_BANK_LABEL } from "../services/transaction_grouping";
 import type { TransactionGroup } from "../services/transaction_grouping";
 import {
@@ -914,7 +914,7 @@ export function initExpensesView(): void {
   btnExportBackup.addEventListener("click", () => void onExportBackupClick());
   btnImportBackup.addEventListener("click", () => backupFileInput.click());
   backupFileInput.addEventListener("change", () => void onBackupFileSelected());
-  document.addEventListener(EXPENSES_UPDATED_EVENT, () => void loadData());
+  listenStoredDataUpdated(() => void loadData());
 
   void loadData();
 }

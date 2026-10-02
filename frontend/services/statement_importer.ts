@@ -4,12 +4,11 @@ import {
   classifyAndSaveIncomeList,
   sumSaveResults,
 } from "./transaction_saver";
+import { notifyStoredDataUpdated } from "./stored_data_events";
 import type { StoredTransaction } from "../types";
 
 // qualquer ano não numérico faz o parser deduzir o ano sozinho (resolvePurchaseYear)
 export const AUTOMATIC_YEAR = "Automático (recomendado)";
-
-export const EXPENSES_UPDATED_EVENT = "billie:expenses-updated";
 
 export interface ParsedStatement {
   expenses: Transaction[];
@@ -74,6 +73,6 @@ export async function saveParsedStatementToExpenses(
   const incomeResult = await classifyAndSaveIncomeList(statement.income);
   const total = sumSaveResults(expensesResult, incomeResult);
 
-  document.dispatchEvent(new Event(EXPENSES_UPDATED_EVENT));
+  notifyStoredDataUpdated();
   return total;
 }

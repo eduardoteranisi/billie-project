@@ -2,11 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { runPipeline, type Transaction } from "@billie/parser";
 import { classifyAndSaveExpenseList, classifyAndSaveIncomeList } from "../../services/transaction_saver";
 import {
-  EXPENSES_UPDATED_EVENT,
   parseCsvStatementText,
   parsePdfStatementFile,
   saveParsedStatementToExpenses,
 } from "../../services/statement_importer";
+import { STORED_DATA_UPDATED_EVENT } from "../../services/stored_data_events";
 
 vi.mock("@billie/parser", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@billie/parser")>()),
@@ -120,6 +120,6 @@ describe("saveParsedStatementToExpenses", () => {
     expect(result).toEqual({ added: 5, duplicates: 1 });
     expect(classifyAndSaveExpenseList).toHaveBeenCalledWith(statement.expenses, "pdf");
     expect(classifyAndSaveIncomeList).toHaveBeenCalledWith(statement.income);
-    expect(dispatchEvent).toHaveBeenCalledWith(expect.objectContaining({ type: EXPENSES_UPDATED_EVENT }));
+    expect(dispatchEvent).toHaveBeenCalledWith(expect.objectContaining({ type: STORED_DATA_UPDATED_EVENT }));
   });
 });
