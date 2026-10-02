@@ -9,7 +9,7 @@ import {
 import type { StoredTransaction } from "../types";
 import { fillColumnMappingSelects, readColumnMappingSelects } from "../components/column_mapping_form";
 import { escapeHtmlSpecialCharacters, getRequiredElementById } from "../utils/dom_helpers";
-import { isPdf } from "../utils/file_helpers";
+import { downloadTextFile, isPdf } from "../utils/file_helpers";
 
 type InvokeFn = (cmd: string, args?: Record<string, unknown>) => Promise<any>;
 
@@ -245,7 +245,7 @@ export function initInvoiceView(): void {
       if (config) {
         const allTransactions = [...statement.expenses, ...statement.income];
         const fileName = buildCsvFileName(els.bank.value, findInvoicePeriod(allTransactions));
-        downloadCsv(exportToCsv(allTransactions, config), fileName);
+        downloadTextFile(exportToCsv(allTransactions, config), fileName, "text/csv;charset=utf-8");
         log(`Arquivo "${fileName}" salvo na pasta Downloads.`, "success");
       } else {
         log("Geração de CSV cancelada.");
@@ -322,17 +322,6 @@ export function initInvoiceView(): void {
     return [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0];
   }
 
-  function downloadCsv(csv: string, fileName: string) {
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = fileName;
-    link.click();
-
-    URL.revokeObjectURL(url);
-  }
 
   function bindEvents() {
     els.fileRow.addEventListener("click", selectFile);

@@ -33,7 +33,10 @@ import {
 } from "../services/expense_store";
 import type { CategoryType } from "../services/expense_store";
 import type { CategorySummary, DreSummary, ManualIncomeEntry, StoredTransaction } from "../types";
+import { confirmAction } from "../components/confirm_modal";
+import { formatBrlCurrency } from "../utils/currency_format";
 import { escapeHtmlSpecialCharacters, getRequiredElementById } from "../utils/dom_helpers";
+import { downloadTextFile } from "../utils/file_helpers";
 
 const BANK_OPTIONS: Bank[] = ["Nubank", "XP / Rico", "Santander"];
 
@@ -44,26 +47,10 @@ const BANK_BADGE_LABELS: Record<Bank, string> = {
 };
 const UNKNOWN_BANK_BADGE_LABEL = "?";
 
-function formatCurrency(value: number): string {
-  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
 function setCardValue(el: HTMLElement, value: number): void {
-  const text = formatCurrency(value);
+  const text = formatBrlCurrency(value);
   el.textContent = text;
   el.style.setProperty("--value-length", String(text.length));
-}
-
-function downloadFile(content: string, fileName: string, mimeType: string): void {
-  const blob = new Blob([content], { type: mimeType });
-  const url = URL.createObjectURL(blob);
-
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = fileName;
-  link.click();
-
-  URL.revokeObjectURL(url);
 }
 
 function buildBackupFileName(): string {
@@ -108,10 +95,6 @@ export function initExpensesView(): void {
   const btnImportBackup = getRequiredElementById<HTMLButtonElement>("btn-importar-backup");
   const backupFileInput = getRequiredElementById<HTMLInputElement>("backup-file-input");
   const backupStatus = getRequiredElementById<HTMLParagraphElement>("backup-status");
-  const modalConfirm = getRequiredElementById<HTMLDivElement>("modal-confirm");
-  const modalConfirmMessage = getRequiredElementById<HTMLParagraphElement>("modal-confirm-message");
-  const modalConfirmConfirm = getRequiredElementById<HTMLButtonElement>("modal-confirm-confirm");
-  const modalConfirmCancel = getRequiredElementById<HTMLButtonElement>("modal-confirm-cancel");
 
   let transactions: StoredTransaction[] = [];
   let income: ManualIncomeEntry[] = [];
@@ -127,25 +110,6 @@ export function initExpensesView(): void {
   let transactionGroupMode: "none" | "bank" | "day" = "none";
   let possibleDuplicateTransactionIds = new Set<string>();
   let possibleDuplicateIncomeIds = new Set<string>();
-
-  function confirmAction(message: string): Promise<boolean> {
-    modalConfirmMessage.textContent = message;
-
-    return new Promise((resolve) => {
-      const finish = (result: boolean) => {
-        modalConfirm.hidden = true;
-        modalConfirmConfirm.removeEventListener("click", onConfirm);
-        modalConfirmCancel.removeEventListener("click", onCancel);
-        resolve(result);
-      };
-      const onConfirm = () => finish(true);
-      const onCancel = () => finish(false);
-
-      modalConfirmConfirm.addEventListener("click", onConfirm);
-      modalConfirmCancel.addEventListener("click", onCancel);
-      modalConfirm.hidden = false;
-    });
-  }
 
   async function loadData(): Promise<void> {
     [transactions, income, expenseCategories, incomeCategories, expenseCategoryRules, incomeCategoryRules] =
@@ -251,7 +215,7 @@ export function initExpensesView(): void {
           <div class="category-row">
             <div class="category-row-header">
               <span>${escapeHtmlSpecialCharacters(category.label)}</span>
-              <span>${formatCurrency(category.total)}</span>
+              <span>${formatBrlCurrency(category.total)}</span>
             </div>
             <div class="category-bar"><div class="category-bar-fill${fillGroupClass}" style="width: ${barWidth}%"></div></div>
           </div>
@@ -292,7 +256,7 @@ export function initExpensesView(): void {
           <div class="transaction-group">
             <div class="transaction-group-header">
               <span>${escapeHtmlSpecialCharacters(groupHeaderLabel(group))}</span>
-              <span class="transaction-group-subtotal">${formatCurrency(group.total)}</span>
+              <span class="transaction-group-subtotal">${formatBrlCurrency(group.total)}</span>
             </div>
             ${rowsHtml(group.transactions)}
           </div>
@@ -360,7 +324,7 @@ export function initExpensesView(): void {
         const ids = group.map((row) => row.id).join(",");
         return `
           <li class="duplicate-notice-item">
-            <span>${dateLabel} · ${formatCurrency(amount)} · ${group.length} lançamentos</span>
+            <span>${dateLabel} · ${formatBrlCurrency(amount)} · ${group.length} lançamentos</span>
             <button type="button" class="link-button duplicate-dismiss" data-ids="${escapeHtmlSpecialCharacters(ids)}">Não é duplicado</button>
           </li>
         `;
@@ -493,7 +457,7 @@ export function initExpensesView(): void {
         <span class="transaction-date">${escapeHtmlSpecialCharacters(row.date)}</span>
         ${bankBadgeHtml(row.bank)}
         <span class="transaction-description" title="${escapeHtmlSpecialCharacters(row.merchant)}">${escapeHtmlSpecialCharacters(row.merchant)}</span>
-        <span class="transaction-amount">${formatCurrency(row.amount)}</span>
+        <span class="transaction-amount">${formatBrlCurrency(row.amount)}</span>
         <select class="transaction-category-select">${categoryOptionsHtml(expenseCategories, row.categoryId)}</select>
         <button type="button" class="link-button transaction-edit">Editar</button>
       </div>
@@ -651,7 +615,7 @@ export function initExpensesView(): void {
         <span class="manual-entry-date">${escapeHtmlSpecialCharacters(row.date)}</span>
         ${bankBadgeHtml(row.bank)}
         <span class="manual-entry-description" title="${escapeHtmlSpecialCharacters(row.description)}">${escapeHtmlSpecialCharacters(row.description)}</span>
-        <span class="manual-entry-amount income">${formatCurrency(row.amount)}</span>
+        <span class="manual-entry-amount income">${formatBrlCurrency(row.amount)}</span>
         <select class="income-category-select">${categoryOptionsHtml(incomeCategories, row.categoryId)}</select>
         <button type="button" class="link-button income-edit">Editar</button>
       </div>
@@ -880,7 +844,7 @@ export function initExpensesView(): void {
   async function onExportBackupClick(): Promise<void> {
     const payload = await exportBackupData();
     const fileName = buildBackupFileName();
-    downloadFile(JSON.stringify(payload, null, 2), fileName, "application/json");
+    downloadTextFile(JSON.stringify(payload, null, 2), fileName, "application/json");
     showBackupStatus(`Backup exportado: ${fileName}`, "success");
   }
 
