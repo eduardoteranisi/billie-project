@@ -86,7 +86,7 @@ export function initInvoiceView(): void {
     for (let ano = anoAtual; ano >= 2021; ano--) opcoes.push(String(ano));
 
     select.innerHTML = opcoes
-      .map((o) => `<option value="${o}">${o}</option>`)
+      .map((o) => `<option value="${escapeHtmlSpecialCharacters(o)}">${escapeHtmlSpecialCharacters(o)}</option>`)
       .join("");
   }
 

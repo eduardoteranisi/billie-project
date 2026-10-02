@@ -174,7 +174,7 @@ export function initExpensesView(): void {
   function renderPeriodOptions(): void {
     const periods = listAvailablePeriods(transactions, income);
     const previousValue = periodSelect.value;
-    const optionsHtml = periods.map((period) => `<option value="${period}">${period}</option>`).join("");
+    const optionsHtml = periods.map((period) => `<option value="${escapeHtmlSpecialCharacters(period)}">${escapeHtmlSpecialCharacters(period)}</option>`).join("");
 
     periodSelect.innerHTML = optionsHtml;
     transactionsPeriodSelect.innerHTML = optionsHtml;
@@ -247,7 +247,7 @@ export function initExpensesView(): void {
     container.innerHTML = summaries
       .map((category) => {
         const barWidth = periodTotal > 0 ? Math.round((category.total / periodTotal) * 100) : 0;
-        const fillGroupClass = category.group ? ` category-bar-fill-${category.group}` : "";
+        const fillGroupClass = category.group ? ` category-bar-fill-${escapeHtmlSpecialCharacters(category.group)}` : "";
         return `
           <div class="category-row">
             <div class="category-row-header">
@@ -490,8 +490,8 @@ export function initExpensesView(): void {
   function transactionViewRowHtml(row: StoredTransaction): string {
     const duplicate = possibleDuplicateRowAttributes(possibleDuplicateTransactionIds.has(row.id));
     return `
-      <div class="transaction-row${duplicate.className}"${duplicate.title} data-id="${row.id}">
-        <span class="transaction-date">${row.date}</span>
+      <div class="transaction-row${duplicate.className}"${duplicate.title} data-id="${escapeHtmlSpecialCharacters(row.id)}">
+        <span class="transaction-date">${escapeHtmlSpecialCharacters(row.date)}</span>
         ${bankBadgeHtml(row.bank)}
         <span class="transaction-description" title="${escapeHtmlSpecialCharacters(row.merchant)}">${escapeHtmlSpecialCharacters(row.merchant)}</span>
         <span class="transaction-amount">${formatCurrency(row.amount)}</span>
@@ -503,12 +503,12 @@ export function initExpensesView(): void {
 
   function transactionEditRowHtml(row: StoredTransaction): string {
     return `
-      <div class="transaction-row transaction-row-editing" data-id="${row.id}">
+      <div class="transaction-row transaction-row-editing" data-id="${escapeHtmlSpecialCharacters(row.id)}">
         <div class="row-edit-line">
-          <input type="date" class="transaction-edit-date" value="${row.date}" />
+          <input type="date" class="transaction-edit-date" value="${escapeHtmlSpecialCharacters(row.date)}" />
           <select class="transaction-edit-bank" title="Banco de origem">${bankOptionsHtml(row.bank)}</select>
           <input type="text" class="transaction-edit-description" value="${escapeHtmlSpecialCharacters(row.merchant)}" />
-          <input type="number" step="0.01" min="0.01" class="transaction-edit-amount" value="${row.amount}" />
+          <input type="number" step="0.01" min="0.01" class="transaction-edit-amount" value="${escapeHtmlSpecialCharacters(String(row.amount))}" />
           <select class="transaction-category-select" title="Categoria">${categoryOptionsHtml(expenseCategories, row.categoryId)}</select>
         </div>
         <div class="row-edit-actions">
@@ -648,8 +648,8 @@ export function initExpensesView(): void {
   function incomeViewRowHtml(row: ManualIncomeEntry): string {
     const duplicate = possibleDuplicateRowAttributes(possibleDuplicateIncomeIds.has(row.id));
     return `
-      <div class="manual-entry-row${duplicate.className}"${duplicate.title} data-id="${row.id}">
-        <span class="manual-entry-date">${row.date}</span>
+      <div class="manual-entry-row${duplicate.className}"${duplicate.title} data-id="${escapeHtmlSpecialCharacters(row.id)}">
+        <span class="manual-entry-date">${escapeHtmlSpecialCharacters(row.date)}</span>
         ${bankBadgeHtml(row.bank)}
         <span class="manual-entry-description" title="${escapeHtmlSpecialCharacters(row.description)}">${escapeHtmlSpecialCharacters(row.description)}</span>
         <span class="manual-entry-amount income">${formatCurrency(row.amount)}</span>
@@ -661,12 +661,12 @@ export function initExpensesView(): void {
 
   function incomeEditRowHtml(row: ManualIncomeEntry): string {
     return `
-      <div class="manual-entry-row manual-entry-row-editing" data-id="${row.id}">
+      <div class="manual-entry-row manual-entry-row-editing" data-id="${escapeHtmlSpecialCharacters(row.id)}">
         <div class="row-edit-line">
-          <input type="date" class="manual-entry-edit-date" value="${row.date}" />
+          <input type="date" class="manual-entry-edit-date" value="${escapeHtmlSpecialCharacters(row.date)}" />
           <select class="manual-entry-edit-bank" title="Banco de origem">${bankOptionsHtml(row.bank)}</select>
           <input type="text" class="manual-entry-edit-description" value="${escapeHtmlSpecialCharacters(row.description)}" />
-          <input type="number" step="0.01" min="0.01" class="manual-entry-edit-amount" value="${row.amount}" />
+          <input type="number" step="0.01" min="0.01" class="manual-entry-edit-amount" value="${escapeHtmlSpecialCharacters(String(row.amount))}" />
           <select class="income-category-select" title="Categoria">${categoryOptionsHtml(incomeCategories, row.categoryId)}</select>
         </div>
         <div class="row-edit-actions">
