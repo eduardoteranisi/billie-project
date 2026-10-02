@@ -7,7 +7,7 @@ import {
 import { listCategoryRules, saveTransactions, saveIncomeEntries } from "./expense_store";
 import type { ManualIncomeEntry, StoredTransaction } from "../types";
 
-export async function classificarESalvarTransacoes(
+export async function classifyAndSaveExpenseList(
   transactions: Transaction[],
   origin: StoredTransaction["origin"]
 ) {
@@ -20,7 +20,7 @@ export async function classificarESalvarTransacoes(
   return saveTransactions(storedTransactions);
 }
 
-export async function salvarIncomeNoControle(
+export async function classifyAndSaveIncomeList(
   income: Transaction[] | undefined
 ): Promise<{ added: number; duplicates: number }> {
   if (!income || income.length === 0) return { added: 0, duplicates: 0 };
@@ -37,11 +37,11 @@ export async function salvarIncomeNoControle(
   return saveIncomeEntries(incomeEntries);
 }
 
-export function somarResultadosSalvamento(
-  ...resultados: { added: number; duplicates: number }[]
+export function sumSaveResults(
+  ...results: { added: number; duplicates: number }[]
 ): { added: number; duplicates: number } {
-  return resultados.reduce(
-    (total, resultado) => ({ added: total.added + resultado.added, duplicates: total.duplicates + resultado.duplicates }),
+  return results.reduce(
+    (total, result) => ({ added: total.added + result.added, duplicates: total.duplicates + result.duplicates }),
     { added: 0, duplicates: 0 }
   );
 }

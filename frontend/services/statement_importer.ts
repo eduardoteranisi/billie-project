@@ -1,8 +1,8 @@
 import { runPipeline, type Bank, type CsvColumnConfig, type LogFn, type Transaction } from "@billie/parser";
 import {
-  classificarESalvarTransacoes,
-  salvarIncomeNoControle,
-  somarResultadosSalvamento,
+  classifyAndSaveExpenseList,
+  classifyAndSaveIncomeList,
+  sumSaveResults,
 } from "./transaction_saver";
 import type { StoredTransaction } from "../types";
 
@@ -70,9 +70,9 @@ export async function saveParsedStatementToExpenses(
   statement: ParsedStatement,
   origin: StoredTransaction["origin"]
 ): Promise<SaveStatementResult> {
-  const expensesResult = await classificarESalvarTransacoes(statement.expenses, origin);
-  const incomeResult = await salvarIncomeNoControle(statement.income);
-  const total = somarResultadosSalvamento(expensesResult, incomeResult);
+  const expensesResult = await classifyAndSaveExpenseList(statement.expenses, origin);
+  const incomeResult = await classifyAndSaveIncomeList(statement.income);
+  const total = sumSaveResults(expensesResult, incomeResult);
 
   document.dispatchEvent(new Event(EXPENSES_UPDATED_EVENT));
   return total;

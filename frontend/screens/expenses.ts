@@ -54,19 +54,19 @@ function setCardValue(el: HTMLElement, value: number): void {
   el.style.setProperty("--value-length", String(text.length));
 }
 
-function baixarArquivo(conteudo: string, nomeArquivo: string, tipo: string): void {
-  const blob = new Blob([conteudo], { type: tipo });
+function downloadFile(content: string, fileName: string, mimeType: string): void {
+  const blob = new Blob([content], { type: mimeType });
   const url = URL.createObjectURL(blob);
 
   const link = document.createElement("a");
   link.href = url;
-  link.download = nomeArquivo;
+  link.download = fileName;
   link.click();
 
   URL.revokeObjectURL(url);
 }
 
-function nomeArquivoBackup(): string {
+function buildBackupFileName(): string {
   return `billie-backup-${new Date().toISOString().slice(0, 10)}.json`;
 }
 
@@ -104,8 +104,8 @@ export function initExpensesView(): void {
   const categoryLabelInput = getRequiredElementById<HTMLInputElement>("category-label");
   const categoryGroupSelect = getRequiredElementById<HTMLSelectElement>("category-group");
   const categoryKeywordsInput = getRequiredElementById<HTMLInputElement>("category-keywords");
-  const btnExportarBackup = getRequiredElementById<HTMLButtonElement>("btn-exportar-backup");
-  const btnImportarBackup = getRequiredElementById<HTMLButtonElement>("btn-importar-backup");
+  const btnExportBackup = getRequiredElementById<HTMLButtonElement>("btn-exportar-backup");
+  const btnImportBackup = getRequiredElementById<HTMLButtonElement>("btn-importar-backup");
   const backupFileInput = getRequiredElementById<HTMLInputElement>("backup-file-input");
   const backupStatus = getRequiredElementById<HTMLParagraphElement>("backup-status");
   const modalConfirm = getRequiredElementById<HTMLDivElement>("modal-confirm");
@@ -128,18 +128,18 @@ export function initExpensesView(): void {
   let possibleDuplicateTransactionIds = new Set<string>();
   let possibleDuplicateIncomeIds = new Set<string>();
 
-  function confirmarAcao(mensagem: string): Promise<boolean> {
-    modalConfirmMessage.textContent = mensagem;
+  function confirmAction(message: string): Promise<boolean> {
+    modalConfirmMessage.textContent = message;
 
     return new Promise((resolve) => {
-      const finalizar = (resultado: boolean) => {
+      const finish = (result: boolean) => {
         modalConfirm.hidden = true;
         modalConfirmConfirm.removeEventListener("click", onConfirm);
         modalConfirmCancel.removeEventListener("click", onCancel);
-        resolve(resultado);
+        resolve(result);
       };
-      const onConfirm = () => finalizar(true);
-      const onCancel = () => finalizar(false);
+      const onConfirm = () => finish(true);
+      const onCancel = () => finish(false);
 
       modalConfirmConfirm.addEventListener("click", onConfirm);
       modalConfirmCancel.addEventListener("click", onCancel);
@@ -441,7 +441,7 @@ export function initExpensesView(): void {
           row.querySelector(".transaction-description")?.textContent ??
           row.querySelector<HTMLInputElement>(".transaction-edit-description")?.value ??
           "";
-        if (!(await confirmarAcao(`Excluir a transação "${description}"?`))) return;
+        if (!(await confirmAction(`Excluir a transação "${description}"?`))) return;
 
         await removeTransaction(row.dataset.id);
         editingTransactionId = null;
@@ -599,7 +599,7 @@ export function initExpensesView(): void {
           row.querySelector(".manual-entry-description")?.textContent ??
           row.querySelector<HTMLInputElement>(".manual-entry-edit-description")?.value ??
           "";
-        if (!(await confirmarAcao(`Excluir a receita "${description}"?`))) return;
+        if (!(await confirmAction(`Excluir a receita "${description}"?`))) return;
 
         await removeIncome(row.dataset.id);
         editingIncomeId = null;
@@ -768,7 +768,7 @@ export function initExpensesView(): void {
             ? `Excluir "${label}"? ${count} lançamento(s) serão movidos para "Outros / Não categorizado".`
             : `Excluir "${label}"?`;
 
-        if (!(await confirmarAcao(confirmMessage))) return;
+        if (!(await confirmAction(confirmMessage))) return;
 
         await deleteCategory(id);
         await loadData();
@@ -870,47 +870,47 @@ export function initExpensesView(): void {
     await loadData();
   }
 
-  function exibirStatusBackup(mensagem: string, tipo: "success" | "error"): void {
-    backupStatus.textContent = mensagem;
-    backupStatus.classList.toggle("success", tipo === "success");
-    backupStatus.classList.toggle("error", tipo === "error");
+  function showBackupStatus(message: string, type: "success" | "error"): void {
+    backupStatus.textContent = message;
+    backupStatus.classList.toggle("success", type === "success");
+    backupStatus.classList.toggle("error", type === "error");
     backupStatus.hidden = false;
   }
 
-  async function onExportarBackupClick(): Promise<void> {
+  async function onExportBackupClick(): Promise<void> {
     const payload = await exportBackupData();
-    const nomeArquivo = nomeArquivoBackup();
-    baixarArquivo(JSON.stringify(payload, null, 2), nomeArquivo, "application/json");
-    exibirStatusBackup(`Backup exportado: ${nomeArquivo}`, "success");
+    const fileName = buildBackupFileName();
+    downloadFile(JSON.stringify(payload, null, 2), fileName, "application/json");
+    showBackupStatus(`Backup exportado: ${fileName}`, "success");
   }
 
   async function onBackupFileSelected(): Promise<void> {
-    const arquivo = backupFileInput.files?.[0];
+    const file = backupFileInput.files?.[0];
     backupFileInput.value = "";
-    if (!arquivo) return;
+    if (!file) return;
 
     backupStatus.hidden = true;
 
     let payload: unknown;
     try {
-      payload = JSON.parse(await arquivo.text());
+      payload = JSON.parse(await file.text());
     } catch {
-      exibirStatusBackup("Arquivo inválido: não é um JSON válido.", "error");
+      showBackupStatus("Arquivo inválido: não é um JSON válido.", "error");
       return;
     }
 
-    const confirmado = await confirmarAcao(
+    const confirmed = await confirmAction(
       "Restaurar este backup? Lançamentos e categorias com o mesmo identificador do arquivo serão sobrescritos; o restante dos dados atuais é preservado."
     );
-    if (!confirmado) return;
+    if (!confirmed) return;
 
     try {
       await restoreBackupData(payload);
       await loadData();
-      exibirStatusBackup("Backup restaurado com sucesso.", "success");
+      showBackupStatus("Backup restaurado com sucesso.", "success");
     } catch (error) {
-      const mensagem = error instanceof BackupValidationError ? error.message : "Não foi possível restaurar o backup.";
-      exibirStatusBackup(mensagem, "error");
+      const message = error instanceof BackupValidationError ? error.message : "Não foi possível restaurar o backup.";
+      showBackupStatus(message, "error");
     }
   }
 
@@ -947,8 +947,8 @@ export function initExpensesView(): void {
     button.addEventListener("click", () => setActiveCategoryManagerType(button.dataset.type as CategoryType));
   });
   categoryForm.addEventListener("submit", onCategorySubmit);
-  btnExportarBackup.addEventListener("click", () => void onExportarBackupClick());
-  btnImportarBackup.addEventListener("click", () => backupFileInput.click());
+  btnExportBackup.addEventListener("click", () => void onExportBackupClick());
+  btnImportBackup.addEventListener("click", () => backupFileInput.click());
   backupFileInput.addEventListener("change", () => void onBackupFileSelected());
   document.addEventListener(EXPENSES_UPDATED_EVENT, () => void loadData());
 

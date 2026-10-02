@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { runPipeline, type Transaction } from "@billie/parser";
-import { classificarESalvarTransacoes, salvarIncomeNoControle } from "../../services/transaction_saver";
+import { classifyAndSaveExpenseList, classifyAndSaveIncomeList } from "../../services/transaction_saver";
 import {
   EXPENSES_UPDATED_EVENT,
   parseCsvStatementText,
@@ -16,8 +16,8 @@ vi.mock("@billie/parser", async (importOriginal) => ({
 // as funções de salvamento dependem do IndexedDB (expense_store.ts)
 vi.mock("../../services/transaction_saver", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../services/transaction_saver")>()),
-  classificarESalvarTransacoes: vi.fn(),
-  salvarIncomeNoControle: vi.fn(),
+  classifyAndSaveExpenseList: vi.fn(),
+  classifyAndSaveIncomeList: vi.fn(),
 }));
 
 function buildTransaction(id: string): Transaction {
@@ -111,15 +111,15 @@ describe("saveParsedStatementToExpenses", () => {
   });
 
   it("salva despesas e receitas, soma os resultados e avisa a tela de Controle de Gastos", async () => {
-    vi.mocked(classificarESalvarTransacoes).mockResolvedValue({ added: 3, duplicates: 1 });
-    vi.mocked(salvarIncomeNoControle).mockResolvedValue({ added: 2, duplicates: 0 });
+    vi.mocked(classifyAndSaveExpenseList).mockResolvedValue({ added: 3, duplicates: 1 });
+    vi.mocked(classifyAndSaveIncomeList).mockResolvedValue({ added: 2, duplicates: 0 });
     const statement = { expenses: [buildTransaction("a")], income: [buildTransaction("b")] };
 
     const result = await saveParsedStatementToExpenses(statement, "pdf");
 
     expect(result).toEqual({ added: 5, duplicates: 1 });
-    expect(classificarESalvarTransacoes).toHaveBeenCalledWith(statement.expenses, "pdf");
-    expect(salvarIncomeNoControle).toHaveBeenCalledWith(statement.income);
+    expect(classifyAndSaveExpenseList).toHaveBeenCalledWith(statement.expenses, "pdf");
+    expect(classifyAndSaveIncomeList).toHaveBeenCalledWith(statement.income);
     expect(dispatchEvent).toHaveBeenCalledWith(expect.objectContaining({ type: EXPENSES_UPDATED_EVENT }));
   });
 });
