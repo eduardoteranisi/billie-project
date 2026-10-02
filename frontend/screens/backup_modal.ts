@@ -1,5 +1,5 @@
 import { confirmAction } from "../components/confirm_modal";
-import { BackupValidationError, exportBackupData, restoreBackupData } from "../services/expense_store";
+import { BackupValidationError, exportBackupData, restoreBackupData } from "../services/finance_store";
 import { notifyStoredDataUpdated } from "../services/stored_data_events";
 import { getRequiredElementById } from "../utils/dom_helpers";
 import { downloadTextFile } from "../utils/file_helpers";

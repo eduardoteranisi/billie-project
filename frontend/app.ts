@@ -22,10 +22,10 @@ const els = {
   btnTheme: getRequiredElementById<HTMLButtonElement>("btn-tema"),
 
   tabInvoice: getRequiredElementById<HTMLButtonElement>("tab-invoice"),
-  tabExpenses: getRequiredElementById<HTMLButtonElement>("tab-expenses"),
+  tabOverview: getRequiredElementById<HTMLButtonElement>("tab-overview"),
   tabTransactions: getRequiredElementById<HTMLButtonElement>("tab-transactions"),
   viewInvoice: getRequiredElementById<HTMLDivElement>("view-invoice"),
-  viewExpenses: getRequiredElementById<HTMLDivElement>("view-expenses"),
+  viewOverview: getRequiredElementById<HTMLDivElement>("view-overview"),
   viewTransactions: getRequiredElementById<HTMLDivElement>("view-transactions"),
 };
 
@@ -62,14 +62,14 @@ async function installUpdate(update: Update) {
 
 // ---------- abas ----------
 
-type ViewName = "invoice" | "expenses" | "transactions";
+type ViewName = "invoice" | "overview" | "transactions";
 
 function showView(view: ViewName) {
   els.viewInvoice.hidden = view !== "invoice";
-  els.viewExpenses.hidden = view !== "expenses";
+  els.viewOverview.hidden = view !== "overview";
   els.viewTransactions.hidden = view !== "transactions";
   els.tabInvoice.classList.toggle("active", view === "invoice");
-  els.tabExpenses.classList.toggle("active", view === "expenses");
+  els.tabOverview.classList.toggle("active", view === "overview");
   els.tabTransactions.classList.toggle("active", view === "transactions");
 }
 
@@ -106,7 +106,7 @@ function updateThemeIcon(theme: string) {
 function bindEvents() {
   els.btnTheme.addEventListener("click", toggleTheme);
   els.tabInvoice.addEventListener("click", () => showView("invoice"));
-  els.tabExpenses.addEventListener("click", () => showView("expenses"));
+  els.tabOverview.addEventListener("click", () => showView("overview"));
   els.tabTransactions.addEventListener("click", () => showView("transactions"));
 }
 

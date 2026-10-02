@@ -3,7 +3,7 @@ import {
   AUTOMATIC_YEAR,
   parseCsvStatementText,
   parsePdfStatementFile,
-  saveParsedStatementToExpenses,
+  saveParsedStatementToFinanceStore,
   type ParsedStatement,
 } from "../../services/statement_importer";
 import type { StoredTransaction } from "../../types";
@@ -185,7 +185,7 @@ export function initStatementImportPopover(): void {
     origin: StoredTransaction["origin"],
     report: StatusReporter
   ) {
-    const { added, duplicates } = await saveParsedStatementToExpenses(statement, origin);
+    const { added, duplicates } = await saveParsedStatementToFinanceStore(statement, origin);
     report(`${added} registros importados${duplicates > 0 ? ` (${duplicates} já existiam)` : ""}.`, "success");
   }
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { sumSaveResults } from "../../services/transaction_saver";
 
-// classifyAndSaveExpenseList e classifyAndSaveIncomeList dependem do IndexedDB (expense_store.ts)
+// classifyAndSaveExpenseList e classifyAndSaveIncomeList dependem do IndexedDB (finance_store.ts)
 // e entram na fatia com fake-indexeddb (ADR 0006).
 describe("somarResultadosSalvamento", () => {
   it("soma adicionados e duplicados de vários salvamentos", () => {

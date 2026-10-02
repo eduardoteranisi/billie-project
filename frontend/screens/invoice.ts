@@ -3,7 +3,7 @@ import {
   AUTOMATIC_YEAR,
   parseCsvStatementText,
   parsePdfStatementFile,
-  saveParsedStatementToExpenses,
+  saveParsedStatementToFinanceStore,
   type ParsedStatement,
 } from "../services/statement_importer";
 import type { StoredTransaction } from "../types";
@@ -56,9 +56,9 @@ export function initInvoiceView(): void {
 
     btnProcess: getRequiredElementById<HTMLButtonElement>("btn-processar"),
 
-    modalSaveExpenses: getRequiredElementById<HTMLDivElement>("modal-save-expenses"),
-    modalSaveExpensesConfirm: getRequiredElementById<HTMLButtonElement>("modal-save-expenses-confirm"),
-    modalSaveExpensesSkip: getRequiredElementById<HTMLButtonElement>("modal-save-expenses-skip"),
+    modalSaveToFinanceStore: getRequiredElementById<HTMLDivElement>("modal-save-to-finance-store"),
+    modalSaveToFinanceStoreConfirm: getRequiredElementById<HTMLButtonElement>("modal-save-to-finance-store-confirm"),
+    modalSaveToFinanceStoreSkip: getRequiredElementById<HTMLButtonElement>("modal-save-to-finance-store-skip"),
 
     modalCsvColumns: getRequiredElementById<HTMLDivElement>("modal-csv-columns"),
     modalCsvColumnsConfirm: getRequiredElementById<HTMLButtonElement>("modal-csv-columns-confirm"),
@@ -165,20 +165,20 @@ export function initInvoiceView(): void {
     saveCsvColumnsConfig();
   }
 
-  function confirmSaveToExpenses(): Promise<boolean> {
+  function confirmSaveToFinanceStore(): Promise<boolean> {
     return new Promise((resolve) => {
       const finish = (result: boolean) => {
-        els.modalSaveExpenses.hidden = true;
-        els.modalSaveExpensesConfirm.removeEventListener("click", onConfirm);
-        els.modalSaveExpensesSkip.removeEventListener("click", onSkip);
+        els.modalSaveToFinanceStore.hidden = true;
+        els.modalSaveToFinanceStoreConfirm.removeEventListener("click", onConfirm);
+        els.modalSaveToFinanceStoreSkip.removeEventListener("click", onSkip);
         resolve(result);
       };
       const onConfirm = () => finish(true);
       const onSkip = () => finish(false);
 
-      els.modalSaveExpensesConfirm.addEventListener("click", onConfirm);
-      els.modalSaveExpensesSkip.addEventListener("click", onSkip);
-      els.modalSaveExpenses.hidden = false;
+      els.modalSaveToFinanceStoreConfirm.addEventListener("click", onConfirm);
+      els.modalSaveToFinanceStoreSkip.addEventListener("click", onSkip);
+      els.modalSaveToFinanceStore.hidden = false;
     });
   }
 
@@ -237,8 +237,8 @@ export function initInvoiceView(): void {
       onLog: (message) => log(message),
     });
 
-    const shouldSaveToExpenses = await confirmSaveToExpenses();
-    if (shouldSaveToExpenses) {
+    const shouldSaveToFinanceStore = await confirmSaveToFinanceStore();
+    if (shouldSaveToFinanceStore) {
       await saveStatementAndLog(statement, "pdf");
     } else {
       const config = await askCsvColumnNames();
@@ -293,7 +293,7 @@ export function initInvoiceView(): void {
   }
 
   async function saveStatementAndLog(statement: ParsedStatement, origin: StoredTransaction["origin"]) {
-    const { added, duplicates } = await saveParsedStatementToExpenses(statement, origin);
+    const { added, duplicates } = await saveParsedStatementToFinanceStore(statement, origin);
     log(
       `${added} transações novas salvas no controle de gastos${duplicates > 0 ? ` (${duplicates} já existiam)` : ""}.`,
       "success"

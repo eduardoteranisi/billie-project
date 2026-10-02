@@ -1,6 +1,6 @@
 import type { Category } from "@billie/parser";
 import { calculateDre, listAvailablePeriods } from "../services/dre_aggregator";
-import { listCategories, listIncome, listTransactions } from "../services/expense_store";
+import { listCategories, listIncome, listTransactions } from "../services/finance_store";
 import {
   getSelectedPeriod,
   listenSelectedPeriodChanged,
@@ -23,7 +23,7 @@ const EMPTY_DRE_SUMMARY: DreSummary = {
 };
 
 export function initOverviewView(): void {
-  const periodSelect = getRequiredElementById<HTMLSelectElement>("expenses-period");
+  const periodSelect = getRequiredElementById<HTMLSelectElement>("overview-period");
   const incomeCard = getRequiredElementById<HTMLParagraphElement>("dre-income");
   const fixedCard = getRequiredElementById<HTMLParagraphElement>("dre-fixed");
   const variableCard = getRequiredElementById<HTMLParagraphElement>("dre-variable");

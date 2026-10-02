@@ -5,7 +5,7 @@ import {
   type Category,
   type CategoryRule,
 } from "@billie/parser";
-import { listCategories, listCategoryRules, saveIncome, saveTransactions } from "../../services/expense_store";
+import { listCategories, listCategoryRules, saveIncome, saveTransactions } from "../../services/finance_store";
 import { listenStoredDataUpdated, notifyStoredDataUpdated } from "../../services/stored_data_events";
 import type { ManualIncomeEntry, StoredTransaction } from "../../types";
 import { getRequiredElementById } from "../../utils/dom_helpers";

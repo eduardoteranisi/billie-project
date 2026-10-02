@@ -16,7 +16,7 @@ import {
   updateTransactionBank,
   updateTransactionCategory,
   updateTransactionFields,
-} from "../../services/expense_store";
+} from "../../services/finance_store";
 import {
   getSelectedPeriod,
   listenSelectedPeriodChanged,

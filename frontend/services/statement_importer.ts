@@ -65,7 +65,7 @@ export async function parseCsvStatementText(
   return { status: "parsed", statement: { expenses: result.transactions, income: result.income ?? [] } };
 }
 
-export async function saveParsedStatementToExpenses(
+export async function saveParsedStatementToFinanceStore(
   statement: ParsedStatement,
   origin: StoredTransaction["origin"]
 ): Promise<SaveStatementResult> {

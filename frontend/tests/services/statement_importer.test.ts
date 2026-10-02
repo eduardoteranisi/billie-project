@@ -4,7 +4,7 @@ import { classifyAndSaveExpenseList, classifyAndSaveIncomeList } from "../../ser
 import {
   parseCsvStatementText,
   parsePdfStatementFile,
-  saveParsedStatementToExpenses,
+  saveParsedStatementToFinanceStore,
 } from "../../services/statement_importer";
 import { STORED_DATA_UPDATED_EVENT } from "../../services/stored_data_events";
 
@@ -13,7 +13,7 @@ vi.mock("@billie/parser", async (importOriginal) => ({
   runPipeline: vi.fn(),
 }));
 
-// as funções de salvamento dependem do IndexedDB (expense_store.ts)
+// as funções de salvamento dependem do IndexedDB (finance_store.ts)
 vi.mock("../../services/transaction_saver", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../services/transaction_saver")>()),
   classifyAndSaveExpenseList: vi.fn(),
@@ -98,7 +98,7 @@ describe("parseCsvStatementText", () => {
   });
 });
 
-describe("saveParsedStatementToExpenses", () => {
+describe("saveParsedStatementToFinanceStore", () => {
   const dispatchEvent = vi.fn();
 
   beforeEach(() => {
@@ -115,7 +115,7 @@ describe("saveParsedStatementToExpenses", () => {
     vi.mocked(classifyAndSaveIncomeList).mockResolvedValue({ added: 2, duplicates: 0 });
     const statement = { expenses: [buildTransaction("a")], income: [buildTransaction("b")] };
 
-    const result = await saveParsedStatementToExpenses(statement, "pdf");
+    const result = await saveParsedStatementToFinanceStore(statement, "pdf");
 
     expect(result).toEqual({ added: 5, duplicates: 1 });
     expect(classifyAndSaveExpenseList).toHaveBeenCalledWith(statement.expenses, "pdf");

@@ -4,7 +4,7 @@ import {
   UNCATEGORIZED_INCOME_CATEGORY_ID,
   type Transaction,
 } from "@billie/parser";
-import { listCategoryRules, saveTransactions, saveIncomeEntries } from "./expense_store";
+import { listCategoryRules, saveTransactions, saveIncomeEntries } from "./finance_store";
 import type { ManualIncomeEntry, StoredTransaction } from "../types";
 
 export async function classifyAndSaveExpenseList(

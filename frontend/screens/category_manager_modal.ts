@@ -15,7 +15,7 @@ import {
   listCategoryRules,
   updateCategory,
   type CategoryType,
-} from "../services/expense_store";
+} from "../services/finance_store";
 import { listenStoredDataUpdated, notifyStoredDataUpdated } from "../services/stored_data_events";
 import { escapeHtmlSpecialCharacters, getRequiredElementById } from "../utils/dom_helpers";
 

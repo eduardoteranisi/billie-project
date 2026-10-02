@@ -12,6 +12,7 @@ import type { BackupPayload, ManualIncomeEntry, StoredTransaction } from "../typ
 
 export type CategoryType = "expense" | "income";
 
+// nome histórico, de quando o banco só guardava despesas: renomear faria quem já usa o app abrir um banco vazio
 const DATABASE_NAME = "billie-expenses";
 const DATABASE_VERSION = 3;
 const TRANSACTIONS_STORE = "transactions";
