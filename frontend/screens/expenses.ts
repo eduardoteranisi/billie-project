@@ -32,6 +32,7 @@ import {
 } from "../services/expense_store";
 import type { CategoryType } from "../services/expense_store";
 import type { CategorySummary, DreSummary, ManualIncomeEntry, StoredTransaction } from "../types";
+import { getRequiredElementById } from "../utils/dom_helpers";
 
 export const EXPENSES_UPDATED_EVENT = "billie:expenses-updated";
 
@@ -59,12 +60,6 @@ function setCardValue(el: HTMLElement, value: number): void {
   el.style.setProperty("--value-length", String(text.length));
 }
 
-function byId<T extends HTMLElement>(id: string): T {
-  const el = document.getElementById(id);
-  if (!el) throw new Error(`elemento #${id} não encontrado`);
-  return el as T;
-}
-
 function baixarArquivo(conteudo: string, nomeArquivo: string, tipo: string): void {
   const blob = new Blob([conteudo], { type: tipo });
   const url = URL.createObjectURL(blob);
@@ -82,47 +77,47 @@ function nomeArquivoBackup(): string {
 }
 
 export function initExpensesView(): void {
-  const periodSelect = byId<HTMLSelectElement>("expenses-period");
-  const incomeCard = byId<HTMLParagraphElement>("dre-income");
-  const fixedCard = byId<HTMLParagraphElement>("dre-fixed");
-  const variableCard = byId<HTMLParagraphElement>("dre-variable");
-  const resultCard = byId<HTMLParagraphElement>("dre-result");
-  const categoryList = byId<HTMLDivElement>("category-list");
-  const incomeCategoryList = byId<HTMLDivElement>("income-category-list");
-  const transactionsPeriodSelect = byId<HTMLSelectElement>("transactions-period");
-  const transactionsGroupModeSelect = byId<HTMLSelectElement>("transactions-group-mode");
-  const transactionList = byId<HTMLDivElement>("transaction-list");
-  const incomeList = byId<HTMLDivElement>("income-entry-list");
-  const btnAddIncome = byId<HTMLButtonElement>("btn-add-income");
-  const incomeAddPopover = byId<HTMLDivElement>("income-add-popover");
-  const incomeAddForm = byId<HTMLFormElement>("income-add-form");
-  const incomeAddDate = byId<HTMLInputElement>("income-add-date");
-  const incomeAddDescription = byId<HTMLInputElement>("income-add-description");
-  const incomeAddCategory = byId<HTMLSelectElement>("income-add-category");
-  const incomeAddAmount = byId<HTMLInputElement>("income-add-amount");
-  const btnAddExpense = byId<HTMLButtonElement>("btn-add-expense");
-  const expenseAddPopover = byId<HTMLDivElement>("expense-add-popover");
-  const expenseAddForm = byId<HTMLFormElement>("expense-add-form");
-  const expenseAddDate = byId<HTMLInputElement>("expense-add-date");
-  const expenseAddDescription = byId<HTMLInputElement>("expense-add-description");
-  const expenseAddCategory = byId<HTMLSelectElement>("expense-add-category");
-  const expenseAddAmount = byId<HTMLInputElement>("expense-add-amount");
-  const categoryTypeToggle = byId<HTMLDivElement>("category-type-toggle");
-  const categoryManagerExpense = byId<HTMLDivElement>("category-manager-expense");
-  const categoryManagerIncome = byId<HTMLDivElement>("category-manager-income");
-  const categoryForm = byId<HTMLFormElement>("category-form");
-  const categoryGroupField = byId<HTMLDivElement>("category-group-field");
-  const categoryLabelInput = byId<HTMLInputElement>("category-label");
-  const categoryGroupSelect = byId<HTMLSelectElement>("category-group");
-  const categoryKeywordsInput = byId<HTMLInputElement>("category-keywords");
-  const btnExportarBackup = byId<HTMLButtonElement>("btn-exportar-backup");
-  const btnImportarBackup = byId<HTMLButtonElement>("btn-importar-backup");
-  const backupFileInput = byId<HTMLInputElement>("backup-file-input");
-  const backupStatus = byId<HTMLParagraphElement>("backup-status");
-  const modalConfirm = byId<HTMLDivElement>("modal-confirm");
-  const modalConfirmMessage = byId<HTMLParagraphElement>("modal-confirm-message");
-  const modalConfirmConfirm = byId<HTMLButtonElement>("modal-confirm-confirm");
-  const modalConfirmCancel = byId<HTMLButtonElement>("modal-confirm-cancel");
+  const periodSelect = getRequiredElementById<HTMLSelectElement>("expenses-period");
+  const incomeCard = getRequiredElementById<HTMLParagraphElement>("dre-income");
+  const fixedCard = getRequiredElementById<HTMLParagraphElement>("dre-fixed");
+  const variableCard = getRequiredElementById<HTMLParagraphElement>("dre-variable");
+  const resultCard = getRequiredElementById<HTMLParagraphElement>("dre-result");
+  const categoryList = getRequiredElementById<HTMLDivElement>("category-list");
+  const incomeCategoryList = getRequiredElementById<HTMLDivElement>("income-category-list");
+  const transactionsPeriodSelect = getRequiredElementById<HTMLSelectElement>("transactions-period");
+  const transactionsGroupModeSelect = getRequiredElementById<HTMLSelectElement>("transactions-group-mode");
+  const transactionList = getRequiredElementById<HTMLDivElement>("transaction-list");
+  const incomeList = getRequiredElementById<HTMLDivElement>("income-entry-list");
+  const btnAddIncome = getRequiredElementById<HTMLButtonElement>("btn-add-income");
+  const incomeAddPopover = getRequiredElementById<HTMLDivElement>("income-add-popover");
+  const incomeAddForm = getRequiredElementById<HTMLFormElement>("income-add-form");
+  const incomeAddDate = getRequiredElementById<HTMLInputElement>("income-add-date");
+  const incomeAddDescription = getRequiredElementById<HTMLInputElement>("income-add-description");
+  const incomeAddCategory = getRequiredElementById<HTMLSelectElement>("income-add-category");
+  const incomeAddAmount = getRequiredElementById<HTMLInputElement>("income-add-amount");
+  const btnAddExpense = getRequiredElementById<HTMLButtonElement>("btn-add-expense");
+  const expenseAddPopover = getRequiredElementById<HTMLDivElement>("expense-add-popover");
+  const expenseAddForm = getRequiredElementById<HTMLFormElement>("expense-add-form");
+  const expenseAddDate = getRequiredElementById<HTMLInputElement>("expense-add-date");
+  const expenseAddDescription = getRequiredElementById<HTMLInputElement>("expense-add-description");
+  const expenseAddCategory = getRequiredElementById<HTMLSelectElement>("expense-add-category");
+  const expenseAddAmount = getRequiredElementById<HTMLInputElement>("expense-add-amount");
+  const categoryTypeToggle = getRequiredElementById<HTMLDivElement>("category-type-toggle");
+  const categoryManagerExpense = getRequiredElementById<HTMLDivElement>("category-manager-expense");
+  const categoryManagerIncome = getRequiredElementById<HTMLDivElement>("category-manager-income");
+  const categoryForm = getRequiredElementById<HTMLFormElement>("category-form");
+  const categoryGroupField = getRequiredElementById<HTMLDivElement>("category-group-field");
+  const categoryLabelInput = getRequiredElementById<HTMLInputElement>("category-label");
+  const categoryGroupSelect = getRequiredElementById<HTMLSelectElement>("category-group");
+  const categoryKeywordsInput = getRequiredElementById<HTMLInputElement>("category-keywords");
+  const btnExportarBackup = getRequiredElementById<HTMLButtonElement>("btn-exportar-backup");
+  const btnImportarBackup = getRequiredElementById<HTMLButtonElement>("btn-importar-backup");
+  const backupFileInput = getRequiredElementById<HTMLInputElement>("backup-file-input");
+  const backupStatus = getRequiredElementById<HTMLParagraphElement>("backup-status");
+  const modalConfirm = getRequiredElementById<HTMLDivElement>("modal-confirm");
+  const modalConfirmMessage = getRequiredElementById<HTMLParagraphElement>("modal-confirm-message");
+  const modalConfirmConfirm = getRequiredElementById<HTMLButtonElement>("modal-confirm-confirm");
+  const modalConfirmCancel = getRequiredElementById<HTMLButtonElement>("modal-confirm-cancel");
 
   let transactions: StoredTransaction[] = [];
   let income: ManualIncomeEntry[] = [];

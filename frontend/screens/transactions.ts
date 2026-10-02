@@ -6,44 +6,39 @@ import {
 } from "../services/transaction_saver";
 import { EXPENSES_UPDATED_EVENT } from "./expenses";
 import { ANO_AUTOMATICO } from "./invoice";
+import { getRequiredElementById } from "../utils/dom_helpers";
 
 type StatusReporter = (mensagem: string, tipo?: "info" | "success" | "error") => void;
 
 type EtapaImportacao = "select" | "confirm" | "pdfDetails" | "status" | "mapping";
 
-function byId<T extends HTMLElement>(id: string): T {
-  const el = document.getElementById(id);
-  if (!el) throw new Error(`elemento #${id} não encontrado`);
-  return el as T;
-}
-
 export function initTransactionsView(): void {
   const els = {
-    btnImportExtrato: byId<HTMLButtonElement>("btn-import-extrato"),
-    importPopover: byId<HTMLDivElement>("import-popover"),
-    importStepSelect: byId<HTMLDivElement>("import-step-select"),
-    importStepConfirm: byId<HTMLDivElement>("import-step-confirm"),
-    importStepStatus: byId<HTMLDivElement>("import-step-status"),
-    importStepMapping: byId<HTMLDivElement>("import-step-mapping"),
-    btnSelecionarArquivo: byId<HTMLButtonElement>("btn-selecionar-arquivo"),
-    importFileInput: byId<HTMLInputElement>("import-file-input"),
-    importConfirmText: byId<HTMLParagraphElement>("import-confirm-text"),
-    importBancoCsv: byId<HTMLSelectElement>("import-banco-csv"),
-    btnConfirmarImportacao: byId<HTMLButtonElement>("btn-confirmar-importacao"),
-    btnCancelarImportacao: byId<HTMLButtonElement>("btn-cancelar-importacao"),
-    importStepPdfDetails: byId<HTMLDivElement>("import-step-pdf-details"),
-    importBanco: byId<HTMLSelectElement>("import-banco"),
-    btnConfirmarImportacaoPdf: byId<HTMLButtonElement>("btn-confirmar-importacao-pdf"),
-    btnCancelarImportacaoPdf: byId<HTMLButtonElement>("btn-cancelar-importacao-pdf"),
-    importStatus: byId<HTMLParagraphElement>("import-status"),
-    btnFecharImportacao: byId<HTMLButtonElement>("btn-fechar-importacao"),
+    btnImportExtrato: getRequiredElementById<HTMLButtonElement>("btn-import-extrato"),
+    importPopover: getRequiredElementById<HTMLDivElement>("import-popover"),
+    importStepSelect: getRequiredElementById<HTMLDivElement>("import-step-select"),
+    importStepConfirm: getRequiredElementById<HTMLDivElement>("import-step-confirm"),
+    importStepStatus: getRequiredElementById<HTMLDivElement>("import-step-status"),
+    importStepMapping: getRequiredElementById<HTMLDivElement>("import-step-mapping"),
+    btnSelecionarArquivo: getRequiredElementById<HTMLButtonElement>("btn-selecionar-arquivo"),
+    importFileInput: getRequiredElementById<HTMLInputElement>("import-file-input"),
+    importConfirmText: getRequiredElementById<HTMLParagraphElement>("import-confirm-text"),
+    importBancoCsv: getRequiredElementById<HTMLSelectElement>("import-banco-csv"),
+    btnConfirmarImportacao: getRequiredElementById<HTMLButtonElement>("btn-confirmar-importacao"),
+    btnCancelarImportacao: getRequiredElementById<HTMLButtonElement>("btn-cancelar-importacao"),
+    importStepPdfDetails: getRequiredElementById<HTMLDivElement>("import-step-pdf-details"),
+    importBanco: getRequiredElementById<HTMLSelectElement>("import-banco"),
+    btnConfirmarImportacaoPdf: getRequiredElementById<HTMLButtonElement>("btn-confirmar-importacao-pdf"),
+    btnCancelarImportacaoPdf: getRequiredElementById<HTMLButtonElement>("btn-cancelar-importacao-pdf"),
+    importStatus: getRequiredElementById<HTMLParagraphElement>("import-status"),
+    btnFecharImportacao: getRequiredElementById<HTMLButtonElement>("btn-fechar-importacao"),
 
-    mapColData: byId<HTMLSelectElement>("map-col-data"),
-    mapColEstabelecimento: byId<HTMLSelectElement>("map-col-estabelecimento"),
-    mapColValor: byId<HTMLSelectElement>("map-col-valor"),
-    mapColParcela: byId<HTMLSelectElement>("map-col-parcela"),
-    btnConfirmarMapeamento: byId<HTMLButtonElement>("btn-confirmar-mapeamento"),
-    mappingStatus: byId<HTMLParagraphElement>("mapping-status"),
+    mapColData: getRequiredElementById<HTMLSelectElement>("map-col-data"),
+    mapColEstabelecimento: getRequiredElementById<HTMLSelectElement>("map-col-estabelecimento"),
+    mapColValor: getRequiredElementById<HTMLSelectElement>("map-col-valor"),
+    mapColParcela: getRequiredElementById<HTMLSelectElement>("map-col-parcela"),
+    btnConfirmarMapeamento: getRequiredElementById<HTMLButtonElement>("btn-confirmar-mapeamento"),
+    mappingStatus: getRequiredElementById<HTMLParagraphElement>("mapping-status"),
   };
 
   let csvImportadoTexto: string | null = null;

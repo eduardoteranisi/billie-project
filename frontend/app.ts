@@ -9,35 +9,30 @@ import {
 import { initExpensesView } from "./screens/expenses";
 import { initInvoiceView, log } from "./screens/invoice";
 import { initTransactionsView } from "./screens/transactions";
+import { getRequiredElementById } from "./utils/dom_helpers";
 
 // ---------- referências de DOM ----------
 
 const els = {
-  updateBanner: byId<HTMLDivElement>("update-banner"),
-  updateText: byId<HTMLSpanElement>("update-text"),
-  btnUpdate: byId<HTMLButtonElement>("btn-update"),
-  btnTema: byId<HTMLButtonElement>("btn-tema"),
-  btnCategories: byId<HTMLButtonElement>("btn-categories"),
-  modalCategories: byId<HTMLDivElement>("modal-categories"),
-  modalCategoriesClose: byId<HTMLButtonElement>("modal-categories-close"),
-  btnBackup: byId<HTMLButtonElement>("btn-backup"),
-  modalBackup: byId<HTMLDivElement>("modal-backup"),
-  modalBackupClose: byId<HTMLButtonElement>("modal-backup-close"),
-  backupStatus: byId<HTMLParagraphElement>("backup-status"),
+  updateBanner: getRequiredElementById<HTMLDivElement>("update-banner"),
+  updateText: getRequiredElementById<HTMLSpanElement>("update-text"),
+  btnUpdate: getRequiredElementById<HTMLButtonElement>("btn-update"),
+  btnTema: getRequiredElementById<HTMLButtonElement>("btn-tema"),
+  btnCategories: getRequiredElementById<HTMLButtonElement>("btn-categories"),
+  modalCategories: getRequiredElementById<HTMLDivElement>("modal-categories"),
+  modalCategoriesClose: getRequiredElementById<HTMLButtonElement>("modal-categories-close"),
+  btnBackup: getRequiredElementById<HTMLButtonElement>("btn-backup"),
+  modalBackup: getRequiredElementById<HTMLDivElement>("modal-backup"),
+  modalBackupClose: getRequiredElementById<HTMLButtonElement>("modal-backup-close"),
+  backupStatus: getRequiredElementById<HTMLParagraphElement>("backup-status"),
 
-  tabInvoice: byId<HTMLButtonElement>("tab-invoice"),
-  tabExpenses: byId<HTMLButtonElement>("tab-expenses"),
-  tabTransactions: byId<HTMLButtonElement>("tab-transactions"),
-  viewInvoice: byId<HTMLDivElement>("view-invoice"),
-  viewExpenses: byId<HTMLDivElement>("view-expenses"),
-  viewTransactions: byId<HTMLDivElement>("view-transactions"),
+  tabInvoice: getRequiredElementById<HTMLButtonElement>("tab-invoice"),
+  tabExpenses: getRequiredElementById<HTMLButtonElement>("tab-expenses"),
+  tabTransactions: getRequiredElementById<HTMLButtonElement>("tab-transactions"),
+  viewInvoice: getRequiredElementById<HTMLDivElement>("view-invoice"),
+  viewExpenses: getRequiredElementById<HTMLDivElement>("view-expenses"),
+  viewTransactions: getRequiredElementById<HTMLDivElement>("view-transactions"),
 };
-
-function byId<T extends HTMLElement>(id: string): T {
-  const el = document.getElementById(id);
-  if (!el) throw new Error(`elemento #${id} não encontrado`);
-  return el as T;
-}
 
 // ---------- atualizações ----------
 

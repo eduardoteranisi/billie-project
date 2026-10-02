@@ -13,6 +13,7 @@ import {
 } from "../services/transaction_saver";
 import { EXPENSES_UPDATED_EVENT } from "./expenses";
 import type { StoredTransaction } from "../types";
+import { getRequiredElementById } from "../utils/dom_helpers";
 
 type InvokeFn = (cmd: string, args?: Record<string, unknown>) => Promise<any>;
 
@@ -24,14 +25,8 @@ declare global {
 
 export const ANO_AUTOMATICO = "Automático (recomendado)";
 
-function byId<T extends HTMLElement>(id: string): T {
-  const el = document.getElementById(id);
-  if (!el) throw new Error(`elemento #${id} não encontrado`);
-  return el as T;
-}
-
 export function log(mensagem: string, tipo: "info" | "error" | "success" = "info") {
-  const logEl = byId<HTMLDivElement>("log");
+  const logEl = getRequiredElementById<HTMLDivElement>("log");
   const hora = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
   const entry = document.createElement("span");
   entry.className = `entry ${tipo}`;
@@ -58,35 +53,35 @@ function escapeHtml(value: string): string {
 
 export function initInvoiceView(): void {
   const els = {
-    fileRow: byId<HTMLButtonElement>("file-row"),
-    fileName: byId<HTMLSpanElement>("file-name"),
-    fileInput: byId<HTMLInputElement>("file-input"),
+    fileRow: getRequiredElementById<HTMLButtonElement>("file-row"),
+    fileName: getRequiredElementById<HTMLSpanElement>("file-name"),
+    fileInput: getRequiredElementById<HTMLInputElement>("file-input"),
 
-    senha: byId<HTMLInputElement>("senha"),
-    banco: byId<HTMLSelectElement>("banco"),
-    ano: byId<HTMLSelectElement>("ano"),
+    senha: getRequiredElementById<HTMLInputElement>("senha"),
+    banco: getRequiredElementById<HTMLSelectElement>("banco"),
+    ano: getRequiredElementById<HTMLSelectElement>("ano"),
 
-    colData: byId<HTMLInputElement>("col-data"),
-    colEstabelecimento: byId<HTMLInputElement>("col-estabelecimento"),
-    colValor: byId<HTMLInputElement>("col-valor"),
-    btnRestaurarColunas: byId<HTMLButtonElement>("btn-restaurar-colunas"),
+    colData: getRequiredElementById<HTMLInputElement>("col-data"),
+    colEstabelecimento: getRequiredElementById<HTMLInputElement>("col-estabelecimento"),
+    colValor: getRequiredElementById<HTMLInputElement>("col-valor"),
+    btnRestaurarColunas: getRequiredElementById<HTMLButtonElement>("btn-restaurar-colunas"),
 
-    btnProcessar: byId<HTMLButtonElement>("btn-processar"),
+    btnProcessar: getRequiredElementById<HTMLButtonElement>("btn-processar"),
 
-    modalSaveExpenses: byId<HTMLDivElement>("modal-save-expenses"),
-    modalSaveExpensesConfirm: byId<HTMLButtonElement>("modal-save-expenses-confirm"),
-    modalSaveExpensesSkip: byId<HTMLButtonElement>("modal-save-expenses-skip"),
+    modalSaveExpenses: getRequiredElementById<HTMLDivElement>("modal-save-expenses"),
+    modalSaveExpensesConfirm: getRequiredElementById<HTMLButtonElement>("modal-save-expenses-confirm"),
+    modalSaveExpensesSkip: getRequiredElementById<HTMLButtonElement>("modal-save-expenses-skip"),
 
-    modalCsvColumns: byId<HTMLDivElement>("modal-csv-columns"),
-    modalCsvColumnsConfirm: byId<HTMLButtonElement>("modal-csv-columns-confirm"),
-    modalCsvColumnsCancel: byId<HTMLButtonElement>("modal-csv-columns-cancel"),
+    modalCsvColumns: getRequiredElementById<HTMLDivElement>("modal-csv-columns"),
+    modalCsvColumnsConfirm: getRequiredElementById<HTMLButtonElement>("modal-csv-columns-confirm"),
+    modalCsvColumnsCancel: getRequiredElementById<HTMLButtonElement>("modal-csv-columns-cancel"),
 
-    sectionInvoiceMapping: byId<HTMLDivElement>("section-invoice-mapping"),
-    mapColData: byId<HTMLSelectElement>("invoice-map-col-data"),
-    mapColEstabelecimento: byId<HTMLSelectElement>("invoice-map-col-estabelecimento"),
-    mapColValor: byId<HTMLSelectElement>("invoice-map-col-valor"),
-    mapColParcela: byId<HTMLSelectElement>("invoice-map-col-parcela"),
-    btnConfirmarMapeamento: byId<HTMLButtonElement>("btn-confirmar-mapeamento-fatura"),
+    sectionInvoiceMapping: getRequiredElementById<HTMLDivElement>("section-invoice-mapping"),
+    mapColData: getRequiredElementById<HTMLSelectElement>("invoice-map-col-data"),
+    mapColEstabelecimento: getRequiredElementById<HTMLSelectElement>("invoice-map-col-estabelecimento"),
+    mapColValor: getRequiredElementById<HTMLSelectElement>("invoice-map-col-valor"),
+    mapColParcela: getRequiredElementById<HTMLSelectElement>("invoice-map-col-parcela"),
+    btnConfirmarMapeamento: getRequiredElementById<HTMLButtonElement>("btn-confirmar-mapeamento-fatura"),
   };
 
   let arquivoPath: string | null = null;
