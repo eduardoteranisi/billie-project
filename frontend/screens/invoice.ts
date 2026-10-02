@@ -1,18 +1,13 @@
+import { exportToCsv, DEFAULT_CSV_COLUMNS, type Bank, type CsvColumnConfig, type Transaction } from "@billie/parser";
 import {
-  runPipeline,
-  exportToCsv,
-  DEFAULT_CSV_COLUMNS,
-  type Bank,
-  type CsvColumnConfig,
-  type Transaction,
-} from "@billie/parser";
-import {
-  classificarESalvarTransacoes,
-  salvarIncomeNoControle,
-  somarResultadosSalvamento,
-} from "../services/transaction_saver";
-import { EXPENSES_UPDATED_EVENT } from "./expenses";
+  AUTOMATIC_YEAR,
+  parseCsvStatementText,
+  parsePdfStatementFile,
+  saveParsedStatementToExpenses,
+  type ParsedStatement,
+} from "../services/statement_importer";
 import type { StoredTransaction } from "../types";
+import { fillColumnMappingSelects, readColumnMappingSelects } from "../components/column_mapping_form";
 import { escapeHtmlSpecialCharacters, getRequiredElementById } from "../utils/dom_helpers";
 import { isPdf } from "../utils/file_helpers";
 
@@ -24,20 +19,21 @@ declare global {
   }
 }
 
-export const ANO_AUTOMATICO = "Automático (recomendado)";
+const CSV_COLUMNS_STORAGE_KEY = "billie:csv-colunas";
+const OLDEST_SELECTABLE_YEAR = 2021;
 
-export function log(mensagem: string, tipo: "info" | "error" | "success" = "info") {
+export function log(message: string, type: "info" | "error" | "success" = "info") {
   const logEl = getRequiredElementById<HTMLDivElement>("log");
-  const hora = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  const time = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
   const entry = document.createElement("span");
-  entry.className = `entry ${tipo}`;
+  entry.className = `entry ${type}`;
 
-  const tsEl = document.createElement("span");
-  tsEl.className = "ts";
-  tsEl.textContent = hora;
+  const timestampEl = document.createElement("span");
+  timestampEl.className = "ts";
+  timestampEl.textContent = time;
 
-  entry.appendChild(tsEl);
-  entry.appendChild(document.createTextNode(mensagem));
+  entry.appendChild(timestampEl);
+  entry.appendChild(document.createTextNode(message));
 
   logEl.appendChild(entry);
   logEl.scrollTop = logEl.scrollHeight;
@@ -49,16 +45,16 @@ export function initInvoiceView(): void {
     fileName: getRequiredElementById<HTMLSpanElement>("file-name"),
     fileInput: getRequiredElementById<HTMLInputElement>("file-input"),
 
-    senha: getRequiredElementById<HTMLInputElement>("senha"),
-    banco: getRequiredElementById<HTMLSelectElement>("banco"),
-    ano: getRequiredElementById<HTMLSelectElement>("ano"),
+    password: getRequiredElementById<HTMLInputElement>("senha"),
+    bank: getRequiredElementById<HTMLSelectElement>("banco"),
+    year: getRequiredElementById<HTMLSelectElement>("ano"),
 
-    colData: getRequiredElementById<HTMLInputElement>("col-data"),
-    colEstabelecimento: getRequiredElementById<HTMLInputElement>("col-estabelecimento"),
-    colValor: getRequiredElementById<HTMLInputElement>("col-valor"),
-    btnRestaurarColunas: getRequiredElementById<HTMLButtonElement>("btn-restaurar-colunas"),
+    colDate: getRequiredElementById<HTMLInputElement>("col-data"),
+    colMerchant: getRequiredElementById<HTMLInputElement>("col-estabelecimento"),
+    colAmount: getRequiredElementById<HTMLInputElement>("col-valor"),
+    btnRestoreColumns: getRequiredElementById<HTMLButtonElement>("btn-restaurar-colunas"),
 
-    btnProcessar: getRequiredElementById<HTMLButtonElement>("btn-processar"),
+    btnProcess: getRequiredElementById<HTMLButtonElement>("btn-processar"),
 
     modalSaveExpenses: getRequiredElementById<HTMLDivElement>("modal-save-expenses"),
     modalSaveExpensesConfirm: getRequiredElementById<HTMLButtonElement>("modal-save-expenses-confirm"),
@@ -69,111 +65,116 @@ export function initInvoiceView(): void {
     modalCsvColumnsCancel: getRequiredElementById<HTMLButtonElement>("modal-csv-columns-cancel"),
 
     sectionInvoiceMapping: getRequiredElementById<HTMLDivElement>("section-invoice-mapping"),
-    mapColData: getRequiredElementById<HTMLSelectElement>("invoice-map-col-data"),
-    mapColEstabelecimento: getRequiredElementById<HTMLSelectElement>("invoice-map-col-estabelecimento"),
-    mapColValor: getRequiredElementById<HTMLSelectElement>("invoice-map-col-valor"),
-    mapColParcela: getRequiredElementById<HTMLSelectElement>("invoice-map-col-parcela"),
-    btnConfirmarMapeamento: getRequiredElementById<HTMLButtonElement>("btn-confirmar-mapeamento-fatura"),
+    btnConfirmMapping: getRequiredElementById<HTMLButtonElement>("btn-confirmar-mapeamento-fatura"),
   };
 
-  let arquivoPath: string | null = null;
-  let arquivoBlob: File | null = null;
-  let csvTextoPendente: string | null = null;
+  const mappingSelects = {
+    date: getRequiredElementById<HTMLSelectElement>("invoice-map-col-data"),
+    merchant: getRequiredElementById<HTMLSelectElement>("invoice-map-col-estabelecimento"),
+    amount: getRequiredElementById<HTMLSelectElement>("invoice-map-col-valor"),
+    installment: getRequiredElementById<HTMLSelectElement>("invoice-map-col-parcela"),
+  };
 
-  function preencherAnos(select: HTMLSelectElement) {
-    const anoAtual = new Date().getFullYear();
-    const opcoes = [ANO_AUTOMATICO];
-    for (let ano = anoAtual; ano >= 2021; ano--) opcoes.push(String(ano));
+  let selectedFilePath: string | null = null;
+  let selectedFile: File | null = null;
+  let pendingCsvText: string | null = null;
 
-    select.innerHTML = opcoes
-      .map((o) => `<option value="${escapeHtmlSpecialCharacters(o)}">${escapeHtmlSpecialCharacters(o)}</option>`)
+  fillYearOptions(els.year);
+  loadCsvColumnsConfig();
+  bindEvents();
+
+  function fillYearOptions(select: HTMLSelectElement) {
+    const currentYear = new Date().getFullYear();
+    const options = [AUTOMATIC_YEAR];
+    for (let year = currentYear; year >= OLDEST_SELECTABLE_YEAR; year--) options.push(String(year));
+
+    select.innerHTML = options
+      .map((option) => `<option value="${escapeHtmlSpecialCharacters(option)}">${escapeHtmlSpecialCharacters(option)}</option>`)
       .join("");
   }
 
-  function selecionarArquivo() {
+  function selectFile() {
     if (window.__TAURI__) {
-      selecionarArquivoTauri();
+      selectFileWithTauri();
     } else {
       els.fileInput.click();
     }
   }
 
-  async function selecionarArquivoTauri() {
-    const resultado = await window.__TAURI__!.invoke("selecionar_arquivo");
-    if (!resultado?.caminho) return;
+  async function selectFileWithTauri() {
+    const result = await window.__TAURI__!.invoke("selecionar_arquivo");
+    if (!result?.caminho) return;
 
-    arquivoPath = resultado.caminho;
-    arquivoBlob = null;
-    registrarArquivoSelecionado(resultado.caminho.split("/").pop());
+    selectedFilePath = result.caminho;
+    selectedFile = null;
+    registerSelectedFile(result.caminho.split("/").pop());
   }
 
   function onFileInputChange() {
-    const arquivo = els.fileInput.files?.[0];
-    if (!arquivo) return;
+    const file = els.fileInput.files?.[0];
+    if (!file) return;
 
-    arquivoBlob = arquivo;
-    arquivoPath = null;
-    registrarArquivoSelecionado(arquivo.name);
+    selectedFile = file;
+    selectedFilePath = null;
+    registerSelectedFile(file.name);
   }
 
-  function registrarArquivoSelecionado(nome: string) {
-    els.fileName.textContent = nome;
+  function registerSelectedFile(name: string) {
+    els.fileName.textContent = name;
     els.fileRow.classList.remove("empty");
-    log(`Arquivo selecionado: ${nome}`);
+    log(`Arquivo selecionado: ${name}`);
   }
 
-  function temArquivoSelecionado(): boolean {
-    return arquivoPath !== null || arquivoBlob !== null;
+  function hasSelectedFile(): boolean {
+    return selectedFilePath !== null || selectedFile !== null;
   }
 
-  const CHAVE_CONFIG_COLUNAS = "billie:csv-colunas";
-
-  function carregarConfigColunas() {
+  function loadCsvColumnsConfig() {
     let config: CsvColumnConfig = DEFAULT_CSV_COLUMNS;
 
-    const salvo = localStorage.getItem(CHAVE_CONFIG_COLUNAS);
-    if (salvo) {
+    const saved = localStorage.getItem(CSV_COLUMNS_STORAGE_KEY);
+    if (saved) {
       try {
-        config = { ...DEFAULT_CSV_COLUMNS, ...JSON.parse(salvo) };
+        config = { ...DEFAULT_CSV_COLUMNS, ...JSON.parse(saved) };
       } catch {
         config = DEFAULT_CSV_COLUMNS;
       }
     }
 
-    els.colData.value = config.date;
-    els.colEstabelecimento.value = config.merchant;
-    els.colValor.value = config.amount;
+    els.colDate.value = config.date;
+    els.colMerchant.value = config.merchant;
+    els.colAmount.value = config.amount;
   }
 
-  function salvarConfigColunas() {
-    localStorage.setItem(CHAVE_CONFIG_COLUNAS, JSON.stringify(obterConfigColunasAtual()));
+  function saveCsvColumnsConfig() {
+    localStorage.setItem(CSV_COLUMNS_STORAGE_KEY, JSON.stringify(readCsvColumnsConfig()));
   }
 
-  function obterConfigColunasAtual(): CsvColumnConfig {
+  function readCsvColumnsConfig(): CsvColumnConfig {
     return {
-      date: els.colData.value.trim() || DEFAULT_CSV_COLUMNS.date,
-      merchant: els.colEstabelecimento.value.trim() || DEFAULT_CSV_COLUMNS.merchant,
-      amount: els.colValor.value.trim() || DEFAULT_CSV_COLUMNS.amount,
+      date: els.colDate.value.trim() || DEFAULT_CSV_COLUMNS.date,
+      merchant: els.colMerchant.value.trim() || DEFAULT_CSV_COLUMNS.merchant,
+      amount: els.colAmount.value.trim() || DEFAULT_CSV_COLUMNS.amount,
     };
   }
 
-  function restaurarColunasPadrao() {
-    els.colData.value = DEFAULT_CSV_COLUMNS.date;
-    els.colEstabelecimento.value = DEFAULT_CSV_COLUMNS.merchant;
-    els.colValor.value = DEFAULT_CSV_COLUMNS.amount;
-    salvarConfigColunas();
+  function restoreDefaultCsvColumns() {
+    els.colDate.value = DEFAULT_CSV_COLUMNS.date;
+    els.colMerchant.value = DEFAULT_CSV_COLUMNS.merchant;
+    els.colAmount.value = DEFAULT_CSV_COLUMNS.amount;
+    saveCsvColumnsConfig();
   }
 
-  function confirmarSalvarControleGastos(): Promise<boolean> {
+  function confirmSaveToExpenses(): Promise<boolean> {
     return new Promise((resolve) => {
-      const finalizar = (resultado: boolean) => {
+      const finish = (result: boolean) => {
         els.modalSaveExpenses.hidden = true;
         els.modalSaveExpensesConfirm.removeEventListener("click", onConfirm);
         els.modalSaveExpensesSkip.removeEventListener("click", onSkip);
-        resolve(resultado);
+        resolve(result);
       };
-      const onConfirm = () => finalizar(true);
-      const onSkip = () => finalizar(false);
+      const onConfirm = () => finish(true);
+      const onSkip = () => finish(false);
 
       els.modalSaveExpensesConfirm.addEventListener("click", onConfirm);
       els.modalSaveExpensesSkip.addEventListener("click", onSkip);
@@ -181,16 +182,16 @@ export function initInvoiceView(): void {
     });
   }
 
-  function abrirPopupNomesColunas(): Promise<CsvColumnConfig | null> {
+  function askCsvColumnNames(): Promise<CsvColumnConfig | null> {
     return new Promise((resolve) => {
-      const finalizar = (config: CsvColumnConfig | null) => {
+      const finish = (config: CsvColumnConfig | null) => {
         els.modalCsvColumns.hidden = true;
         els.modalCsvColumnsConfirm.removeEventListener("click", onConfirm);
         els.modalCsvColumnsCancel.removeEventListener("click", onCancel);
         resolve(config);
       };
-      const onConfirm = () => finalizar(obterConfigColunasAtual());
-      const onCancel = () => finalizar(null);
+      const onConfirm = () => finish(readCsvColumnsConfig());
+      const onCancel = () => finish(null);
 
       els.modalCsvColumnsConfirm.addEventListener("click", onConfirm);
       els.modalCsvColumnsCancel.addEventListener("click", onCancel);
@@ -198,192 +199,151 @@ export function initInvoiceView(): void {
     });
   }
 
-  async function processarFatura() {
-    if (!temArquivoSelecionado()) {
+  async function processInvoice() {
+    if (!hasSelectedFile()) {
       log("Nenhum arquivo selecionado.", "error");
       return;
     }
 
-    els.btnProcessar.disabled = true;
-    els.btnProcessar.textContent = "Processando...";
+    els.btnProcess.disabled = true;
+    els.btnProcess.textContent = "Processando...";
     els.sectionInvoiceMapping.hidden = true;
     log("Processando fatura...");
 
     try {
-      if (!arquivoBlob) {
+      if (!selectedFile) {
         throw new Error("Seleção de arquivo pelo Tauri ainda não implementada.");
       }
 
-      if (isPdf(arquivoBlob)) {
-        await processarComoPdf(arquivoBlob);
+      if (isPdf(selectedFile)) {
+        await processPdfFile(selectedFile);
       } else {
-        csvTextoPendente = await arquivoBlob.text();
-        await processarComoCsv(csvTextoPendente, undefined);
+        pendingCsvText = await selectedFile.text();
+        await processCsvText(pendingCsvText, undefined);
       }
-    } catch (erro) {
-      log(`Erro ao processar: ${erro}`, "error");
-      els.btnProcessar.textContent = "Tentar novamente";
+    } catch (error) {
+      log(`Erro ao processar: ${error}`, "error");
+      els.btnProcess.textContent = "Tentar novamente";
     } finally {
-      els.btnProcessar.disabled = false;
+      els.btnProcess.disabled = false;
     }
   }
 
-  async function processarComoPdf(arquivo: File) {
-    const pdfBytes = new Uint8Array(await arquivo.arrayBuffer());
-
-    const resultado = await runPipeline({
-      source: "pdf",
-      pdfBytes,
-      password: els.senha.value || undefined,
-      bank: els.banco.value as Bank,
-      year: els.ano.value,
-      onLog: (mensagem) => log(mensagem),
+  async function processPdfFile(file: File) {
+    const statement = await parsePdfStatementFile(file, {
+      bank: els.bank.value as Bank,
+      year: els.year.value,
+      password: els.password.value || undefined,
+      onLog: (message) => log(message),
     });
 
-    if (!resultado.success || !resultado.transactions) {
-      throw new Error(resultado.error ?? "erro desconhecido no processamento");
-    }
-
-    const todasTransacoes = [...resultado.transactions, ...(resultado.income ?? [])];
-
-    const salvarNoControle = await confirmarSalvarControleGastos();
-    if (salvarNoControle) {
-      await salvarTransacoesClassificadas(resultado.transactions, resultado.income, "pdf");
+    const shouldSaveToExpenses = await confirmSaveToExpenses();
+    if (shouldSaveToExpenses) {
+      await saveStatementAndLog(statement, "pdf");
     } else {
-      const config = await abrirPopupNomesColunas();
+      const config = await askCsvColumnNames();
       if (config) {
-        const periodo = periodoFatura(todasTransacoes);
-        const nomeArquivo = nomeArquivoCsv(els.banco.value, periodo);
-        baixarCsv(exportToCsv(todasTransacoes, config), nomeArquivo);
-        log(`Arquivo "${nomeArquivo}" salvo na pasta Downloads.`, "success");
+        const allTransactions = [...statement.expenses, ...statement.income];
+        const fileName = buildCsvFileName(els.bank.value, findInvoicePeriod(allTransactions));
+        downloadCsv(exportToCsv(allTransactions, config), fileName);
+        log(`Arquivo "${fileName}" salvo na pasta Downloads.`, "success");
       } else {
         log("Geração de CSV cancelada.");
       }
     }
 
-    els.btnProcessar.textContent = "Processar outra fatura";
+    els.btnProcess.textContent = "Processar outra fatura";
   }
 
-  async function processarComoCsv(csvText: string, columns: CsvColumnConfig | undefined) {
-    const resultado = await runPipeline({
-      source: "csv",
-      csvText,
+  async function processCsvText(csvText: string, columns: CsvColumnConfig | undefined) {
+    const result = await parseCsvStatementText(csvText, {
+      bank: els.bank.value as Bank,
       columns,
-      bank: els.banco.value as Bank,
-      onLog: (mensagem) => log(mensagem),
+      onLog: (message) => log(message),
     });
 
-    if (!resultado.success || !resultado.transactions) {
-      if (resultado.needsColumnMapping) {
-        mostrarMapeamentoManual(resultado.needsColumnMapping.headers);
-        return;
-      }
-      throw new Error(resultado.error ?? "erro desconhecido no processamento");
+    if (result.status === "needsColumnMapping") {
+      showManualColumnMapping(result.headers);
+      return;
     }
 
     els.sectionInvoiceMapping.hidden = true;
-    await salvarTransacoesClassificadas(resultado.transactions, resultado.income, "csv");
+    await saveStatementAndLog(result.statement, "csv");
     log("Salvo no Controle de Gastos.", "success");
-    els.btnProcessar.textContent = "Processar outra fatura";
+    els.btnProcess.textContent = "Processar outra fatura";
   }
 
-  function mostrarMapeamentoManual(headers: string[]) {
-    const options = headers
-      .map((h) => `<option value="${escapeHtmlSpecialCharacters(h)}">${escapeHtmlSpecialCharacters(h)}</option>`)
-      .join("");
-    els.mapColData.innerHTML = options;
-    els.mapColEstabelecimento.innerHTML = options;
-    els.mapColValor.innerHTML = options;
-    els.mapColParcela.innerHTML = `<option value="">— nenhuma —</option>${options}`;
-
+  function showManualColumnMapping(headers: string[]) {
+    fillColumnMappingSelects(mappingSelects, headers);
     els.sectionInvoiceMapping.hidden = false;
     log("⚠️ Não foi possível identificar as colunas automaticamente.", "error");
   }
 
-  async function onConfirmarMapeamentoClick() {
-    if (!csvTextoPendente) return;
+  async function onConfirmMappingClick() {
+    if (!pendingCsvText) return;
 
-    const columns: CsvColumnConfig = {
-      date: els.mapColData.value,
-      merchant: els.mapColEstabelecimento.value,
-      amount: els.mapColValor.value,
-      installment: els.mapColParcela.value || undefined,
-    };
-
-    els.btnConfirmarMapeamento.disabled = true;
+    els.btnConfirmMapping.disabled = true;
     try {
-      await processarComoCsv(csvTextoPendente, columns);
-    } catch (erro) {
-      log(`Erro ao processar: ${erro}`, "error");
+      await processCsvText(pendingCsvText, readColumnMappingSelects(mappingSelects));
+    } catch (error) {
+      log(`Erro ao processar: ${error}`, "error");
     } finally {
-      els.btnConfirmarMapeamento.disabled = false;
+      els.btnConfirmMapping.disabled = false;
     }
   }
 
-  async function salvarTransacoesClassificadas(
-    transactions: Transaction[],
-    income: Transaction[] | undefined,
-    origin: StoredTransaction["origin"]
-  ) {
-    const resultadoTransacoes = await classificarESalvarTransacoes(transactions, origin);
-    const resultadoIncome = await salvarIncomeNoControle(income);
-    const { added, duplicates } = somarResultadosSalvamento(resultadoTransacoes, resultadoIncome);
+  async function saveStatementAndLog(statement: ParsedStatement, origin: StoredTransaction["origin"]) {
+    const { added, duplicates } = await saveParsedStatementToExpenses(statement, origin);
     log(
       `${added} transações novas salvas no controle de gastos${duplicates > 0 ? ` (${duplicates} já existiam)` : ""}.`,
       "success"
     );
-
-    document.dispatchEvent(new Event(EXPENSES_UPDATED_EVENT));
   }
 
-  function nomeArquivoCsv(banco: string, periodo: string): string {
-    const bancoSlug = banco
+  function buildCsvFileName(bank: string, period: string): string {
+    const bankSlug = bank
       .toLowerCase()
       .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[̀-ͯ]/g, "")
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/(^-|-$)/g, "");
-    return `fatura-${bancoSlug}-${periodo}.csv`;
+    return `fatura-${bankSlug}-${period}.csv`;
   }
 
-  function periodoFatura(transacoes: Transaction[]): string {
-    if (transacoes.length === 0) return new Date().toISOString().slice(0, 7);
-    const periodos = transacoes.map((t) => t.date.slice(0, 7)); // "YYYY-MM" direto da string ISO
-    return maisFrequente(periodos);
+  function findInvoicePeriod(transactions: Transaction[]): string {
+    if (transactions.length === 0) return new Date().toISOString().slice(0, 7);
+    const periods = transactions.map((transaction) => transaction.date.slice(0, 7)); // "YYYY-MM" direto da string ISO
+    return findMostFrequentValue(periods);
   }
 
-  function maisFrequente(valores: string[]): string {
-    const contagem = new Map<string, number>();
-    for (const valor of valores) contagem.set(valor, (contagem.get(valor) ?? 0) + 1);
-    return [...contagem.entries()].sort((a, b) => b[1] - a[1])[0][0];
+  function findMostFrequentValue(values: string[]): string {
+    const counts = new Map<string, number>();
+    for (const value of values) counts.set(value, (counts.get(value) ?? 0) + 1);
+    return [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0];
   }
 
-  function baixarCsv(csv: string, nomeArquivo: string) {
+  function downloadCsv(csv: string, fileName: string) {
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
 
     const link = document.createElement("a");
     link.href = url;
-    link.download = nomeArquivo;
+    link.download = fileName;
     link.click();
 
     URL.revokeObjectURL(url);
   }
 
   function bindEvents() {
-    els.fileRow.addEventListener("click", selecionarArquivo);
+    els.fileRow.addEventListener("click", selectFile);
     els.fileInput.addEventListener("change", onFileInputChange);
-    els.btnProcessar.addEventListener("click", processarFatura);
+    els.btnProcess.addEventListener("click", processInvoice);
 
-    els.colData.addEventListener("blur", salvarConfigColunas);
-    els.colEstabelecimento.addEventListener("blur", salvarConfigColunas);
-    els.colValor.addEventListener("blur", salvarConfigColunas);
-    els.btnRestaurarColunas.addEventListener("click", restaurarColunasPadrao);
+    els.colDate.addEventListener("blur", saveCsvColumnsConfig);
+    els.colMerchant.addEventListener("blur", saveCsvColumnsConfig);
+    els.colAmount.addEventListener("blur", saveCsvColumnsConfig);
+    els.btnRestoreColumns.addEventListener("click", restoreDefaultCsvColumns);
 
-    els.btnConfirmarMapeamento.addEventListener("click", onConfirmarMapeamentoClick);
+    els.btnConfirmMapping.addEventListener("click", onConfirmMappingClick);
   }
-
-  preencherAnos(els.ano);
-  carregarConfigColunas();
-  bindEvents();
 }

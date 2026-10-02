@@ -2,6 +2,7 @@ import { classifyTransactionDescription, UNCATEGORIZED_CATEGORY_ID, UNCATEGORIZE
 import type { Bank, Category, CategoryGroup, CategoryRule } from "@billie/parser";
 import { calculateDre, listAvailablePeriods } from "../services/dre_aggregator";
 import { groupPossibleDuplicateRows } from "../services/duplicate_detection";
+import { EXPENSES_UPDATED_EVENT } from "../services/statement_importer";
 import { groupTransactionsByBank, groupTransactionsByDay, UNKNOWN_BANK_LABEL } from "../services/transaction_grouping";
 import type { TransactionGroup } from "../services/transaction_grouping";
 import {
@@ -33,8 +34,6 @@ import {
 import type { CategoryType } from "../services/expense_store";
 import type { CategorySummary, DreSummary, ManualIncomeEntry, StoredTransaction } from "../types";
 import { escapeHtmlSpecialCharacters, getRequiredElementById } from "../utils/dom_helpers";
-
-export const EXPENSES_UPDATED_EVENT = "billie:expenses-updated";
 
 const BANK_OPTIONS: Bank[] = ["Nubank", "XP / Rico", "Santander"];
 

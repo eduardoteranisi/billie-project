@@ -1,263 +1,227 @@
-import { runPipeline, type Bank, type CsvColumnConfig } from "@billie/parser";
+import type { Bank, CsvColumnConfig } from "@billie/parser";
 import {
-  classificarESalvarTransacoes,
-  salvarIncomeNoControle,
-  somarResultadosSalvamento,
-} from "../services/transaction_saver";
-import { EXPENSES_UPDATED_EVENT } from "./expenses";
-import { ANO_AUTOMATICO } from "./invoice";
-import { escapeHtmlSpecialCharacters, getRequiredElementById } from "../utils/dom_helpers";
+  AUTOMATIC_YEAR,
+  parseCsvStatementText,
+  parsePdfStatementFile,
+  saveParsedStatementToExpenses,
+  type ParsedStatement,
+} from "../services/statement_importer";
+import type { StoredTransaction } from "../types";
+import { fillColumnMappingSelects, readColumnMappingSelects } from "../components/column_mapping_form";
+import { getRequiredElementById } from "../utils/dom_helpers";
 import { isPdf } from "../utils/file_helpers";
 
-type StatusReporter = (mensagem: string, tipo?: "info" | "success" | "error") => void;
+type StatusReporter = (message: string, type?: "info" | "success" | "error") => void;
 
-type EtapaImportacao = "select" | "confirm" | "pdfDetails" | "status" | "mapping";
+type ImportStep = "select" | "confirm" | "pdfDetails" | "status" | "mapping";
 
 export function initTransactionsView(): void {
   const els = {
-    btnImportExtrato: getRequiredElementById<HTMLButtonElement>("btn-import-extrato"),
+    btnImportStatement: getRequiredElementById<HTMLButtonElement>("btn-import-extrato"),
     importPopover: getRequiredElementById<HTMLDivElement>("import-popover"),
     importStepSelect: getRequiredElementById<HTMLDivElement>("import-step-select"),
     importStepConfirm: getRequiredElementById<HTMLDivElement>("import-step-confirm"),
     importStepStatus: getRequiredElementById<HTMLDivElement>("import-step-status"),
     importStepMapping: getRequiredElementById<HTMLDivElement>("import-step-mapping"),
-    btnSelecionarArquivo: getRequiredElementById<HTMLButtonElement>("btn-selecionar-arquivo"),
+    btnSelectFile: getRequiredElementById<HTMLButtonElement>("btn-selecionar-arquivo"),
     importFileInput: getRequiredElementById<HTMLInputElement>("import-file-input"),
     importConfirmText: getRequiredElementById<HTMLParagraphElement>("import-confirm-text"),
-    importBancoCsv: getRequiredElementById<HTMLSelectElement>("import-banco-csv"),
-    btnConfirmarImportacao: getRequiredElementById<HTMLButtonElement>("btn-confirmar-importacao"),
-    btnCancelarImportacao: getRequiredElementById<HTMLButtonElement>("btn-cancelar-importacao"),
+    importCsvBank: getRequiredElementById<HTMLSelectElement>("import-banco-csv"),
+    btnConfirmImport: getRequiredElementById<HTMLButtonElement>("btn-confirmar-importacao"),
+    btnCancelImport: getRequiredElementById<HTMLButtonElement>("btn-cancelar-importacao"),
     importStepPdfDetails: getRequiredElementById<HTMLDivElement>("import-step-pdf-details"),
-    importBanco: getRequiredElementById<HTMLSelectElement>("import-banco"),
-    btnConfirmarImportacaoPdf: getRequiredElementById<HTMLButtonElement>("btn-confirmar-importacao-pdf"),
-    btnCancelarImportacaoPdf: getRequiredElementById<HTMLButtonElement>("btn-cancelar-importacao-pdf"),
+    importPdfBank: getRequiredElementById<HTMLSelectElement>("import-banco"),
+    btnConfirmPdfImport: getRequiredElementById<HTMLButtonElement>("btn-confirmar-importacao-pdf"),
+    btnCancelPdfImport: getRequiredElementById<HTMLButtonElement>("btn-cancelar-importacao-pdf"),
     importStatus: getRequiredElementById<HTMLParagraphElement>("import-status"),
-    btnFecharImportacao: getRequiredElementById<HTMLButtonElement>("btn-fechar-importacao"),
+    btnCloseImport: getRequiredElementById<HTMLButtonElement>("btn-fechar-importacao"),
 
-    mapColData: getRequiredElementById<HTMLSelectElement>("map-col-data"),
-    mapColEstabelecimento: getRequiredElementById<HTMLSelectElement>("map-col-estabelecimento"),
-    mapColValor: getRequiredElementById<HTMLSelectElement>("map-col-valor"),
-    mapColParcela: getRequiredElementById<HTMLSelectElement>("map-col-parcela"),
-    btnConfirmarMapeamento: getRequiredElementById<HTMLButtonElement>("btn-confirmar-mapeamento"),
+    btnConfirmMapping: getRequiredElementById<HTMLButtonElement>("btn-confirmar-mapeamento"),
     mappingStatus: getRequiredElementById<HTMLParagraphElement>("mapping-status"),
   };
 
-  let csvImportadoTexto: string | null = null;
-  let arquivoParaImportar: File | null = null;
-  let arquivoPdfParaImportar: File | null = null;
-
-  function mostrarEtapaImportacao(etapa: EtapaImportacao) {
-    els.importStepSelect.hidden = etapa !== "select";
-    els.importStepConfirm.hidden = etapa !== "confirm";
-    els.importStepPdfDetails.hidden = etapa !== "pdfDetails";
-    els.importStepStatus.hidden = etapa !== "status";
-    els.importStepMapping.hidden = etapa !== "mapping";
-  }
-
-  function resetarFluxoImportacao() {
-    arquivoParaImportar = null;
-    arquivoPdfParaImportar = null;
-    csvImportadoTexto = null;
-    els.mappingStatus.hidden = true;
-    mostrarEtapaImportacao("select");
-  }
-
-  function fecharPopoverImportacao() {
-    els.importPopover.hidden = true;
-  }
-
-  function alternarPopoverImportacao(evento: MouseEvent) {
-    evento.stopPropagation();
-    const vaiAbrir = els.importPopover.hidden;
-    els.importPopover.hidden = !els.importPopover.hidden;
-    if (vaiAbrir) resetarFluxoImportacao();
-  }
-
-  function onCliqueForaPopoverImportacao(evento: MouseEvent) {
-    if (els.importPopover.hidden) return;
-    const alvo = evento.target as Node;
-    if (els.importPopover.contains(alvo) || els.btnImportExtrato.contains(alvo)) return;
-    fecharPopoverImportacao();
-  }
-
-  const setImportStatus: StatusReporter = (mensagem, tipo = "info") => {
-    els.importStatus.textContent = mensagem;
-    els.importStatus.className = `import-status ${tipo}`;
-    els.btnFecharImportacao.hidden = tipo === "info";
+  const mappingSelects = {
+    date: getRequiredElementById<HTMLSelectElement>("map-col-data"),
+    merchant: getRequiredElementById<HTMLSelectElement>("map-col-estabelecimento"),
+    amount: getRequiredElementById<HTMLSelectElement>("map-col-valor"),
+    installment: getRequiredElementById<HTMLSelectElement>("map-col-parcela"),
   };
 
-  const setMappingStatus: StatusReporter = (mensagem, tipo = "info") => {
-    els.mappingStatus.textContent = mensagem;
-    els.mappingStatus.className = `import-status ${tipo}`;
+  let importedCsvText: string | null = null;
+  let csvFileToImport: File | null = null;
+  let pdfFileToImport: File | null = null;
+
+  const setImportStatus: StatusReporter = (message, type = "info") => {
+    els.importStatus.textContent = message;
+    els.importStatus.className = `import-status ${type}`;
+    els.btnCloseImport.hidden = type === "info";
+  };
+
+  const setMappingStatus: StatusReporter = (message, type = "info") => {
+    els.mappingStatus.textContent = message;
+    els.mappingStatus.className = `import-status ${type}`;
     els.mappingStatus.hidden = false;
   };
 
-  function onImportFileInputChange() {
-    const arquivo = els.importFileInput.files?.[0];
-    els.importFileInput.value = "";
-    if (!arquivo) return;
+  bindEvents();
 
-    if (isPdf(arquivo)) {
-      arquivoPdfParaImportar = arquivo;
-      mostrarEtapaImportacao("pdfDetails");
+  function showImportStep(step: ImportStep) {
+    els.importStepSelect.hidden = step !== "select";
+    els.importStepConfirm.hidden = step !== "confirm";
+    els.importStepPdfDetails.hidden = step !== "pdfDetails";
+    els.importStepStatus.hidden = step !== "status";
+    els.importStepMapping.hidden = step !== "mapping";
+  }
+
+  function resetImportFlow() {
+    csvFileToImport = null;
+    pdfFileToImport = null;
+    importedCsvText = null;
+    els.mappingStatus.hidden = true;
+    showImportStep("select");
+  }
+
+  function closeImportPopover() {
+    els.importPopover.hidden = true;
+  }
+
+  function toggleImportPopover(event: MouseEvent) {
+    event.stopPropagation();
+    const willOpen = els.importPopover.hidden;
+    els.importPopover.hidden = !els.importPopover.hidden;
+    if (willOpen) resetImportFlow();
+  }
+
+  function onClickOutsideImportPopover(event: MouseEvent) {
+    if (els.importPopover.hidden) return;
+    const target = event.target as Node;
+    if (els.importPopover.contains(target) || els.btnImportStatement.contains(target)) return;
+    closeImportPopover();
+  }
+
+  function onImportFileInputChange() {
+    const file = els.importFileInput.files?.[0];
+    els.importFileInput.value = "";
+    if (!file) return;
+
+    if (isPdf(file)) {
+      pdfFileToImport = file;
+      showImportStep("pdfDetails");
       return;
     }
 
-    arquivoParaImportar = arquivo;
-    els.importConfirmText.textContent = `Importar o arquivo "${arquivo.name}"?`;
-    mostrarEtapaImportacao("confirm");
+    csvFileToImport = file;
+    els.importConfirmText.textContent = `Importar o arquivo "${file.name}"?`;
+    showImportStep("confirm");
   }
 
-  function onCancelarImportacaoClick() {
-    arquivoParaImportar = null;
-    mostrarEtapaImportacao("select");
+  function onCancelImportClick() {
+    csvFileToImport = null;
+    showImportStep("select");
   }
 
-  function onCancelarImportacaoPdfClick() {
-    arquivoPdfParaImportar = null;
-    mostrarEtapaImportacao("select");
+  function onCancelPdfImportClick() {
+    pdfFileToImport = null;
+    showImportStep("select");
   }
 
-  async function onConfirmarImportacaoPdfClick() {
-    if (!arquivoPdfParaImportar) return;
-    const arquivo = arquivoPdfParaImportar;
-    arquivoPdfParaImportar = null;
+  async function onConfirmPdfImportClick() {
+    if (!pdfFileToImport) return;
+    const file = pdfFileToImport;
+    pdfFileToImport = null;
 
-    const bank = els.importBanco.value as Bank;
+    const bank = els.importPdfBank.value as Bank;
 
-    mostrarEtapaImportacao("status");
+    showImportStep("status");
     setImportStatus("Importando extrato...");
 
     try {
-      await processarImportacaoPdf(arquivo, bank, setImportStatus);
-    } catch (erro) {
-      setImportStatus(`Erro ao importar extrato: ${erro}`, "error");
+      await importPdfFile(file, bank, setImportStatus);
+    } catch (error) {
+      setImportStatus(`Erro ao importar extrato: ${error}`, "error");
     }
   }
 
-  async function onConfirmarImportacaoClick() {
-    if (!arquivoParaImportar) return;
-    const arquivo = arquivoParaImportar;
-    arquivoParaImportar = null;
-    const bank = els.importBancoCsv.value as Bank;
+  async function onConfirmImportClick() {
+    if (!csvFileToImport) return;
+    const file = csvFileToImport;
+    csvFileToImport = null;
+    const bank = els.importCsvBank.value as Bank;
 
-    mostrarEtapaImportacao("status");
+    showImportStep("status");
     setImportStatus("Importando extrato...");
 
     try {
-      csvImportadoTexto = await arquivo.text();
-      await processarImportacaoCsv(csvImportadoTexto, undefined, bank, setImportStatus);
-    } catch (erro) {
-      setImportStatus(`Erro ao importar extrato: ${erro}`, "error");
+      importedCsvText = await file.text();
+      await importCsvText(importedCsvText, undefined, bank, setImportStatus);
+    } catch (error) {
+      setImportStatus(`Erro ao importar extrato: ${error}`, "error");
     }
   }
 
-  async function processarImportacaoPdf(arquivo: File, bank: Bank, reportar: StatusReporter) {
-    const pdfBytes = new Uint8Array(await arquivo.arrayBuffer());
-
-    const resultado = await runPipeline({
-      source: "pdf",
-      pdfBytes,
-      bank,
-      year: ANO_AUTOMATICO,
-      onLog: () => {},
-    });
-
-    if (!resultado.success || !resultado.transactions) {
-      throw new Error(resultado.error ?? "erro desconhecido no processamento");
-    }
-
-    const resultadoTransacoes = await classificarESalvarTransacoes(resultado.transactions, "pdf");
-    const resultadoIncome = await salvarIncomeNoControle(resultado.income);
-    const { added, duplicates } = somarResultadosSalvamento(resultadoTransacoes, resultadoIncome);
-
-    document.dispatchEvent(new Event(EXPENSES_UPDATED_EVENT));
-    reportar(
-      `${added} registros importados${duplicates > 0 ? ` (${duplicates} já existiam)` : ""}.`,
-      "success"
-    );
+  async function importPdfFile(file: File, bank: Bank, report: StatusReporter) {
+    const statement = await parsePdfStatementFile(file, { bank, year: AUTOMATIC_YEAR });
+    await saveStatementAndReport(statement, "pdf", report);
   }
 
-  async function processarImportacaoCsv(
+  async function importCsvText(
     csvText: string,
     columns: CsvColumnConfig | undefined,
     bank: Bank,
-    reportar: StatusReporter
+    report: StatusReporter
   ) {
-    const resultado = await runPipeline({
-      source: "csv",
-      csvText,
-      columns,
-      bank,
-      onLog: () => {},
-    });
+    const result = await parseCsvStatementText(csvText, { bank, columns });
 
-    if (!resultado.success || !resultado.transactions) {
-      if (resultado.needsColumnMapping) {
-        mostrarMapeamentoManualImportacao(resultado.needsColumnMapping.headers);
-        return;
-      }
-      throw new Error(resultado.error ?? "erro desconhecido no processamento");
+    if (result.status === "needsColumnMapping") {
+      showManualColumnMapping(result.headers);
+      return;
     }
 
-    const resultadoTransacoes = await classificarESalvarTransacoes(resultado.transactions, "csv");
-    const resultadoIncome = await salvarIncomeNoControle(resultado.income);
-    const { added, duplicates } = somarResultadosSalvamento(resultadoTransacoes, resultadoIncome);
-
-    document.dispatchEvent(new Event(EXPENSES_UPDATED_EVENT));
-    reportar(
-      `${added} registros importados${duplicates > 0 ? ` (${duplicates} já existiam)` : ""}.`,
-      "success"
-    );
+    await saveStatementAndReport(result.statement, "csv", report);
   }
 
-  function mostrarMapeamentoManualImportacao(headers: string[]) {
-    const options = headers
-      .map((h) => `<option value="${escapeHtmlSpecialCharacters(h)}">${escapeHtmlSpecialCharacters(h)}</option>`)
-      .join("");
-    els.mapColData.innerHTML = options;
-    els.mapColEstabelecimento.innerHTML = options;
-    els.mapColValor.innerHTML = options;
-    els.mapColParcela.innerHTML = `<option value="">— nenhuma —</option>${options}`;
+  async function saveStatementAndReport(
+    statement: ParsedStatement,
+    origin: StoredTransaction["origin"],
+    report: StatusReporter
+  ) {
+    const { added, duplicates } = await saveParsedStatementToExpenses(statement, origin);
+    report(`${added} registros importados${duplicates > 0 ? ` (${duplicates} já existiam)` : ""}.`, "success");
+  }
 
+  function showManualColumnMapping(headers: string[]) {
+    fillColumnMappingSelects(mappingSelects, headers);
     els.mappingStatus.hidden = true;
-    mostrarEtapaImportacao("mapping");
+    showImportStep("mapping");
   }
 
-  async function onConfirmarMapeamentoImportacao() {
-    if (!csvImportadoTexto) return;
+  async function onConfirmMappingClick() {
+    if (!importedCsvText) return;
 
-    const columns: CsvColumnConfig = {
-      date: els.mapColData.value,
-      merchant: els.mapColEstabelecimento.value,
-      amount: els.mapColValor.value,
-      installment: els.mapColParcela.value || undefined,
-    };
-    const bank = els.importBancoCsv.value as Bank;
+    const columns = readColumnMappingSelects(mappingSelects);
+    const bank = els.importCsvBank.value as Bank;
 
-    els.btnConfirmarMapeamento.disabled = true;
+    els.btnConfirmMapping.disabled = true;
     setMappingStatus("Importando extrato...");
     try {
-      await processarImportacaoCsv(csvImportadoTexto, columns, bank, setMappingStatus);
-    } catch (erro) {
-      setMappingStatus(`Erro ao importar extrato: ${erro}`, "error");
+      await importCsvText(importedCsvText, columns, bank, setMappingStatus);
+    } catch (error) {
+      setMappingStatus(`Erro ao importar extrato: ${error}`, "error");
     } finally {
-      els.btnConfirmarMapeamento.disabled = false;
+      els.btnConfirmMapping.disabled = false;
     }
   }
 
   function bindEvents() {
-    els.btnImportExtrato.addEventListener("click", alternarPopoverImportacao);
-    els.btnSelecionarArquivo.addEventListener("click", () => els.importFileInput.click());
+    els.btnImportStatement.addEventListener("click", toggleImportPopover);
+    els.btnSelectFile.addEventListener("click", () => els.importFileInput.click());
     els.importFileInput.addEventListener("change", onImportFileInputChange);
-    els.btnConfirmarImportacao.addEventListener("click", onConfirmarImportacaoClick);
-    els.btnCancelarImportacao.addEventListener("click", onCancelarImportacaoClick);
-    els.btnConfirmarImportacaoPdf.addEventListener("click", onConfirmarImportacaoPdfClick);
-    els.btnCancelarImportacaoPdf.addEventListener("click", onCancelarImportacaoPdfClick);
-    els.btnFecharImportacao.addEventListener("click", fecharPopoverImportacao);
-    els.btnConfirmarMapeamento.addEventListener("click", onConfirmarMapeamentoImportacao);
-    document.addEventListener("click", onCliqueForaPopoverImportacao);
+    els.btnConfirmImport.addEventListener("click", onConfirmImportClick);
+    els.btnCancelImport.addEventListener("click", onCancelImportClick);
+    els.btnConfirmPdfImport.addEventListener("click", onConfirmPdfImportClick);
+    els.btnCancelPdfImport.addEventListener("click", onCancelPdfImportClick);
+    els.btnCloseImport.addEventListener("click", closeImportPopover);
+    els.btnConfirmMapping.addEventListener("click", onConfirmMappingClick);
+    document.addEventListener("click", onClickOutsideImportPopover);
   }
-
-  bindEvents();
 }
