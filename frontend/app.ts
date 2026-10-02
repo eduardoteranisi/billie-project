@@ -6,9 +6,11 @@ import {
   openExternalLink,
   RELEASES_PAGE_URL,
 } from "./services/update_checker";
-import { initExpensesView } from "./screens/expenses";
+import { initBackupModal } from "./screens/backup_modal";
+import { initCategoryManagerModal } from "./screens/category_manager_modal";
 import { initInvoiceView, log } from "./screens/invoice";
-import { initTransactionsView } from "./screens/transactions";
+import { initOverviewView } from "./screens/overview";
+import { initTransactionsView } from "./screens/transactions/transactions_view";
 import { getRequiredElementById } from "./utils/dom_helpers";
 
 // ---------- referências de DOM ----------
@@ -18,13 +20,6 @@ const els = {
   updateText: getRequiredElementById<HTMLSpanElement>("update-text"),
   btnUpdate: getRequiredElementById<HTMLButtonElement>("btn-update"),
   btnTheme: getRequiredElementById<HTMLButtonElement>("btn-tema"),
-  btnCategories: getRequiredElementById<HTMLButtonElement>("btn-categories"),
-  modalCategories: getRequiredElementById<HTMLDivElement>("modal-categories"),
-  modalCategoriesClose: getRequiredElementById<HTMLButtonElement>("modal-categories-close"),
-  btnBackup: getRequiredElementById<HTMLButtonElement>("btn-backup"),
-  modalBackup: getRequiredElementById<HTMLDivElement>("modal-backup"),
-  modalBackupClose: getRequiredElementById<HTMLButtonElement>("modal-backup-close"),
-  backupStatus: getRequiredElementById<HTMLParagraphElement>("backup-status"),
 
   tabInvoice: getRequiredElementById<HTMLButtonElement>("tab-invoice"),
   tabExpenses: getRequiredElementById<HTMLButtonElement>("tab-expenses"),
@@ -110,19 +105,6 @@ function updateThemeIcon(theme: string) {
 
 function bindEvents() {
   els.btnTheme.addEventListener("click", toggleTheme);
-  els.btnCategories.addEventListener("click", () => { els.modalCategories.hidden = false; });
-  els.modalCategoriesClose.addEventListener("click", () => { els.modalCategories.hidden = true; });
-  els.modalCategories.addEventListener("click", (event) => {
-    if (event.target === els.modalCategories) els.modalCategories.hidden = true;
-  });
-  els.btnBackup.addEventListener("click", () => {
-    els.modalBackup.hidden = false;
-    els.backupStatus.hidden = true;
-  });
-  els.modalBackupClose.addEventListener("click", () => { els.modalBackup.hidden = true; });
-  els.modalBackup.addEventListener("click", (event) => {
-    if (event.target === els.modalBackup) els.modalBackup.hidden = true;
-  });
   els.tabInvoice.addEventListener("click", () => showView("invoice"));
   els.tabExpenses.addEventListener("click", () => showView("expenses"));
   els.tabTransactions.addEventListener("click", () => showView("transactions"));
@@ -136,6 +118,8 @@ bindEvents();
 initInvoiceView();
 initTransactionsView();
 checkForUpdates();
-initExpensesView();
+initOverviewView();
+initCategoryManagerModal();
+initBackupModal();
 showView("invoice");
 log("Pronto para iniciar. Selecione a fatura em PDF ou CSV.");

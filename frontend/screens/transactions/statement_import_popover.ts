@@ -5,17 +5,17 @@ import {
   parsePdfStatementFile,
   saveParsedStatementToExpenses,
   type ParsedStatement,
-} from "../services/statement_importer";
-import type { StoredTransaction } from "../types";
-import { fillColumnMappingSelects, readColumnMappingSelects } from "../components/column_mapping_form";
-import { getRequiredElementById } from "../utils/dom_helpers";
-import { isPdf } from "../utils/file_helpers";
+} from "../../services/statement_importer";
+import type { StoredTransaction } from "../../types";
+import { fillColumnMappingSelects, readColumnMappingSelects } from "../../components/column_mapping_form";
+import { getRequiredElementById } from "../../utils/dom_helpers";
+import { isPdf } from "../../utils/file_helpers";
 
 type StatusReporter = (message: string, type?: "info" | "success" | "error") => void;
 
 type ImportStep = "select" | "confirm" | "pdfDetails" | "status" | "mapping";
 
-export function initTransactionsView(): void {
+export function initStatementImportPopover(): void {
   const els = {
     btnImportStatement: getRequiredElementById<HTMLButtonElement>("btn-import-extrato"),
     importPopover: getRequiredElementById<HTMLDivElement>("import-popover"),
