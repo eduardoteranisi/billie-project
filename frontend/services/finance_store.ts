@@ -20,6 +20,15 @@ const INCOME_STORE = "income";
 const CATEGORIES_STORE = "categories";
 const CATEGORY_RULES_STORE = "categoryRules";
 
+type StoredEntry = StoredExpense | StoredIncome;
+type EntryStoreName = typeof TRANSACTIONS_STORE | typeof INCOME_STORE;
+
+// como cada store é chamado na mensagem de erro de lançamento não encontrado
+const ENTRY_STORE_LABELS: Record<EntryStoreName, string> = {
+  [TRANSACTIONS_STORE]: "transação",
+  [INCOME_STORE]: "receita",
+};
+
 function openDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DATABASE_NAME, DATABASE_VERSION);
@@ -86,44 +95,12 @@ function getAll<T>(storeName: string): Promise<T[]> {
   return runInStore<T[]>(storeName, "readonly", (store) => store.getAll());
 }
 
-export async function saveTransactions(
-  transactions: StoredExpense[]
-): Promise<{ added: number; duplicates: number }> {
-  const existingById = new Map((await listTransactions()).map((transaction) => [transaction.id, transaction]));
-
-  let added = 0;
-  let duplicates = 0;
-
-  for (const transaction of transactions) {
-    const existing = existingById.get(transaction.id);
-
-    if (existing) {
-      duplicates++;
-    } else {
-      added++;
-    }
-
-    const merged = existing ? mergeReimportedTransaction(existing, transaction) : transaction;
-    await runInStore(TRANSACTIONS_STORE, "readwrite", (store) => store.put(merged));
-  }
-
-  return { added, duplicates };
-}
-
-function mergeReimportedTransaction(existing: StoredExpense, incoming: StoredExpense): StoredExpense {
-  const keepCategory = existing.categoryOverridden || existing.detailsOverridden;
-  return {
-    ...incoming,
-    ...(keepCategory && { categoryId: existing.categoryId, categoryOverridden: existing.categoryOverridden }),
-    ...(existing.detailsOverridden && {
-      date: existing.date,
-      merchant: existing.merchant,
-      amount: existing.amount,
-      detailsOverridden: true,
-    }),
-    ...(existing.bankOverridden && { bank: existing.bank, bankOverridden: true }),
-    ...(existing.duplicateDismissed && { duplicateDismissed: true }),
-  };
+export function saveTransactions(transactions: StoredExpense[]): Promise<{ added: number; duplicates: number }> {
+  return saveStoredEntryList(TRANSACTIONS_STORE, transactions, (transaction) => ({
+    date: transaction.date,
+    merchant: transaction.merchant,
+    amount: transaction.amount,
+  }));
 }
 
 export function listTransactions(): Promise<StoredExpense[]> {
@@ -134,57 +111,75 @@ export async function removeTransaction(id: string): Promise<void> {
   await runInStore(TRANSACTIONS_STORE, "readwrite", (store) => store.delete(id));
 }
 
-export async function updateTransactionCategory(id: string, categoryId: string): Promise<void> {
-  const transaction = await runInStore<StoredExpense>(TRANSACTIONS_STORE, "readonly", (store) => store.get(id));
-  if (!transaction) throw new Error(`transação #${id} não encontrada`);
-
-  const updated: StoredExpense = { ...transaction, categoryId, categoryOverridden: true };
-  await runInStore(TRANSACTIONS_STORE, "readwrite", (store) => store.put(updated));
+export function updateTransactionCategory(id: string, categoryId: string): Promise<void> {
+  return updateStoredEntryCategory(TRANSACTIONS_STORE, id, categoryId);
 }
 
-export async function updateTransactionFields(
+export function updateTransactionFields(
   id: string,
   changes: { date: string; merchant: string; amount: number }
 ): Promise<void> {
-  const transaction = await runInStore<StoredExpense>(TRANSACTIONS_STORE, "readonly", (store) => store.get(id));
-  if (!transaction) throw new Error(`transação #${id} não encontrada`);
-
-  const updated: StoredExpense = {
-    ...transaction,
-    ...changes,
-    detailsOverridden: true,
-    // O "não é duplicado" valia para a data/valor antigos: mudou algum deles, a verificação recomeça.
-    ...((changes.date !== transaction.date || changes.amount !== transaction.amount) && { duplicateDismissed: false }),
-  };
-  await runInStore(TRANSACTIONS_STORE, "readwrite", (store) => store.put(updated));
+  return updateStoredEntryFields<StoredExpense>(TRANSACTIONS_STORE, id, changes);
 }
 
-export async function updateTransactionBank(id: string, bank: Bank | undefined): Promise<void> {
-  const transaction = await runInStore<StoredExpense>(TRANSACTIONS_STORE, "readonly", (store) => store.get(id));
-  if (!transaction) throw new Error(`transação #${id} não encontrada`);
-
-  const updated: StoredExpense = { ...transaction, bank, bankOverridden: true };
-  await runInStore(TRANSACTIONS_STORE, "readwrite", (store) => store.put(updated));
+export function updateTransactionBank(id: string, bank: Bank | undefined): Promise<void> {
+  return updateStoredEntryBank(TRANSACTIONS_STORE, id, bank);
 }
 
-export async function markTransactionIdListAsNotDuplicate(ids: string[]): Promise<void> {
-  for (const id of ids) {
-    const transaction = await runInStore<StoredExpense>(TRANSACTIONS_STORE, "readonly", (store) => store.get(id));
-    if (!transaction) continue;
-
-    const updated: StoredExpense = { ...transaction, duplicateDismissed: true };
-    await runInStore(TRANSACTIONS_STORE, "readwrite", (store) => store.put(updated));
-  }
+export function markTransactionIdListAsNotDuplicate(ids: string[]): Promise<void> {
+  return markStoredEntryIdListAsNotDuplicate(TRANSACTIONS_STORE, ids);
 }
 
 export async function saveIncome(entry: StoredIncome): Promise<void> {
   await runInStore(INCOME_STORE, "readwrite", (store) => store.put(entry));
 }
 
-export async function saveIncomeEntries(
-  entries: StoredIncome[]
+export function saveIncomeEntries(entries: StoredIncome[]): Promise<{ added: number; duplicates: number }> {
+  return saveStoredEntryList(INCOME_STORE, entries, (entry) => ({
+    date: entry.date,
+    description: entry.description,
+    amount: entry.amount,
+  }));
+}
+
+export function listIncome(): Promise<StoredIncome[]> {
+  return getAll<StoredIncome>(INCOME_STORE);
+}
+
+export async function removeIncome(id: string): Promise<void> {
+  await runInStore(INCOME_STORE, "readwrite", (store) => store.delete(id));
+}
+
+export function updateIncomeCategory(id: string, categoryId: string): Promise<void> {
+  return updateStoredEntryCategory(INCOME_STORE, id, categoryId);
+}
+
+export async function countIncomeByCategory(categoryId: string): Promise<number> {
+  const entries = await listIncome();
+  return entries.filter((entry) => entry.categoryId === categoryId).length;
+}
+
+export function updateIncomeFields(
+  id: string,
+  changes: { date: string; description: string; amount: number }
+): Promise<void> {
+  return updateStoredEntryFields<StoredIncome>(INCOME_STORE, id, changes);
+}
+
+export function updateIncomeBank(id: string, bank: Bank | undefined): Promise<void> {
+  return updateStoredEntryBank(INCOME_STORE, id, bank);
+}
+
+export function markIncomeIdListAsNotDuplicate(ids: string[]): Promise<void> {
+  return markStoredEntryIdListAsNotDuplicate(INCOME_STORE, ids);
+}
+
+async function saveStoredEntryList<T extends StoredEntry>(
+  storeName: EntryStoreName,
+  entries: T[],
+  pickEditableDetails: (entry: T) => Partial<T>
 ): Promise<{ added: number; duplicates: number }> {
-  const existingById = new Map((await listIncome()).map((entry) => [entry.id, entry]));
+  const existingById = new Map((await getAll<T>(storeName)).map((entry) => [entry.id, entry]));
 
   let added = 0;
   let duplicates = 0;
@@ -198,82 +193,69 @@ export async function saveIncomeEntries(
       added++;
     }
 
-    const merged = existing ? mergeReimportedIncomeEntry(existing, entry) : entry;
-    await runInStore(INCOME_STORE, "readwrite", (store) => store.put(merged));
+    const merged = existing ? mergeReimportedEntry(existing, entry, pickEditableDetails) : entry;
+    await runInStore(storeName, "readwrite", (store) => store.put(merged));
   }
 
   return { added, duplicates };
 }
 
-function mergeReimportedIncomeEntry(existing: StoredIncome, incoming: StoredIncome): StoredIncome {
+function mergeReimportedEntry<T extends StoredEntry>(
+  existing: T,
+  incoming: T,
+  pickEditableDetails: (entry: T) => Partial<T>
+): T {
   const keepCategory = existing.categoryOverridden || existing.detailsOverridden;
   return {
     ...incoming,
     ...(keepCategory && { categoryId: existing.categoryId, categoryOverridden: existing.categoryOverridden }),
-    ...(existing.detailsOverridden && {
-      date: existing.date,
-      description: existing.description,
-      amount: existing.amount,
-      detailsOverridden: true,
-    }),
+    ...(existing.detailsOverridden && { ...pickEditableDetails(existing), detailsOverridden: true }),
     ...(existing.bankOverridden && { bank: existing.bank, bankOverridden: true }),
     ...(existing.duplicateDismissed && { duplicateDismissed: true }),
   };
 }
 
-export function listIncome(): Promise<StoredIncome[]> {
-  return getAll<StoredIncome>(INCOME_STORE);
+function updateStoredEntryCategory(storeName: EntryStoreName, id: string, categoryId: string): Promise<void> {
+  return changeStoredEntry(storeName, id, (entry) => ({ ...entry, categoryId, categoryOverridden: true }));
 }
 
-export async function removeIncome(id: string): Promise<void> {
-  await runInStore(INCOME_STORE, "readwrite", (store) => store.delete(id));
-}
-
-export async function updateIncomeCategory(id: string, categoryId: string): Promise<void> {
-  const entry = await runInStore<StoredIncome>(INCOME_STORE, "readonly", (store) => store.get(id));
-  if (!entry) throw new Error(`receita #${id} não encontrada`);
-
-  const updated: StoredIncome = { ...entry, categoryId, categoryOverridden: true };
-  await runInStore(INCOME_STORE, "readwrite", (store) => store.put(updated));
-}
-
-export async function countIncomeByCategory(categoryId: string): Promise<number> {
-  const entries = await listIncome();
-  return entries.filter((entry) => entry.categoryId === categoryId).length;
-}
-
-export async function updateIncomeFields(
+function updateStoredEntryFields<T extends StoredEntry>(
+  storeName: EntryStoreName,
   id: string,
-  changes: { date: string; description: string; amount: number }
+  changes: Partial<T> & { date: string; amount: number }
 ): Promise<void> {
-  const entry = await runInStore<StoredIncome>(INCOME_STORE, "readonly", (store) => store.get(id));
-  if (!entry) throw new Error(`receita #${id} não encontrada`);
-
-  const updated: StoredIncome = {
+  return changeStoredEntry<T>(storeName, id, (entry) => ({
     ...entry,
     ...changes,
     detailsOverridden: true,
     // O "não é duplicado" valia para a data/valor antigos: mudou algum deles, a verificação recomeça.
     ...((changes.date !== entry.date || changes.amount !== entry.amount) && { duplicateDismissed: false }),
-  };
-  await runInStore(INCOME_STORE, "readwrite", (store) => store.put(updated));
+  }));
 }
 
-export async function updateIncomeBank(id: string, bank: Bank | undefined): Promise<void> {
-  const entry = await runInStore<StoredIncome>(INCOME_STORE, "readonly", (store) => store.get(id));
-  if (!entry) throw new Error(`receita #${id} não encontrada`);
-
-  const updated: StoredIncome = { ...entry, bank, bankOverridden: true };
-  await runInStore(INCOME_STORE, "readwrite", (store) => store.put(updated));
+function updateStoredEntryBank(storeName: EntryStoreName, id: string, bank: Bank | undefined): Promise<void> {
+  return changeStoredEntry(storeName, id, (entry) => ({ ...entry, bank, bankOverridden: true }));
 }
 
-export async function markIncomeIdListAsNotDuplicate(ids: string[]): Promise<void> {
+async function changeStoredEntry<T extends StoredEntry>(
+  storeName: EntryStoreName,
+  id: string,
+  change: (entry: T) => T
+): Promise<void> {
+  const entry = await runInStore<T | undefined>(storeName, "readonly", (store) => store.get(id));
+  if (!entry) throw new Error(`${ENTRY_STORE_LABELS[storeName]} #${id} não encontrada`);
+
+  const updated = change(entry);
+  await runInStore(storeName, "readwrite", (store) => store.put(updated));
+}
+
+async function markStoredEntryIdListAsNotDuplicate(storeName: EntryStoreName, ids: string[]): Promise<void> {
   for (const id of ids) {
-    const entry = await runInStore<StoredIncome>(INCOME_STORE, "readonly", (store) => store.get(id));
+    const entry = await runInStore<StoredEntry | undefined>(storeName, "readonly", (store) => store.get(id));
     if (!entry) continue;
 
-    const updated: StoredIncome = { ...entry, duplicateDismissed: true };
-    await runInStore(INCOME_STORE, "readwrite", (store) => store.put(updated));
+    const updated: StoredEntry = { ...entry, duplicateDismissed: true };
+    await runInStore(storeName, "readwrite", (store) => store.put(updated));
   }
 }
 
