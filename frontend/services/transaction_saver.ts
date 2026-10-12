@@ -4,29 +4,29 @@ import {
   UNCATEGORIZED_INCOME_CATEGORY_ID,
   type Transaction,
 } from "@billie/parser";
-import { listCategoryRules, saveTransactions, saveIncomeEntries } from "./expense_store";
-import type { ManualIncomeEntry, StoredTransaction } from "../types";
+import { listCategoryRules, saveTransactions, saveIncomeEntries } from "./finance_store";
+import type { StoredExpense, StoredIncome } from "../types";
 
-export async function classificarESalvarTransacoes(
+export async function classifyAndSaveExpenseList(
   transactions: Transaction[],
-  origin: StoredTransaction["origin"]
+  origin: StoredExpense["origin"]
 ) {
   const rules = await listCategoryRules("expense");
   const categorized = classifyTransactionList(transactions, rules);
-  const storedTransactions: StoredTransaction[] = categorized.map((transaction) => ({
+  const storedExpenses: StoredExpense[] = categorized.map((transaction) => ({
     ...transaction,
     origin,
   }));
-  return saveTransactions(storedTransactions);
+  return saveTransactions(storedExpenses);
 }
 
-export async function salvarIncomeNoControle(
+export async function classifyAndSaveIncomeList(
   income: Transaction[] | undefined
 ): Promise<{ added: number; duplicates: number }> {
   if (!income || income.length === 0) return { added: 0, duplicates: 0 };
 
   const incomeRules = await listCategoryRules("income");
-  const incomeEntries: ManualIncomeEntry[] = income.map((entry) => ({
+  const incomeEntries: StoredIncome[] = income.map((entry) => ({
     id: entry.id,
     date: entry.date,
     description: entry.merchant,
@@ -37,11 +37,11 @@ export async function salvarIncomeNoControle(
   return saveIncomeEntries(incomeEntries);
 }
 
-export function somarResultadosSalvamento(
-  ...resultados: { added: number; duplicates: number }[]
+export function sumSaveResults(
+  ...results: { added: number; duplicates: number }[]
 ): { added: number; duplicates: number } {
-  return resultados.reduce(
-    (total, resultado) => ({ added: total.added + resultado.added, duplicates: total.duplicates + resultado.duplicates }),
+  return results.reduce(
+    (total, result) => ({ added: total.added + result.added, duplicates: total.duplicates + result.duplicates }),
     { added: 0, duplicates: 0 }
   );
 }

@@ -55,36 +55,7 @@
   margin-bottom: 12px;
 }
 
-/* ---------- controle de gastos: lançamentos manuais (receitas do período) ---------- */
-
-.manual-entry-form .field-row { margin-bottom: 12px; }
-
-.manual-entry-list { display: flex; flex-direction: column; gap: 8px; }
-
-.manual-entry-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 13px;
-  padding: 6px 0;
-  border-bottom: 1px solid var(--border-soft);
-}
-
-.manual-entry-date { color: var(--text-tertiary); font-family: var(--font-mono); font-size: 12px; }
-.manual-entry-description { flex: 1; }
-.manual-entry-amount.income { color: var(--accent-strong); }
-.manual-entry-amount.expense { color: var(--danger); }
-.manual-entry-row .link-button { margin-top: 0; }
-
-.manual-entry-row-editing { flex-wrap: wrap; }
-.manual-entry-row-editing .manual-entry-edit-date,
-.manual-entry-row-editing .manual-entry-edit-description,
-.manual-entry-row-editing .manual-entry-edit-amount { font-size: 12px; padding: 6px 8px; }
-.manual-entry-row-editing .manual-entry-edit-date { width: 140px; }
-.manual-entry-row-editing .manual-entry-edit-description { flex: 1; min-width: 120px; }
-.manual-entry-row-editing .manual-entry-edit-amount { width: 100px; }
-
-/* ---------- controle de gastos: transações do período (despesas do período) ---------- */
+/* ---------- lançamentos: listas de receitas e despesas do período ---------- */
 
 .field-inline {
   display: flex;
@@ -101,12 +72,12 @@
   font-size: 12px;
 }
 
-.transaction-list { display: flex; flex-direction: column; gap: 8px; }
+.entry-list { display: flex; flex-direction: column; gap: 8px; }
 
-.transaction-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
-.transaction-group:last-child { margin-bottom: 0; }
+.entry-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
+.entry-group:last-child { margin-bottom: 0; }
 
-.transaction-group-header {
+.entry-group-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -122,9 +93,9 @@
   color: var(--text-tertiary);
 }
 
-.transaction-group-subtotal { color: var(--text-secondary); font-weight: 600; }
+.entry-group-subtotal { color: var(--text-secondary); font-weight: 600; }
 
-.transaction-row {
+.entry-row {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -133,30 +104,28 @@
   border-bottom: 1px solid var(--border-soft);
 }
 
-.transaction-date { color: var(--text-tertiary); font-family: var(--font-mono); font-size: 12px; flex-shrink: 0; }
-.transaction-description {
+.entry-date { color: var(--text-tertiary); font-family: var(--font-mono); font-size: 12px; flex-shrink: 0; }
+.entry-description {
   flex: 1;
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
-.transaction-amount { color: var(--danger); white-space: nowrap; flex-shrink: 0; }
-.transaction-category-select,
-.income-category-select { width: 110px; font-size: 12px; padding: 6px 24px 6px 8px; flex-shrink: 0; }
-.transaction-row .link-button { margin-top: 0; flex-shrink: 0; }
+.entry-amount { white-space: nowrap; flex-shrink: 0; }
+.entry-amount.expense { color: var(--danger); }
+.entry-amount.income { color: var(--accent-strong); }
+.entry-category-select { width: 110px; font-size: 12px; padding: 6px 24px 6px 8px; flex-shrink: 0; }
+.entry-row .link-button { margin-top: 0; flex-shrink: 0; }
 
-.transaction-row-editing { flex-wrap: wrap; }
-.transaction-row-editing .transaction-edit-date,
-.transaction-row-editing .transaction-edit-description,
-.transaction-row-editing .transaction-edit-amount { font-size: 12px; padding: 6px 8px; }
-.transaction-row-editing .transaction-edit-date { width: 140px; }
-.transaction-row-editing .transaction-edit-description { flex: 1; min-width: 120px; }
-.transaction-row-editing .transaction-edit-amount { width: 100px; }
-
-/* linha em edição (despesas e receitas): campos / ações */
-.transaction-row-editing,
-.manual-entry-row-editing { flex-direction: column; align-items: stretch; gap: 8px; }
+/* linha em edição: campos / ações */
+.entry-row-editing { flex-wrap: wrap; flex-direction: column; align-items: stretch; gap: 8px; }
+.entry-row-editing .entry-edit-date,
+.entry-row-editing .entry-edit-description,
+.entry-row-editing .entry-edit-amount { font-size: 12px; padding: 6px 8px; }
+.entry-row-editing .entry-edit-date { width: 140px; }
+.entry-row-editing .entry-edit-description { flex: 1; min-width: 120px; }
+.entry-row-editing .entry-edit-amount { width: 100px; }
 
 .row-edit-line {
   display: flex;
@@ -218,9 +187,8 @@
   padding-left: 6px;
 }
 
-.transaction-edit-bank,
-.manual-entry-edit-bank { width: auto; max-width: 140px; font-size: 12px; padding: 6px 24px 6px 8px; flex-shrink: 0; }
+.entry-edit-bank { width: auto; max-width: 140px; font-size: 12px; padding: 6px 24px 6px 8px; flex-shrink: 0; }
 
 @media (max-width: 640px) {
-  .transaction-row { flex-wrap: wrap; }
+  .entry-row { flex-wrap: wrap; }
 }

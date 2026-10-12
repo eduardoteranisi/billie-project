@@ -1,7 +1,7 @@
 import type { Category } from "@billie/parser";
-import type { CategorySummary, DreSummary, ManualIncomeEntry, StoredTransaction } from "../types";
+import type { CategorySummary, DreSummary, StoredExpense, StoredIncome } from "../types";
 
-export function listAvailablePeriods(transactions: StoredTransaction[], income: ManualIncomeEntry[]): string[] {
+export function listAvailablePeriods(transactions: StoredExpense[], income: StoredIncome[]): string[] {
   const periods = new Set<string>();
   for (const transaction of transactions) periods.add(transaction.date.slice(0, 7));
   for (const entry of income) periods.add(entry.date.slice(0, 7));
@@ -25,8 +25,8 @@ function summarizeByCategory(
 
 export function calculateDre(
   period: string,
-  transactions: StoredTransaction[],
-  income: ManualIncomeEntry[],
+  transactions: StoredExpense[],
+  income: StoredIncome[],
   allCategories: Category[]
 ): DreSummary {
   const periodTransactions = transactions.filter((transaction) => transaction.date.slice(0, 7) === period);

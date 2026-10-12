@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Category } from "@billie/parser";
 import { calculateDre, listAvailablePeriods } from "../../services/dre_aggregator";
-import type { ManualIncomeEntry, StoredTransaction } from "../../types";
+import type { StoredExpense, StoredIncome } from "../../types";
 
 const CATEGORIES: Category[] = [
   { id: "housing", label: "Moradia", type: "expense", group: "fixed" },
@@ -11,11 +11,11 @@ const CATEGORIES: Category[] = [
   { id: "freelance", label: "Freelance / PJ", type: "income" },
 ];
 
-function buildTransaction(date: string, categoryId: string, amount: number): StoredTransaction {
+function buildTransaction(date: string, categoryId: string, amount: number): StoredExpense {
   return { id: `${date}-${categoryId}-${amount}`, date, merchant: "x", amount, categoryId, origin: "pdf" };
 }
 
-function buildIncome(date: string, categoryId: string, amount: number): ManualIncomeEntry {
+function buildIncome(date: string, categoryId: string, amount: number): StoredIncome {
   return { id: `${date}-${categoryId}-${amount}`, date, description: "x", amount, categoryId };
 }
 

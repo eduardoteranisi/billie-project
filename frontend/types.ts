@@ -1,24 +1,23 @@
 import type { Bank, Category, CategorizedTransaction, CategoryGroup, CategoryRule } from "@billie/parser";
 
-export interface ManualIncomeEntry {
-  id: string;
-  date: string;
-  description: string;
-  amount: number;
-  categoryId: string;
-  bank?: Bank;
+export interface StoredEntryFlags {
   categoryOverridden?: boolean;
   detailsOverridden?: boolean;
   bankOverridden?: boolean;
   duplicateDismissed?: boolean;
 }
 
-export interface StoredTransaction extends CategorizedTransaction {
+export interface StoredIncome extends StoredEntryFlags {
+  id: string;
+  date: string;
+  description: string;
+  amount: number;
+  categoryId: string;
+  bank?: Bank;
+}
+
+export interface StoredExpense extends CategorizedTransaction, StoredEntryFlags {
   origin: "pdf" | "manual" | "csv";
-  categoryOverridden?: boolean;
-  detailsOverridden?: boolean;
-  bankOverridden?: boolean;
-  duplicateDismissed?: boolean;
 }
 
 export interface CategorySummary {
@@ -43,8 +42,8 @@ export const BACKUP_SCHEMA_VERSION = 1;
 export interface BackupPayload {
   schemaVersion: typeof BACKUP_SCHEMA_VERSION;
   exportedAt: string;
-  transactions: StoredTransaction[];
-  income: ManualIncomeEntry[];
+  transactions: StoredExpense[];
+  income: StoredIncome[];
   categories: Category[];
   categoryRules: CategoryRule[];
 }
