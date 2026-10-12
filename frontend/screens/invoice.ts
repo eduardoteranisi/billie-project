@@ -6,7 +6,7 @@ import {
   saveParsedStatementToFinanceStore,
   type ParsedStatement,
 } from "../services/statement_importer";
-import type { StoredTransaction } from "../types";
+import type { StoredExpense } from "../types";
 import { fillColumnMappingSelects, readColumnMappingSelects } from "../components/column_mapping_form";
 import { escapeHtmlSpecialCharacters, getRequiredElementById } from "../utils/dom_helpers";
 import { downloadTextFile, isPdf } from "../utils/file_helpers";
@@ -292,7 +292,7 @@ export function initInvoiceView(): void {
     }
   }
 
-  async function saveStatementAndLog(statement: ParsedStatement, origin: StoredTransaction["origin"]) {
+  async function saveStatementAndLog(statement: ParsedStatement, origin: StoredExpense["origin"]) {
     const { added, duplicates } = await saveParsedStatementToFinanceStore(statement, origin);
     log(
       `${added} transações novas salvas no controle de gastos${duplicates > 0 ? ` (${duplicates} já existiam)` : ""}.`,

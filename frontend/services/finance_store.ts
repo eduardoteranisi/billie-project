@@ -8,7 +8,7 @@ import {
 } from "@billie/parser";
 import type { Bank, Category, CategoryGroup, CategoryRule } from "@billie/parser";
 import { BACKUP_SCHEMA_VERSION } from "../types";
-import type { BackupPayload, ManualIncomeEntry, StoredTransaction } from "../types";
+import type { BackupPayload, StoredExpense, StoredIncome } from "../types";
 
 export type CategoryType = "expense" | "income";
 
@@ -87,7 +87,7 @@ function getAll<T>(storeName: string): Promise<T[]> {
 }
 
 export async function saveTransactions(
-  transactions: StoredTransaction[]
+  transactions: StoredExpense[]
 ): Promise<{ added: number; duplicates: number }> {
   const existingById = new Map((await listTransactions()).map((transaction) => [transaction.id, transaction]));
 
@@ -110,7 +110,7 @@ export async function saveTransactions(
   return { added, duplicates };
 }
 
-function mergeReimportedTransaction(existing: StoredTransaction, incoming: StoredTransaction): StoredTransaction {
+function mergeReimportedTransaction(existing: StoredExpense, incoming: StoredExpense): StoredExpense {
   const keepCategory = existing.categoryOverridden || existing.detailsOverridden;
   return {
     ...incoming,
@@ -126,8 +126,8 @@ function mergeReimportedTransaction(existing: StoredTransaction, incoming: Store
   };
 }
 
-export function listTransactions(): Promise<StoredTransaction[]> {
-  return getAll<StoredTransaction>(TRANSACTIONS_STORE);
+export function listTransactions(): Promise<StoredExpense[]> {
+  return getAll<StoredExpense>(TRANSACTIONS_STORE);
 }
 
 export async function removeTransaction(id: string): Promise<void> {
@@ -135,10 +135,10 @@ export async function removeTransaction(id: string): Promise<void> {
 }
 
 export async function updateTransactionCategory(id: string, categoryId: string): Promise<void> {
-  const transaction = await runInStore<StoredTransaction>(TRANSACTIONS_STORE, "readonly", (store) => store.get(id));
+  const transaction = await runInStore<StoredExpense>(TRANSACTIONS_STORE, "readonly", (store) => store.get(id));
   if (!transaction) throw new Error(`transação #${id} não encontrada`);
 
-  const updated: StoredTransaction = { ...transaction, categoryId, categoryOverridden: true };
+  const updated: StoredExpense = { ...transaction, categoryId, categoryOverridden: true };
   await runInStore(TRANSACTIONS_STORE, "readwrite", (store) => store.put(updated));
 }
 
@@ -146,10 +146,10 @@ export async function updateTransactionFields(
   id: string,
   changes: { date: string; merchant: string; amount: number }
 ): Promise<void> {
-  const transaction = await runInStore<StoredTransaction>(TRANSACTIONS_STORE, "readonly", (store) => store.get(id));
+  const transaction = await runInStore<StoredExpense>(TRANSACTIONS_STORE, "readonly", (store) => store.get(id));
   if (!transaction) throw new Error(`transação #${id} não encontrada`);
 
-  const updated: StoredTransaction = {
+  const updated: StoredExpense = {
     ...transaction,
     ...changes,
     detailsOverridden: true,
@@ -160,29 +160,29 @@ export async function updateTransactionFields(
 }
 
 export async function updateTransactionBank(id: string, bank: Bank | undefined): Promise<void> {
-  const transaction = await runInStore<StoredTransaction>(TRANSACTIONS_STORE, "readonly", (store) => store.get(id));
+  const transaction = await runInStore<StoredExpense>(TRANSACTIONS_STORE, "readonly", (store) => store.get(id));
   if (!transaction) throw new Error(`transação #${id} não encontrada`);
 
-  const updated: StoredTransaction = { ...transaction, bank, bankOverridden: true };
+  const updated: StoredExpense = { ...transaction, bank, bankOverridden: true };
   await runInStore(TRANSACTIONS_STORE, "readwrite", (store) => store.put(updated));
 }
 
 export async function markTransactionIdListAsNotDuplicate(ids: string[]): Promise<void> {
   for (const id of ids) {
-    const transaction = await runInStore<StoredTransaction>(TRANSACTIONS_STORE, "readonly", (store) => store.get(id));
+    const transaction = await runInStore<StoredExpense>(TRANSACTIONS_STORE, "readonly", (store) => store.get(id));
     if (!transaction) continue;
 
-    const updated: StoredTransaction = { ...transaction, duplicateDismissed: true };
+    const updated: StoredExpense = { ...transaction, duplicateDismissed: true };
     await runInStore(TRANSACTIONS_STORE, "readwrite", (store) => store.put(updated));
   }
 }
 
-export async function saveIncome(entry: ManualIncomeEntry): Promise<void> {
+export async function saveIncome(entry: StoredIncome): Promise<void> {
   await runInStore(INCOME_STORE, "readwrite", (store) => store.put(entry));
 }
 
 export async function saveIncomeEntries(
-  entries: ManualIncomeEntry[]
+  entries: StoredIncome[]
 ): Promise<{ added: number; duplicates: number }> {
   const existingById = new Map((await listIncome()).map((entry) => [entry.id, entry]));
 
@@ -205,7 +205,7 @@ export async function saveIncomeEntries(
   return { added, duplicates };
 }
 
-function mergeReimportedIncomeEntry(existing: ManualIncomeEntry, incoming: ManualIncomeEntry): ManualIncomeEntry {
+function mergeReimportedIncomeEntry(existing: StoredIncome, incoming: StoredIncome): StoredIncome {
   const keepCategory = existing.categoryOverridden || existing.detailsOverridden;
   return {
     ...incoming,
@@ -221,8 +221,8 @@ function mergeReimportedIncomeEntry(existing: ManualIncomeEntry, incoming: Manua
   };
 }
 
-export function listIncome(): Promise<ManualIncomeEntry[]> {
-  return getAll<ManualIncomeEntry>(INCOME_STORE);
+export function listIncome(): Promise<StoredIncome[]> {
+  return getAll<StoredIncome>(INCOME_STORE);
 }
 
 export async function removeIncome(id: string): Promise<void> {
@@ -230,10 +230,10 @@ export async function removeIncome(id: string): Promise<void> {
 }
 
 export async function updateIncomeCategory(id: string, categoryId: string): Promise<void> {
-  const entry = await runInStore<ManualIncomeEntry>(INCOME_STORE, "readonly", (store) => store.get(id));
+  const entry = await runInStore<StoredIncome>(INCOME_STORE, "readonly", (store) => store.get(id));
   if (!entry) throw new Error(`receita #${id} não encontrada`);
 
-  const updated: ManualIncomeEntry = { ...entry, categoryId, categoryOverridden: true };
+  const updated: StoredIncome = { ...entry, categoryId, categoryOverridden: true };
   await runInStore(INCOME_STORE, "readwrite", (store) => store.put(updated));
 }
 
@@ -246,10 +246,10 @@ export async function updateIncomeFields(
   id: string,
   changes: { date: string; description: string; amount: number }
 ): Promise<void> {
-  const entry = await runInStore<ManualIncomeEntry>(INCOME_STORE, "readonly", (store) => store.get(id));
+  const entry = await runInStore<StoredIncome>(INCOME_STORE, "readonly", (store) => store.get(id));
   if (!entry) throw new Error(`receita #${id} não encontrada`);
 
-  const updated: ManualIncomeEntry = {
+  const updated: StoredIncome = {
     ...entry,
     ...changes,
     detailsOverridden: true,
@@ -260,19 +260,19 @@ export async function updateIncomeFields(
 }
 
 export async function updateIncomeBank(id: string, bank: Bank | undefined): Promise<void> {
-  const entry = await runInStore<ManualIncomeEntry>(INCOME_STORE, "readonly", (store) => store.get(id));
+  const entry = await runInStore<StoredIncome>(INCOME_STORE, "readonly", (store) => store.get(id));
   if (!entry) throw new Error(`receita #${id} não encontrada`);
 
-  const updated: ManualIncomeEntry = { ...entry, bank, bankOverridden: true };
+  const updated: StoredIncome = { ...entry, bank, bankOverridden: true };
   await runInStore(INCOME_STORE, "readwrite", (store) => store.put(updated));
 }
 
 export async function markIncomeIdListAsNotDuplicate(ids: string[]): Promise<void> {
   for (const id of ids) {
-    const entry = await runInStore<ManualIncomeEntry>(INCOME_STORE, "readonly", (store) => store.get(id));
+    const entry = await runInStore<StoredIncome>(INCOME_STORE, "readonly", (store) => store.get(id));
     if (!entry) continue;
 
-    const updated: ManualIncomeEntry = { ...entry, duplicateDismissed: true };
+    const updated: StoredIncome = { ...entry, duplicateDismissed: true };
     await runInStore(INCOME_STORE, "readwrite", (store) => store.put(updated));
   }
 }

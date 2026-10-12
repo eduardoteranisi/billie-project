@@ -26,7 +26,7 @@ import {
 import { listenStoredDataUpdated, notifyStoredDataUpdated } from "../../services/stored_data_events";
 import { groupTransactionsByBank, groupTransactionsByDay, UNKNOWN_BANK_LABEL } from "../../services/transaction_grouping";
 import type { TransactionGroup } from "../../services/transaction_grouping";
-import type { ManualIncomeEntry, StoredTransaction } from "../../types";
+import type { StoredExpense, StoredIncome } from "../../types";
 import { formatBrlCurrency } from "../../utils/currency_format";
 import { escapeHtmlSpecialCharacters, getRequiredElementById } from "../../utils/dom_helpers";
 import { buildCategoryOptionsHtml } from "./category_options_html";
@@ -89,7 +89,7 @@ export function initTransactionLists(): void {
     },
   };
 
-  const expenseList = createEntryListController<StoredTransaction>({
+  const expenseList = createEntryListController<StoredExpense>({
     ...sharedOptions,
     container: getRequiredElementById<HTMLDivElement>("transaction-list"),
     amountKind: "expense",
@@ -104,7 +104,7 @@ export function initTransactionLists(): void {
     markEntryIdListAsNotDuplicate: markTransactionIdListAsNotDuplicate,
   });
 
-  const incomeList = createEntryListController<ManualIncomeEntry>({
+  const incomeList = createEntryListController<StoredIncome>({
     ...sharedOptions,
     container: getRequiredElementById<HTMLDivElement>("income-entry-list"),
     amountKind: "income",

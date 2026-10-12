@@ -5,7 +5,7 @@ import {
   sumSaveResults,
 } from "./transaction_saver";
 import { notifyStoredDataUpdated } from "./stored_data_events";
-import type { StoredTransaction } from "../types";
+import type { StoredExpense } from "../types";
 
 // qualquer ano não numérico faz o parser deduzir o ano sozinho (resolvePurchaseYear)
 export const AUTOMATIC_YEAR = "Automático (recomendado)";
@@ -67,7 +67,7 @@ export async function parseCsvStatementText(
 
 export async function saveParsedStatementToFinanceStore(
   statement: ParsedStatement,
-  origin: StoredTransaction["origin"]
+  origin: StoredExpense["origin"]
 ): Promise<SaveStatementResult> {
   const expensesResult = await classifyAndSaveExpenseList(statement.expenses, origin);
   const incomeResult = await classifyAndSaveIncomeList(statement.income);

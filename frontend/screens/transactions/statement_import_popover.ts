@@ -6,7 +6,7 @@ import {
   saveParsedStatementToFinanceStore,
   type ParsedStatement,
 } from "../../services/statement_importer";
-import type { StoredTransaction } from "../../types";
+import type { StoredExpense } from "../../types";
 import { fillColumnMappingSelects, readColumnMappingSelects } from "../../components/column_mapping_form";
 import { getRequiredElementById } from "../../utils/dom_helpers";
 import { isPdf } from "../../utils/file_helpers";
@@ -182,7 +182,7 @@ export function initStatementImportPopover(): void {
 
   async function saveStatementAndReport(
     statement: ParsedStatement,
-    origin: StoredTransaction["origin"],
+    origin: StoredExpense["origin"],
     report: StatusReporter
   ) {
     const { added, duplicates } = await saveParsedStatementToFinanceStore(statement, origin);

@@ -7,7 +7,7 @@ import {
 } from "@billie/parser";
 import { listCategories, listCategoryRules, saveIncome, saveTransactions } from "../../services/finance_store";
 import { listenStoredDataUpdated, notifyStoredDataUpdated } from "../../services/stored_data_events";
-import type { ManualIncomeEntry, StoredTransaction } from "../../types";
+import type { StoredExpense, StoredIncome } from "../../types";
 import { getRequiredElementById } from "../../utils/dom_helpers";
 import { buildCategoryOptionsHtml } from "./category_options_html";
 
@@ -58,7 +58,7 @@ export function initTransactionAddForms(): void {
     const amount = parseFloat(incomeAddAmount.value);
     if (!date || !description || Number.isNaN(amount) || amount <= 0) return;
 
-    const entry: ManualIncomeEntry = {
+    const entry: StoredIncome = {
       id: crypto.randomUUID(),
       date,
       description,
@@ -80,7 +80,7 @@ export function initTransactionAddForms(): void {
     const amount = parseFloat(expenseAddAmount.value);
     if (!date || !merchant || Number.isNaN(amount) || amount <= 0) return;
 
-    const entry: StoredTransaction = {
+    const entry: StoredExpense = {
       id: crypto.randomUUID(),
       date,
       merchant,

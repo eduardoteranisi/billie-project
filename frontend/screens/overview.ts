@@ -8,7 +8,7 @@ import {
   syncSelectedPeriodWithAvailableList,
 } from "../services/selected_period";
 import { listenStoredDataUpdated } from "../services/stored_data_events";
-import type { CategorySummary, DreSummary, ManualIncomeEntry, StoredTransaction } from "../types";
+import type { CategorySummary, DreSummary, StoredExpense, StoredIncome } from "../types";
 import { formatBrlCurrency } from "../utils/currency_format";
 import { escapeHtmlSpecialCharacters, getRequiredElementById } from "../utils/dom_helpers";
 
@@ -31,8 +31,8 @@ export function initOverviewView(): void {
   const expenseCategoryList = getRequiredElementById<HTMLDivElement>("category-list");
   const incomeCategoryList = getRequiredElementById<HTMLDivElement>("income-category-list");
 
-  let transactions: StoredTransaction[] = [];
-  let income: ManualIncomeEntry[] = [];
+  let transactions: StoredExpense[] = [];
+  let income: StoredIncome[] = [];
   let categories: Category[] = [];
 
   periodSelect.addEventListener("change", () => setSelectedPeriod(periodSelect.value));

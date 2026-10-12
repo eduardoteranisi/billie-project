@@ -5,19 +5,19 @@ import {
   type Transaction,
 } from "@billie/parser";
 import { listCategoryRules, saveTransactions, saveIncomeEntries } from "./finance_store";
-import type { ManualIncomeEntry, StoredTransaction } from "../types";
+import type { StoredExpense, StoredIncome } from "../types";
 
 export async function classifyAndSaveExpenseList(
   transactions: Transaction[],
-  origin: StoredTransaction["origin"]
+  origin: StoredExpense["origin"]
 ) {
   const rules = await listCategoryRules("expense");
   const categorized = classifyTransactionList(transactions, rules);
-  const storedTransactions: StoredTransaction[] = categorized.map((transaction) => ({
+  const storedExpenses: StoredExpense[] = categorized.map((transaction) => ({
     ...transaction,
     origin,
   }));
-  return saveTransactions(storedTransactions);
+  return saveTransactions(storedExpenses);
 }
 
 export async function classifyAndSaveIncomeList(
@@ -26,7 +26,7 @@ export async function classifyAndSaveIncomeList(
   if (!income || income.length === 0) return { added: 0, duplicates: 0 };
 
   const incomeRules = await listCategoryRules("income");
-  const incomeEntries: ManualIncomeEntry[] = income.map((entry) => ({
+  const incomeEntries: StoredIncome[] = income.map((entry) => ({
     id: entry.id,
     date: entry.date,
     description: entry.merchant,
