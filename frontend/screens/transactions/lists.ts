@@ -158,10 +158,10 @@ export function initTransactionLists(): void {
     return groups
       .map(
         (group) => `
-          <div class="transaction-group">
-            <div class="transaction-group-header">
+          <div class="entry-group">
+            <div class="entry-group-header">
               <span>${escapeHtmlSpecialCharacters(groupHeaderLabel(group))}</span>
-              <span class="transaction-group-subtotal">${formatBrlCurrency(group.total)}</span>
+              <span class="entry-group-subtotal">${formatBrlCurrency(group.total)}</span>
             </div>
             ${rowsHtml(group.transactions)}
           </div>
@@ -189,31 +189,31 @@ export function initTransactionLists(): void {
   function transactionViewRowHtml(row: StoredTransaction): string {
     const duplicate = possibleDuplicateRowAttributes(possibleDuplicateTransactionIds.has(row.id));
     return `
-      <div class="transaction-row${duplicate.className}"${duplicate.title} data-id="${escapeHtmlSpecialCharacters(row.id)}">
-        <span class="transaction-date">${escapeHtmlSpecialCharacters(row.date)}</span>
+      <div class="entry-row${duplicate.className}"${duplicate.title} data-id="${escapeHtmlSpecialCharacters(row.id)}">
+        <span class="entry-date">${escapeHtmlSpecialCharacters(row.date)}</span>
         ${bankBadgeHtml(row.bank)}
-        <span class="transaction-description" title="${escapeHtmlSpecialCharacters(row.merchant)}">${escapeHtmlSpecialCharacters(row.merchant)}</span>
-        <span class="transaction-amount">${formatBrlCurrency(row.amount)}</span>
-        <select class="transaction-category-select">${buildCategoryOptionsHtml(expenseCategories, row.categoryId)}</select>
-        <button type="button" class="link-button transaction-edit">Editar</button>
+        <span class="entry-description" title="${escapeHtmlSpecialCharacters(row.merchant)}">${escapeHtmlSpecialCharacters(row.merchant)}</span>
+        <span class="entry-amount expense">${formatBrlCurrency(row.amount)}</span>
+        <select class="entry-category-select">${buildCategoryOptionsHtml(expenseCategories, row.categoryId)}</select>
+        <button type="button" class="link-button entry-edit">Editar</button>
       </div>
     `;
   }
 
   function transactionEditRowHtml(row: StoredTransaction): string {
     return `
-      <div class="transaction-row transaction-row-editing" data-id="${escapeHtmlSpecialCharacters(row.id)}">
+      <div class="entry-row entry-row-editing" data-id="${escapeHtmlSpecialCharacters(row.id)}">
         <div class="row-edit-line">
-          <input type="date" class="transaction-edit-date" value="${escapeHtmlSpecialCharacters(row.date)}" />
-          <select class="transaction-edit-bank" title="Banco de origem">${bankOptionsHtml(row.bank)}</select>
-          <input type="text" class="transaction-edit-description" value="${escapeHtmlSpecialCharacters(row.merchant)}" />
-          <input type="number" step="0.01" min="0.01" class="transaction-edit-amount" value="${escapeHtmlSpecialCharacters(String(row.amount))}" />
-          <select class="transaction-category-select" title="Categoria">${buildCategoryOptionsHtml(expenseCategories, row.categoryId)}</select>
+          <input type="date" class="entry-edit-date" value="${escapeHtmlSpecialCharacters(row.date)}" />
+          <select class="entry-edit-bank" title="Banco de origem">${bankOptionsHtml(row.bank)}</select>
+          <input type="text" class="entry-edit-description" value="${escapeHtmlSpecialCharacters(row.merchant)}" />
+          <input type="number" step="0.01" min="0.01" class="entry-edit-amount" value="${escapeHtmlSpecialCharacters(String(row.amount))}" />
+          <select class="entry-category-select" title="Categoria">${buildCategoryOptionsHtml(expenseCategories, row.categoryId)}</select>
         </div>
         <div class="row-edit-actions">
-          <button type="button" class="link-button transaction-save">Salvar</button>
-          <button type="button" class="link-button transaction-cancel">Cancelar</button>
-          <button type="button" class="link-button transaction-remove">Excluir</button>
+          <button type="button" class="link-button entry-save">Salvar</button>
+          <button type="button" class="link-button entry-cancel">Cancelar</button>
+          <button type="button" class="link-button entry-remove">Excluir</button>
         </div>
       </div>
     `;
@@ -227,9 +227,9 @@ export function initTransactionLists(): void {
       });
     });
 
-    transactionList.querySelectorAll<HTMLSelectElement>(".transaction-category-select").forEach((select) => {
+    transactionList.querySelectorAll<HTMLSelectElement>(".entry-category-select").forEach((select) => {
       select.addEventListener("change", async () => {
-        const row = select.closest<HTMLElement>(".transaction-row");
+        const row = select.closest<HTMLElement>(".entry-row");
         if (!row?.dataset.id) return;
 
         await updateTransactionCategory(row.dataset.id, select.value);
@@ -238,9 +238,9 @@ export function initTransactionLists(): void {
       });
     });
 
-    transactionList.querySelectorAll<HTMLSelectElement>(".transaction-edit-bank").forEach((select) => {
+    transactionList.querySelectorAll<HTMLSelectElement>(".entry-edit-bank").forEach((select) => {
       select.addEventListener("change", async () => {
-        const row = select.closest<HTMLElement>(".transaction-row");
+        const row = select.closest<HTMLElement>(".entry-row");
         if (!row?.dataset.id) return;
 
         await updateTransactionBank(row.dataset.id, (select.value || undefined) as Bank | undefined);
@@ -249,14 +249,14 @@ export function initTransactionLists(): void {
       });
     });
 
-    transactionList.querySelectorAll<HTMLButtonElement>(".transaction-remove").forEach((button) => {
+    transactionList.querySelectorAll<HTMLButtonElement>(".entry-remove").forEach((button) => {
       button.addEventListener("click", async () => {
-        const row = button.closest<HTMLElement>(".transaction-row");
+        const row = button.closest<HTMLElement>(".entry-row");
         if (!row?.dataset.id) return;
 
         const description =
-          row.querySelector(".transaction-description")?.textContent ??
-          row.querySelector<HTMLInputElement>(".transaction-edit-description")?.value ??
+          row.querySelector(".entry-description")?.textContent ??
+          row.querySelector<HTMLInputElement>(".entry-edit-description")?.value ??
           "";
         if (!(await confirmAction(`Excluir a transação "${description}"?`))) return;
 
@@ -266,9 +266,9 @@ export function initTransactionLists(): void {
       });
     });
 
-    transactionList.querySelectorAll<HTMLButtonElement>(".transaction-edit").forEach((button) => {
+    transactionList.querySelectorAll<HTMLButtonElement>(".entry-edit").forEach((button) => {
       button.addEventListener("click", () => {
-        const row = button.closest<HTMLElement>(".transaction-row");
+        const row = button.closest<HTMLElement>(".entry-row");
         if (!row?.dataset.id) return;
 
         editingTransactionId = row.dataset.id;
@@ -276,21 +276,21 @@ export function initTransactionLists(): void {
       });
     });
 
-    transactionList.querySelectorAll<HTMLButtonElement>(".transaction-cancel").forEach((button) => {
+    transactionList.querySelectorAll<HTMLButtonElement>(".entry-cancel").forEach((button) => {
       button.addEventListener("click", () => {
         editingTransactionId = null;
         renderTransactionList();
       });
     });
 
-    transactionList.querySelectorAll<HTMLButtonElement>(".transaction-save").forEach((button) => {
+    transactionList.querySelectorAll<HTMLButtonElement>(".entry-save").forEach((button) => {
       button.addEventListener("click", async () => {
-        const row = button.closest<HTMLElement>(".transaction-row");
+        const row = button.closest<HTMLElement>(".entry-row");
         if (!row?.dataset.id) return;
 
-        const date = row.querySelector<HTMLInputElement>(".transaction-edit-date")?.value ?? "";
-        const merchant = row.querySelector<HTMLInputElement>(".transaction-edit-description")?.value.trim() ?? "";
-        const amount = parseFloat(row.querySelector<HTMLInputElement>(".transaction-edit-amount")?.value ?? "");
+        const date = row.querySelector<HTMLInputElement>(".entry-edit-date")?.value ?? "";
+        const merchant = row.querySelector<HTMLInputElement>(".entry-edit-description")?.value.trim() ?? "";
+        const amount = parseFloat(row.querySelector<HTMLInputElement>(".entry-edit-amount")?.value ?? "");
         if (!date || !merchant || Number.isNaN(amount) || amount <= 0) return;
 
         const original = transactions.find((transaction) => transaction.id === row.dataset.id);
@@ -310,31 +310,31 @@ export function initTransactionLists(): void {
   function incomeViewRowHtml(row: ManualIncomeEntry): string {
     const duplicate = possibleDuplicateRowAttributes(possibleDuplicateIncomeIds.has(row.id));
     return `
-      <div class="manual-entry-row${duplicate.className}"${duplicate.title} data-id="${escapeHtmlSpecialCharacters(row.id)}">
-        <span class="manual-entry-date">${escapeHtmlSpecialCharacters(row.date)}</span>
+      <div class="entry-row${duplicate.className}"${duplicate.title} data-id="${escapeHtmlSpecialCharacters(row.id)}">
+        <span class="entry-date">${escapeHtmlSpecialCharacters(row.date)}</span>
         ${bankBadgeHtml(row.bank)}
-        <span class="manual-entry-description" title="${escapeHtmlSpecialCharacters(row.description)}">${escapeHtmlSpecialCharacters(row.description)}</span>
-        <span class="manual-entry-amount income">${formatBrlCurrency(row.amount)}</span>
-        <select class="income-category-select">${buildCategoryOptionsHtml(incomeCategories, row.categoryId)}</select>
-        <button type="button" class="link-button income-edit">Editar</button>
+        <span class="entry-description" title="${escapeHtmlSpecialCharacters(row.description)}">${escapeHtmlSpecialCharacters(row.description)}</span>
+        <span class="entry-amount income">${formatBrlCurrency(row.amount)}</span>
+        <select class="entry-category-select">${buildCategoryOptionsHtml(incomeCategories, row.categoryId)}</select>
+        <button type="button" class="link-button entry-edit">Editar</button>
       </div>
     `;
   }
 
   function incomeEditRowHtml(row: ManualIncomeEntry): string {
     return `
-      <div class="manual-entry-row manual-entry-row-editing" data-id="${escapeHtmlSpecialCharacters(row.id)}">
+      <div class="entry-row entry-row-editing" data-id="${escapeHtmlSpecialCharacters(row.id)}">
         <div class="row-edit-line">
-          <input type="date" class="manual-entry-edit-date" value="${escapeHtmlSpecialCharacters(row.date)}" />
-          <select class="manual-entry-edit-bank" title="Banco de origem">${bankOptionsHtml(row.bank)}</select>
-          <input type="text" class="manual-entry-edit-description" value="${escapeHtmlSpecialCharacters(row.description)}" />
-          <input type="number" step="0.01" min="0.01" class="manual-entry-edit-amount" value="${escapeHtmlSpecialCharacters(String(row.amount))}" />
-          <select class="income-category-select" title="Categoria">${buildCategoryOptionsHtml(incomeCategories, row.categoryId)}</select>
+          <input type="date" class="entry-edit-date" value="${escapeHtmlSpecialCharacters(row.date)}" />
+          <select class="entry-edit-bank" title="Banco de origem">${bankOptionsHtml(row.bank)}</select>
+          <input type="text" class="entry-edit-description" value="${escapeHtmlSpecialCharacters(row.description)}" />
+          <input type="number" step="0.01" min="0.01" class="entry-edit-amount" value="${escapeHtmlSpecialCharacters(String(row.amount))}" />
+          <select class="entry-category-select" title="Categoria">${buildCategoryOptionsHtml(incomeCategories, row.categoryId)}</select>
         </div>
         <div class="row-edit-actions">
-          <button type="button" class="link-button income-save">Salvar</button>
-          <button type="button" class="link-button income-cancel">Cancelar</button>
-          <button type="button" class="link-button income-remove">Excluir</button>
+          <button type="button" class="link-button entry-save">Salvar</button>
+          <button type="button" class="link-button entry-cancel">Cancelar</button>
+          <button type="button" class="link-button entry-remove">Excluir</button>
         </div>
       </div>
     `;
@@ -348,9 +348,9 @@ export function initTransactionLists(): void {
       });
     });
 
-    incomeList.querySelectorAll<HTMLSelectElement>(".income-category-select").forEach((select) => {
+    incomeList.querySelectorAll<HTMLSelectElement>(".entry-category-select").forEach((select) => {
       select.addEventListener("change", async () => {
-        const row = select.closest<HTMLElement>(".manual-entry-row");
+        const row = select.closest<HTMLElement>(".entry-row");
         if (!row?.dataset.id) return;
 
         await updateIncomeCategory(row.dataset.id, select.value);
@@ -359,9 +359,9 @@ export function initTransactionLists(): void {
       });
     });
 
-    incomeList.querySelectorAll<HTMLSelectElement>(".manual-entry-edit-bank").forEach((select) => {
+    incomeList.querySelectorAll<HTMLSelectElement>(".entry-edit-bank").forEach((select) => {
       select.addEventListener("change", async () => {
-        const row = select.closest<HTMLElement>(".manual-entry-row");
+        const row = select.closest<HTMLElement>(".entry-row");
         if (!row?.dataset.id) return;
 
         await updateIncomeBank(row.dataset.id, (select.value || undefined) as Bank | undefined);
@@ -370,14 +370,14 @@ export function initTransactionLists(): void {
       });
     });
 
-    incomeList.querySelectorAll<HTMLButtonElement>(".income-remove").forEach((button) => {
+    incomeList.querySelectorAll<HTMLButtonElement>(".entry-remove").forEach((button) => {
       button.addEventListener("click", async () => {
-        const row = button.closest<HTMLElement>(".manual-entry-row");
+        const row = button.closest<HTMLElement>(".entry-row");
         if (!row?.dataset.id) return;
 
         const description =
-          row.querySelector(".manual-entry-description")?.textContent ??
-          row.querySelector<HTMLInputElement>(".manual-entry-edit-description")?.value ??
+          row.querySelector(".entry-description")?.textContent ??
+          row.querySelector<HTMLInputElement>(".entry-edit-description")?.value ??
           "";
         if (!(await confirmAction(`Excluir a receita "${description}"?`))) return;
 
@@ -387,9 +387,9 @@ export function initTransactionLists(): void {
       });
     });
 
-    incomeList.querySelectorAll<HTMLButtonElement>(".income-edit").forEach((button) => {
+    incomeList.querySelectorAll<HTMLButtonElement>(".entry-edit").forEach((button) => {
       button.addEventListener("click", () => {
-        const row = button.closest<HTMLElement>(".manual-entry-row");
+        const row = button.closest<HTMLElement>(".entry-row");
         if (!row?.dataset.id) return;
 
         editingIncomeId = row.dataset.id;
@@ -397,21 +397,21 @@ export function initTransactionLists(): void {
       });
     });
 
-    incomeList.querySelectorAll<HTMLButtonElement>(".income-cancel").forEach((button) => {
+    incomeList.querySelectorAll<HTMLButtonElement>(".entry-cancel").forEach((button) => {
       button.addEventListener("click", () => {
         editingIncomeId = null;
         renderIncomeList();
       });
     });
 
-    incomeList.querySelectorAll<HTMLButtonElement>(".income-save").forEach((button) => {
+    incomeList.querySelectorAll<HTMLButtonElement>(".entry-save").forEach((button) => {
       button.addEventListener("click", async () => {
-        const row = button.closest<HTMLElement>(".manual-entry-row");
+        const row = button.closest<HTMLElement>(".entry-row");
         if (!row?.dataset.id) return;
 
-        const date = row.querySelector<HTMLInputElement>(".manual-entry-edit-date")?.value ?? "";
-        const description = row.querySelector<HTMLInputElement>(".manual-entry-edit-description")?.value.trim() ?? "";
-        const amount = parseFloat(row.querySelector<HTMLInputElement>(".manual-entry-edit-amount")?.value ?? "");
+        const date = row.querySelector<HTMLInputElement>(".entry-edit-date")?.value ?? "";
+        const description = row.querySelector<HTMLInputElement>(".entry-edit-description")?.value.trim() ?? "";
+        const amount = parseFloat(row.querySelector<HTMLInputElement>(".entry-edit-amount")?.value ?? "");
         if (!date || !description || Number.isNaN(amount) || amount <= 0) return;
 
         const original = income.find((entry) => entry.id === row.dataset.id);
