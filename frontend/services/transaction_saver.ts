@@ -3,7 +3,7 @@ import {
   UNCATEGORIZED_INCOME_CATEGORY_ID,
   type Transaction,
 } from "@billie/parser";
-import { listCategoryRules, saveTransactions, saveIncomeEntries } from "./finance_store";
+import { listCategoryRules, saveExpenseList, saveIncomeList } from "./finance_store";
 import type { StoredExpense } from "../types";
 
 export async function classifyAndSaveExpenseList(
@@ -16,7 +16,7 @@ export async function classifyAndSaveExpenseList(
     ...transaction,
     origin,
   }));
-  return saveTransactions(storedExpenses);
+  return saveExpenseList(storedExpenses);
 }
 
 export async function classifyAndSaveIncomeList(
@@ -25,7 +25,7 @@ export async function classifyAndSaveIncomeList(
   if (!income || income.length === 0) return { added: 0, duplicates: 0 };
 
   const incomeRules = await listCategoryRules("income");
-  return saveIncomeEntries(classifyTransactionList(income, incomeRules, UNCATEGORIZED_INCOME_CATEGORY_ID));
+  return saveIncomeList(classifyTransactionList(income, incomeRules, UNCATEGORIZED_INCOME_CATEGORY_ID));
 }
 
 export function sumSaveResults(

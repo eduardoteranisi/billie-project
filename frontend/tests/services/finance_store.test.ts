@@ -9,29 +9,29 @@ import {
 import {
   BackupValidationError,
   countIncomeByCategory,
-  countTransactionsByCategory,
+  countExpensesByCategory,
   createCategory,
   deleteCategory,
   exportBackupData,
   listCategories,
   listCategoryRules,
   listIncome,
-  listTransactions,
+  listExpenses,
   markIncomeIdListAsNotDuplicate,
-  markTransactionIdListAsNotDuplicate,
+  markExpenseIdListAsNotDuplicate,
   removeIncome,
-  removeTransaction,
+  removeExpense,
   restoreBackupData,
   saveIncome,
-  saveIncomeEntries,
-  saveTransactions,
+  saveIncomeList,
+  saveExpenseList,
   updateCategory,
   updateIncomeBank,
   updateIncomeCategory,
   updateIncomeFields,
-  updateTransactionBank,
-  updateTransactionCategory,
-  updateTransactionFields,
+  updateExpenseBank,
+  updateExpenseCategory,
+  updateExpenseFields,
 } from "../../services/finance_store";
 import { BACKUP_SCHEMA_VERSION } from "../../types";
 import type { StoredExpense, StoredIncome } from "../../types";
@@ -66,49 +66,49 @@ beforeEach(() => {
   vi.stubGlobal("indexedDB", new IDBFactory());
 });
 
-describe("saveTransactions", () => {
+describe("saveExpenseList", () => {
   it("salva despesas novas e conta quantas foram adicionadas", async () => {
-    const result = await saveTransactions([buildExpense("a"), buildExpense("b")]);
+    const result = await saveExpenseList([buildExpense("a"), buildExpense("b")]);
 
     expect(result).toEqual({ added: 2, duplicates: 0 });
-    expect(await listTransactions()).toEqual([buildExpense("a"), buildExpense("b")]);
+    expect(await listExpenses()).toEqual([buildExpense("a"), buildExpense("b")]);
   });
 
   it("conta como duplicada a despesa que já estava salva", async () => {
-    await saveTransactions([buildExpense("a")]);
+    await saveExpenseList([buildExpense("a")]);
 
-    const result = await saveTransactions([buildExpense("a"), buildExpense("b")]);
+    const result = await saveExpenseList([buildExpense("a"), buildExpense("b")]);
 
     expect(result).toEqual({ added: 1, duplicates: 1 });
-    expect(await listTransactions()).toHaveLength(2);
+    expect(await listExpenses()).toHaveLength(2);
   });
 
   it("atualiza a despesa reimportada quando ela não foi editada à mão", async () => {
-    await saveTransactions([buildExpense("a", { categoryId: "food", bank: "Nubank" })]);
+    await saveExpenseList([buildExpense("a", { categoryId: "food", bank: "Nubank" })]);
 
-    await saveTransactions([buildExpense("a", { categoryId: "shopping", bank: "Santander" })]);
+    await saveExpenseList([buildExpense("a", { categoryId: "shopping", bank: "Santander" })]);
 
-    expect(await listTransactions()).toEqual([buildExpense("a", { categoryId: "shopping", bank: "Santander" })]);
+    expect(await listExpenses()).toEqual([buildExpense("a", { categoryId: "shopping", bank: "Santander" })]);
   });
 
   it("preserva a categoria escolhida à mão ao reimportar", async () => {
-    await saveTransactions([buildExpense("a", { categoryId: "food" })]);
-    await updateTransactionCategory("a", "leisure");
+    await saveExpenseList([buildExpense("a", { categoryId: "food" })]);
+    await updateExpenseCategory("a", "leisure");
 
-    await saveTransactions([buildExpense("a", { categoryId: "food" })]);
+    await saveExpenseList([buildExpense("a", { categoryId: "food" })]);
 
-    expect(await listTransactions()).toEqual([
+    expect(await listExpenses()).toEqual([
       buildExpense("a", { categoryId: "leisure", categoryOverridden: true }),
     ]);
   });
 
   it("preserva data, descrição e valor editados à mão ao reimportar", async () => {
-    await saveTransactions([buildExpense("a")]);
-    await updateTransactionFields("a", { date: "2026-03-09", description: "Padaria da esquina", amount: 12.5 });
+    await saveExpenseList([buildExpense("a")]);
+    await updateExpenseFields("a", { date: "2026-03-09", description: "Padaria da esquina", amount: 12.5 });
 
-    await saveTransactions([buildExpense("a", { categoryId: "shopping" })]);
+    await saveExpenseList([buildExpense("a", { categoryId: "shopping" })]);
 
-    const [stored] = await listTransactions();
+    const [stored] = await listExpenses();
     expect(stored).toMatchObject({
       date: "2026-03-09",
       description: "Padaria da esquina",
@@ -120,107 +120,107 @@ describe("saveTransactions", () => {
   });
 
   it("preserva o banco escolhido à mão ao reimportar", async () => {
-    await saveTransactions([buildExpense("a", { bank: "Nubank" })]);
-    await updateTransactionBank("a", "Santander");
+    await saveExpenseList([buildExpense("a", { bank: "Nubank" })]);
+    await updateExpenseBank("a", "Santander");
 
-    await saveTransactions([buildExpense("a", { bank: "Nubank" })]);
+    await saveExpenseList([buildExpense("a", { bank: "Nubank" })]);
 
-    expect(await listTransactions()).toEqual([buildExpense("a", { bank: "Santander", bankOverridden: true })]);
+    expect(await listExpenses()).toEqual([buildExpense("a", { bank: "Santander", bankOverridden: true })]);
   });
 
   it("preserva o 'não é duplicado' ao reimportar", async () => {
-    await saveTransactions([buildExpense("a")]);
-    await markTransactionIdListAsNotDuplicate(["a"]);
+    await saveExpenseList([buildExpense("a")]);
+    await markExpenseIdListAsNotDuplicate(["a"]);
 
-    await saveTransactions([buildExpense("a")]);
+    await saveExpenseList([buildExpense("a")]);
 
-    expect(await listTransactions()).toEqual([buildExpense("a", { duplicateDismissed: true })]);
+    expect(await listExpenses()).toEqual([buildExpense("a", { duplicateDismissed: true })]);
   });
 });
 
-describe("updateTransactionFields", () => {
+describe("updateExpenseFields", () => {
   it("marca a despesa como editada à mão", async () => {
-    await saveTransactions([buildExpense("a")]);
+    await saveExpenseList([buildExpense("a")]);
 
-    await updateTransactionFields("a", { date: "2026-03-01", description: "Novo nome", amount: 10 });
+    await updateExpenseFields("a", { date: "2026-03-01", description: "Novo nome", amount: 10 });
 
-    expect(await listTransactions()).toEqual([
+    expect(await listExpenses()).toEqual([
       buildExpense("a", { description: "Novo nome", detailsOverridden: true, duplicateDismissed: undefined }),
     ]);
   });
 
   it("mantém o 'não é duplicado' quando só a descrição muda", async () => {
-    await saveTransactions([buildExpense("a", { duplicateDismissed: true })]);
+    await saveExpenseList([buildExpense("a", { duplicateDismissed: true })]);
 
-    await updateTransactionFields("a", { date: "2026-03-01", description: "Novo nome", amount: 10 });
+    await updateExpenseFields("a", { date: "2026-03-01", description: "Novo nome", amount: 10 });
 
-    expect((await listTransactions())[0].duplicateDismissed).toBe(true);
+    expect((await listExpenses())[0].duplicateDismissed).toBe(true);
   });
 
   it("desfaz o 'não é duplicado' quando a data muda", async () => {
-    await saveTransactions([buildExpense("a", { duplicateDismissed: true })]);
+    await saveExpenseList([buildExpense("a", { duplicateDismissed: true })]);
 
-    await updateTransactionFields("a", { date: "2026-03-02", description: "Loja a", amount: 10 });
+    await updateExpenseFields("a", { date: "2026-03-02", description: "Loja a", amount: 10 });
 
-    expect((await listTransactions())[0].duplicateDismissed).toBe(false);
+    expect((await listExpenses())[0].duplicateDismissed).toBe(false);
   });
 
   it("desfaz o 'não é duplicado' quando o valor muda", async () => {
-    await saveTransactions([buildExpense("a", { duplicateDismissed: true })]);
+    await saveExpenseList([buildExpense("a", { duplicateDismissed: true })]);
 
-    await updateTransactionFields("a", { date: "2026-03-01", description: "Loja a", amount: 11 });
+    await updateExpenseFields("a", { date: "2026-03-01", description: "Loja a", amount: 11 });
 
-    expect((await listTransactions())[0].duplicateDismissed).toBe(false);
+    expect((await listExpenses())[0].duplicateDismissed).toBe(false);
   });
 
   it("falha quando a despesa não existe", async () => {
     await expect(
-      updateTransactionFields("nao-existe", { date: "2026-03-01", description: "x", amount: 1 })
+      updateExpenseFields("nao-existe", { date: "2026-03-01", description: "x", amount: 1 })
     ).rejects.toThrow("transação #nao-existe não encontrada");
   });
 });
 
-describe("updateTransactionCategory", () => {
+describe("updateExpenseCategory", () => {
   it("troca a categoria e marca como escolhida à mão", async () => {
-    await saveTransactions([buildExpense("a", { categoryId: "food" })]);
+    await saveExpenseList([buildExpense("a", { categoryId: "food" })]);
 
-    await updateTransactionCategory("a", "leisure");
+    await updateExpenseCategory("a", "leisure");
 
-    expect(await listTransactions()).toEqual([
+    expect(await listExpenses()).toEqual([
       buildExpense("a", { categoryId: "leisure", categoryOverridden: true }),
     ]);
   });
 });
 
-describe("updateTransactionBank", () => {
+describe("updateExpenseBank", () => {
   it("permite remover o banco de uma despesa", async () => {
-    await saveTransactions([buildExpense("a", { bank: "Nubank" })]);
+    await saveExpenseList([buildExpense("a", { bank: "Nubank" })]);
 
-    await updateTransactionBank("a", undefined);
+    await updateExpenseBank("a", undefined);
 
-    const [stored] = await listTransactions();
+    const [stored] = await listExpenses();
     expect(stored.bank).toBeUndefined();
     expect(stored.bankOverridden).toBe(true);
   });
 });
 
-describe("removeTransaction", () => {
+describe("removeExpense", () => {
   it("remove só a despesa indicada", async () => {
-    await saveTransactions([buildExpense("a"), buildExpense("b")]);
+    await saveExpenseList([buildExpense("a"), buildExpense("b")]);
 
-    await removeTransaction("a");
+    await removeExpense("a");
 
-    expect(await listTransactions()).toEqual([buildExpense("b")]);
+    expect(await listExpenses()).toEqual([buildExpense("b")]);
   });
 });
 
-describe("markTransactionIdListAsNotDuplicate", () => {
+describe("markExpenseIdListAsNotDuplicate", () => {
   it("marca as despesas indicadas e ignora ids que não existem", async () => {
-    await saveTransactions([buildExpense("a"), buildExpense("b"), buildExpense("c")]);
+    await saveExpenseList([buildExpense("a"), buildExpense("b"), buildExpense("c")]);
 
-    await markTransactionIdListAsNotDuplicate(["a", "nao-existe", "c"]);
+    await markExpenseIdListAsNotDuplicate(["a", "nao-existe", "c"]);
 
-    expect(await listTransactions()).toEqual([
+    expect(await listExpenses()).toEqual([
       buildExpense("a", { duplicateDismissed: true }),
       buildExpense("b"),
       buildExpense("c", { duplicateDismissed: true }),
@@ -237,24 +237,24 @@ describe("saveIncome", () => {
   });
 });
 
-describe("saveIncomeEntries", () => {
+describe("saveIncomeList", () => {
   it("salva receitas novas e conta as duplicadas", async () => {
-    await saveIncomeEntries([buildIncome("a")]);
+    await saveIncomeList([buildIncome("a")]);
 
-    const result = await saveIncomeEntries([buildIncome("a"), buildIncome("b")]);
+    const result = await saveIncomeList([buildIncome("a"), buildIncome("b")]);
 
     expect(result).toEqual({ added: 1, duplicates: 1 });
     expect(await listIncome()).toEqual([buildIncome("a"), buildIncome("b")]);
   });
 
   it("preserva categoria, detalhes, banco e 'não é duplicado' editados à mão ao reimportar", async () => {
-    await saveIncomeEntries([buildIncome("a", { bank: "Nubank" })]);
+    await saveIncomeList([buildIncome("a", { bank: "Nubank" })]);
     await updateIncomeCategory("a", "freelance");
     await updateIncomeFields("a", { date: "2026-03-07", description: "Projeto do cliente", amount: 250 });
     await updateIncomeBank("a", "Santander");
     await markIncomeIdListAsNotDuplicate(["a"]);
 
-    await saveIncomeEntries([buildIncome("a", { bank: "Nubank" })]);
+    await saveIncomeList([buildIncome("a", { bank: "Nubank" })]);
 
     expect(await listIncome()).toEqual([
       {
@@ -291,7 +291,7 @@ describe("updateIncomeFields", () => {
 
 describe("removeIncome", () => {
   it("remove só a receita indicada", async () => {
-    await saveIncomeEntries([buildIncome("a"), buildIncome("b")]);
+    await saveIncomeList([buildIncome("a"), buildIncome("b")]);
 
     await removeIncome("a");
 
@@ -386,22 +386,22 @@ describe("updateCategory", () => {
   });
 });
 
-describe("countTransactionsByCategory", () => {
+describe("countExpensesByCategory", () => {
   it("conta as despesas da categoria", async () => {
-    await saveTransactions([
+    await saveExpenseList([
       buildExpense("a", { categoryId: "food" }),
       buildExpense("b", { categoryId: "food" }),
       buildExpense("c", { categoryId: "leisure" }),
     ]);
 
-    expect(await countTransactionsByCategory("food")).toBe(2);
-    expect(await countTransactionsByCategory("housing")).toBe(0);
+    expect(await countExpensesByCategory("food")).toBe(2);
+    expect(await countExpensesByCategory("housing")).toBe(0);
   });
 });
 
 describe("countIncomeByCategory", () => {
   it("conta as receitas da categoria", async () => {
-    await saveIncomeEntries([
+    await saveIncomeList([
       buildIncome("a", { categoryId: "salary" }),
       buildIncome("b", { categoryId: "freelance" }),
     ]);
@@ -414,14 +414,14 @@ describe("countIncomeByCategory", () => {
 describe("deleteCategory", () => {
   it("move as despesas da categoria excluída para 'Outros' e remove a categoria e a regra", async () => {
     await listCategories("expense");
-    await saveTransactions([
+    await saveExpenseList([
       buildExpense("a", { categoryId: "leisure" }),
       buildExpense("b", { categoryId: "food" }),
     ]);
 
     await deleteCategory("leisure");
 
-    expect(await listTransactions()).toEqual([
+    expect(await listExpenses()).toEqual([
       buildExpense("a", { categoryId: UNCATEGORIZED_CATEGORY_ID }),
       buildExpense("b", { categoryId: "food" }),
     ]);
@@ -431,7 +431,7 @@ describe("deleteCategory", () => {
 
   it("move as receitas da categoria excluída para 'Outros' de receita", async () => {
     await listCategories("income");
-    await saveIncomeEntries([buildIncome("a", { categoryId: "freelance" })]);
+    await saveIncomeList([buildIncome("a", { categoryId: "freelance" })]);
 
     await deleteCategory("freelance");
 
@@ -452,8 +452,8 @@ describe("deleteCategory", () => {
 
 describe("exportBackupData", () => {
   it("exporta despesas, receitas, categorias e regras com a versão do formato", async () => {
-    await saveTransactions([buildExpense("a")]);
-    await saveIncomeEntries([buildIncome("b")]);
+    await saveExpenseList([buildExpense("a")]);
+    await saveIncomeList([buildIncome("b")]);
 
     const backup = await exportBackupData();
 
@@ -470,15 +470,15 @@ describe("exportBackupData", () => {
 
 describe("restoreBackupData", () => {
   it("restaura num banco vazio tudo o que foi exportado", async () => {
-    await saveTransactions([buildExpense("a", { categoryOverridden: true })]);
-    await saveIncomeEntries([buildIncome("b")]);
+    await saveExpenseList([buildExpense("a", { categoryOverridden: true })]);
+    await saveIncomeList([buildIncome("b")]);
     const custom = await createCategory({ label: "Pets", type: "expense", keywords: ["PETZ"] });
     const backup = JSON.parse(JSON.stringify(await exportBackupData()));
 
     vi.stubGlobal("indexedDB", new IDBFactory());
     await restoreBackupData(backup);
 
-    expect(await listTransactions()).toEqual([buildExpense("a", { categoryOverridden: true })]);
+    expect(await listExpenses()).toEqual([buildExpense("a", { categoryOverridden: true })]);
     expect(await listIncome()).toEqual([buildIncome("b")]);
     expect(await listCategories("expense")).toContainEqual(custom);
     expect(await listCategoryRules("expense")).toContainEqual({ categoryId: custom.id, keywords: ["PETZ"] });
@@ -507,7 +507,7 @@ describe("restoreBackupData", () => {
 
     await restoreBackupData(legacyBackup);
 
-    expect(await listTransactions()).toEqual([
+    expect(await listExpenses()).toEqual([
       {
         id: "a",
         date: "2026-03-01",
@@ -530,13 +530,13 @@ describe("restoreBackupData", () => {
   });
 
   it("mantém os lançamentos que já existiam e não estão no backup", async () => {
-    await saveTransactions([buildExpense("a")]);
+    await saveExpenseList([buildExpense("a")]);
     const backup = await exportBackupData();
-    await saveTransactions([buildExpense("novo")]);
+    await saveExpenseList([buildExpense("novo")]);
 
     await restoreBackupData(backup);
 
-    expect((await listTransactions()).map((expense) => expense.id).sort()).toEqual(["a", "novo"]);
+    expect((await listExpenses()).map((expense) => expense.id).sort()).toEqual(["a", "novo"]);
   });
 
   it("recusa um arquivo que não é um backup", async () => {
@@ -562,7 +562,7 @@ describe("restoreBackupData", () => {
     const backup = { ...(await exportBackupData()), schemaVersion: 99, expenses: [buildExpense("a")] };
 
     await expect(restoreBackupData(backup)).rejects.toThrow("versão do arquivo de backup não suportada");
-    expect(await listTransactions()).toEqual([]);
+    expect(await listExpenses()).toEqual([]);
   });
 });
 
@@ -641,7 +641,7 @@ describe("migração do banco", () => {
       categoryRules: [{ categoryId: "pets", keywords: ["PETZ"] }],
     });
 
-    expect(await listTransactions()).toEqual([
+    expect(await listExpenses()).toEqual([
       MIGRATED_EXPENSE,
       { id: "b", date: "2026-03-02", description: "Mercado", amount: 55.9, categoryId: "food", origin: "csv" },
     ]);
@@ -657,18 +657,18 @@ describe("migração do banco", () => {
   it("da versão 3: os lançamentos migrados continuam sendo reconhecidos ao reimportar", async () => {
     await createLegacyDatabase(3, { transactions: [LEGACY_EXPENSE] });
 
-    const result = await saveTransactions([
+    const result = await saveExpenseList([
       buildExpense("a", { date: "2026-03-01", description: "PADARIA ORIGINAL", amount: 9, categoryId: "shopping" }),
     ]);
 
     expect(result).toEqual({ added: 0, duplicates: 1 });
-    expect(await listTransactions()).toEqual([{ ...MIGRATED_EXPENSE, bank: undefined }]);
+    expect(await listExpenses()).toEqual([{ ...MIGRATED_EXPENSE, bank: undefined }]);
   });
 
   it("da versão 3 sem despesas: cria a store `expenses` vazia", async () => {
     await createLegacyDatabase(3, {});
 
-    expect(await listTransactions()).toEqual([]);
+    expect(await listExpenses()).toEqual([]);
     expect(await listDatabaseStoreNames()).not.toContain("transactions");
   });
 
@@ -679,7 +679,7 @@ describe("migração do banco", () => {
       categories: [{ id: "food", label: "Alimentação", group: "variable" }],
     });
 
-    expect(await listTransactions()).toEqual([MIGRATED_EXPENSE]);
+    expect(await listExpenses()).toEqual([MIGRATED_EXPENSE]);
     expect(await listIncome()).toEqual([
       { id: "b", date: "2026-03-05", description: "Salário", amount: 100, categoryId: UNCATEGORIZED_INCOME_CATEGORY_ID },
     ]);
@@ -689,7 +689,7 @@ describe("migração do banco", () => {
   });
 
   it("num banco novo: cria só as stores atuais", async () => {
-    await listTransactions();
+    await listExpenses();
 
     expect((await listDatabaseStoreNames()).sort()).toEqual(["categories", "categoryRules", "expenses", "income"]);
   });

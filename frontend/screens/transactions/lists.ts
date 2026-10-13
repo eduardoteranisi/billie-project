@@ -5,17 +5,17 @@ import { groupPossibleDuplicateRows } from "../../services/duplicate_detection";
 import {
   listCategories,
   listIncome,
-  listTransactions,
+  listExpenses,
   markIncomeIdListAsNotDuplicate,
-  markTransactionIdListAsNotDuplicate,
+  markExpenseIdListAsNotDuplicate,
   removeIncome,
-  removeTransaction,
+  removeExpense,
   updateIncomeBank,
   updateIncomeCategory,
   updateIncomeFields,
-  updateTransactionBank,
-  updateTransactionCategory,
-  updateTransactionFields,
+  updateExpenseBank,
+  updateExpenseCategory,
+  updateExpenseFields,
 } from "../../services/finance_store";
 import {
   getSelectedPeriod,
@@ -95,11 +95,11 @@ export function initTransactionLists(): void {
     amountKind: "expense",
     emptyMessage: "Nenhuma transação neste período.",
     removeConfirmTarget: "a transação",
-    removeEntry: removeTransaction,
-    updateEntryCategory: updateTransactionCategory,
-    updateEntryBank: updateTransactionBank,
-    updateEntryFields: updateTransactionFields,
-    markEntryIdListAsNotDuplicate: markTransactionIdListAsNotDuplicate,
+    removeEntry: removeExpense,
+    updateEntryCategory: updateExpenseCategory,
+    updateEntryBank: updateExpenseBank,
+    updateEntryFields: updateExpenseFields,
+    markEntryIdListAsNotDuplicate: markExpenseIdListAsNotDuplicate,
   });
 
   const incomeList = createEntryListController<StoredIncome>({
@@ -123,7 +123,7 @@ export function initTransactionLists(): void {
 
   async function loadData(): Promise<void> {
     const [expenses, income, expenseCategories, incomeCategories] = await Promise.all([
-      listTransactions(),
+      listExpenses(),
       listIncome(),
       listCategories("expense"),
       listCategories("income"),

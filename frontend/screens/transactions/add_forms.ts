@@ -5,7 +5,7 @@ import {
   type Category,
   type CategoryRule,
 } from "@billie/parser";
-import { listCategories, listCategoryRules, saveIncome, saveTransactions } from "../../services/finance_store";
+import { listCategories, listCategoryRules, saveIncome, saveExpenseList } from "../../services/finance_store";
 import { listenStoredDataUpdated, notifyStoredDataUpdated } from "../../services/stored_data_events";
 import type { StoredExpense, StoredIncome } from "../../types";
 import { getRequiredElementById } from "../../utils/dom_helpers";
@@ -88,7 +88,7 @@ export function initTransactionAddForms(): void {
       categoryId: expenseAddCategory.value,
       origin: "manual",
     };
-    await saveTransactions([entry]);
+    await saveExpenseList([entry]);
 
     expenseAddForm.reset();
     expenseAddPopover.hidden = true;

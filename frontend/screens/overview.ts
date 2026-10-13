@@ -1,6 +1,6 @@
 import type { Category } from "@billie/parser";
 import { calculateDre, listAvailablePeriods } from "../services/dre_aggregator";
-import { listCategories, listIncome, listTransactions } from "../services/finance_store";
+import { listCategories, listIncome, listExpenses } from "../services/finance_store";
 import {
   getSelectedPeriod,
   listenSelectedPeriodChanged,
@@ -44,7 +44,7 @@ export function initOverviewView(): void {
     let expenseCategories: Category[];
     let incomeCategories: Category[];
     [expenses, income, expenseCategories, incomeCategories] = await Promise.all([
-      listTransactions(),
+      listExpenses(),
       listIncome(),
       listCategories("expense"),
       listCategories("income"),

@@ -4,8 +4,8 @@ import { UNCATEGORIZED_CATEGORY_ID, UNCATEGORIZED_INCOME_CATEGORY_ID, type Trans
 import {
   createCategory,
   listIncome,
-  listTransactions,
-  updateTransactionCategory,
+  listExpenses,
+  updateExpenseCategory,
 } from "../../services/finance_store";
 import {
   classifyAndSaveExpenseList,
@@ -30,7 +30,7 @@ describe("classifyAndSaveExpenseList", () => {
     );
 
     expect(result).toEqual({ added: 2, duplicates: 0 });
-    expect(await listTransactions()).toEqual([
+    expect(await listExpenses()).toEqual([
       { ...buildTransaction("a", "IFOOD *RESTAURANTE"), categoryId: "food", origin: "csv" },
       { ...buildTransaction("b", "LOJA DESCONHECIDA"), categoryId: UNCATEGORIZED_CATEGORY_ID, origin: "csv" },
     ]);
@@ -41,17 +41,17 @@ describe("classifyAndSaveExpenseList", () => {
 
     await classifyAndSaveExpenseList([buildTransaction("a", "PETZ MOEMA")], "pdf");
 
-    expect((await listTransactions())[0].categoryId).toBe(pets.id);
+    expect((await listExpenses())[0].categoryId).toBe(pets.id);
   });
 
   it("ao reimportar, conta como duplicada e mantém a categoria escolhida à mão", async () => {
     await classifyAndSaveExpenseList([buildTransaction("a", "IFOOD *RESTAURANTE")], "pdf");
-    await updateTransactionCategory("a", "leisure");
+    await updateExpenseCategory("a", "leisure");
 
     const result = await classifyAndSaveExpenseList([buildTransaction("a", "IFOOD *RESTAURANTE")], "pdf");
 
     expect(result).toEqual({ added: 0, duplicates: 1 });
-    expect((await listTransactions())[0].categoryId).toBe("leisure");
+    expect((await listExpenses())[0].categoryId).toBe("leisure");
   });
 });
 
@@ -81,7 +81,7 @@ describe("classifyAndSaveIncomeList", () => {
         bank: "Nubank",
       },
     ]);
-    expect(await listTransactions()).toEqual([]);
+    expect(await listExpenses()).toEqual([]);
   });
 
   it("não salva nada sem receitas", async () => {

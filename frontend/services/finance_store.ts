@@ -114,34 +114,34 @@ function getAll<T>(storeName: string): Promise<T[]> {
   return runInStore<T[]>(storeName, "readonly", (store) => store.getAll());
 }
 
-export function saveTransactions(expenses: StoredExpense[]): Promise<{ added: number; duplicates: number }> {
+export function saveExpenseList(expenses: StoredExpense[]): Promise<{ added: number; duplicates: number }> {
   return saveStoredEntryList(EXPENSES_STORE, expenses);
 }
 
-export function listTransactions(): Promise<StoredExpense[]> {
+export function listExpenses(): Promise<StoredExpense[]> {
   return getAll<StoredExpense>(EXPENSES_STORE);
 }
 
-export async function removeTransaction(id: string): Promise<void> {
+export async function removeExpense(id: string): Promise<void> {
   await runInStore(EXPENSES_STORE, "readwrite", (store) => store.delete(id));
 }
 
-export function updateTransactionCategory(id: string, categoryId: string): Promise<void> {
+export function updateExpenseCategory(id: string, categoryId: string): Promise<void> {
   return updateStoredEntryCategory(EXPENSES_STORE, id, categoryId);
 }
 
-export function updateTransactionFields(
+export function updateExpenseFields(
   id: string,
   changes: { date: string; description: string; amount: number }
 ): Promise<void> {
   return updateStoredEntryFields<StoredExpense>(EXPENSES_STORE, id, changes);
 }
 
-export function updateTransactionBank(id: string, bank: Bank | undefined): Promise<void> {
+export function updateExpenseBank(id: string, bank: Bank | undefined): Promise<void> {
   return updateStoredEntryBank(EXPENSES_STORE, id, bank);
 }
 
-export function markTransactionIdListAsNotDuplicate(ids: string[]): Promise<void> {
+export function markExpenseIdListAsNotDuplicate(ids: string[]): Promise<void> {
   return markStoredEntryIdListAsNotDuplicate(EXPENSES_STORE, ids);
 }
 
@@ -149,7 +149,7 @@ export async function saveIncome(entry: StoredIncome): Promise<void> {
   await runInStore(INCOME_STORE, "readwrite", (store) => store.put(entry));
 }
 
-export function saveIncomeEntries(entries: StoredIncome[]): Promise<{ added: number; duplicates: number }> {
+export function saveIncomeList(entries: StoredIncome[]): Promise<{ added: number; duplicates: number }> {
   return saveStoredEntryList(INCOME_STORE, entries);
 }
 
@@ -346,8 +346,8 @@ export async function updateCategory(
   }
 }
 
-export async function countTransactionsByCategory(categoryId: string): Promise<number> {
-  const expenses = await listTransactions();
+export async function countExpensesByCategory(categoryId: string): Promise<number> {
+  const expenses = await listExpenses();
   return expenses.filter((expense) => expense.categoryId === categoryId).length;
 }
 
@@ -360,7 +360,7 @@ export async function deleteCategory(id: string): Promise<void> {
   if (!category) throw new Error(`categoria #${id} não encontrada`);
 
   if (category.type === "expense") {
-    const affected = (await listTransactions()).filter((expense) => expense.categoryId === id);
+    const affected = (await listExpenses()).filter((expense) => expense.categoryId === id);
     for (const expense of affected) {
       await runInStore(EXPENSES_STORE, "readwrite", (store) =>
         store.put({ ...expense, categoryId: UNCATEGORIZED_CATEGORY_ID })
@@ -385,7 +385,7 @@ export async function exportBackupData(): Promise<BackupPayload> {
   await ensureCategoriesSeeded();
 
   const [expenses, income, categories, categoryRules] = await Promise.all([
-    listTransactions(),
+    listExpenses(),
     listIncome(),
     getAll<Category>(CATEGORIES_STORE),
     getAll<CategoryRule>(CATEGORY_RULES_STORE),
