@@ -102,6 +102,8 @@ function buildMenuElement(select: HTMLSelectElement, onOptionChosen: (optionInde
     menu.appendChild(option);
   });
 
+  // o menu fica no body, fora de quem contém o select: sem isso, popovers tratam o clique como "clique fora" e se fecham.
+  menu.addEventListener("click", (event) => event.stopPropagation());
   menu.addEventListener("keydown", (event) => onMenuKeyDown(event, menu));
   return menu;
 }
