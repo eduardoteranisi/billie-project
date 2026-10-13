@@ -92,6 +92,6 @@ export function classifyTransactionList(
 ): CategorizedTransaction[] {
   return transactions.map((transaction) => ({
     ...transaction,
-    categoryId: classifyTransactionDescription(transaction.merchant, rules, fallbackCategoryId),
+    categoryId: classifyTransactionDescription(transaction.description, rules, fallbackCategoryId),
   }));
 }

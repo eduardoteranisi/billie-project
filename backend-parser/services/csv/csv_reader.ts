@@ -21,23 +21,23 @@ export async function parseCsvInvoice(csvText: string, columns?: CsvColumnConfig
   const validRows: CsvRowInput[] = rows
     .map((row) => ({
       date: (row[resolved.date] ?? "").trim(),
-      merchant: (row[resolved.merchant] ?? "").trim(),
+      description: (row[resolved.description] ?? "").trim(),
       rawAmount: (row[resolved.amount] ?? "").trim(),
       isInstallment: resolved.installment !== null && isInstallmentValue(row[resolved.installment]),
     }))
-    .filter((row) => row.date && row.merchant && row.rawAmount)
+    .filter((row) => row.date && row.description && row.rawAmount)
     .filter((row) => parseAmount(row.rawAmount) !== 0);
 
   if (validRows.length === 0) {
     throw new Error("Nenhuma transação válida encontrada no CSV.");
   }
 
-  const documentType = detectCsvDocumentType(validRows.map((row) => row.merchant));
+  const documentType = detectCsvDocumentType(validRows.map((row) => row.description));
   return documentType === "fatura" ? finalizeFaturaRows(validRows) : finalizeExtratoRows(validRows);
 }
 
 function finalizeFaturaRows(validRows: CsvRowInput[]): CsvParseResult {
-  const expenseRows = validRows.filter((row) => !isNoiseRow(row.merchant));
+  const expenseRows = validRows.filter((row) => !isNoiseRow(row.description));
   return { expenses: finalizeCsvTransactions(expenseRows), income: [] };
 }
 

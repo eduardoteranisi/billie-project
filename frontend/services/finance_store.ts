@@ -9,23 +9,29 @@ import {
 import type { Bank, Category, CategoryGroup, CategoryRule } from "@billie/parser";
 import { BACKUP_SCHEMA_VERSION } from "../types";
 import type { BackupPayload, StoredExpense, StoredIncome } from "../types";
+import { convertLegacyBackupPayloadToCurrent, convertLegacyExpenseToStoredExpense } from "./legacy_data_conversion";
+import type { LegacyBackupPayload, LegacyStoredExpense } from "./legacy_data_conversion";
 
 export type CategoryType = "expense" | "income";
 
 // nome histórico, de quando o banco só guardava despesas: renomear faria quem já usa o app abrir um banco vazio
 const DATABASE_NAME = "billie-expenses";
-const DATABASE_VERSION = 3;
-const TRANSACTIONS_STORE = "transactions";
+const DATABASE_VERSION = 4;
+const EXPENSES_STORE = "expenses";
+// nome da store de despesas até a versão 3 do banco
+const LEGACY_EXPENSES_STORE = "transactions";
 const INCOME_STORE = "income";
 const CATEGORIES_STORE = "categories";
 const CATEGORY_RULES_STORE = "categoryRules";
 
+const LEGACY_BACKUP_SCHEMA_VERSION = 1;
+
 type StoredEntry = StoredExpense | StoredIncome;
-type EntryStoreName = typeof TRANSACTIONS_STORE | typeof INCOME_STORE;
+type EntryStoreName = typeof EXPENSES_STORE | typeof INCOME_STORE;
 
 // como cada store é chamado na mensagem de erro de lançamento não encontrado
 const ENTRY_STORE_LABELS: Record<EntryStoreName, string> = {
-  [TRANSACTIONS_STORE]: "transação",
+  [EXPENSES_STORE]: "transação",
   [INCOME_STORE]: "receita",
 };
 
@@ -35,8 +41,8 @@ function openDatabase(): Promise<IDBDatabase> {
 
     request.onupgradeneeded = (event) => {
       const database = request.result;
-      if (!database.objectStoreNames.contains(TRANSACTIONS_STORE)) {
-        database.createObjectStore(TRANSACTIONS_STORE, { keyPath: "id" });
+      if (!database.objectStoreNames.contains(EXPENSES_STORE)) {
+        database.createObjectStore(EXPENSES_STORE, { keyPath: "id" });
       }
       if (!database.objectStoreNames.contains(INCOME_STORE)) {
         database.createObjectStore(INCOME_STORE, { keyPath: "id" });
@@ -67,6 +73,19 @@ function openDatabase(): Promise<IDBDatabase> {
           cursor.continue();
         };
       }
+
+      if (database.objectStoreNames.contains(LEGACY_EXPENSES_STORE) && request.transaction) {
+        const expensesStore = request.transaction.objectStore(EXPENSES_STORE);
+        const legacyExpensesRequest: IDBRequest<LegacyStoredExpense[]> = request.transaction
+          .objectStore(LEGACY_EXPENSES_STORE)
+          .getAll();
+        legacyExpensesRequest.onsuccess = () => {
+          for (const legacyExpense of legacyExpensesRequest.result) {
+            expensesStore.put(convertLegacyExpenseToStoredExpense(legacyExpense));
+          }
+          database.deleteObjectStore(LEGACY_EXPENSES_STORE);
+        };
+      }
     };
 
     request.onsuccess = () => resolve(request.result);
@@ -95,51 +114,43 @@ function getAll<T>(storeName: string): Promise<T[]> {
   return runInStore<T[]>(storeName, "readonly", (store) => store.getAll());
 }
 
-export function saveTransactions(transactions: StoredExpense[]): Promise<{ added: number; duplicates: number }> {
-  return saveStoredEntryList(TRANSACTIONS_STORE, transactions, (transaction) => ({
-    date: transaction.date,
-    merchant: transaction.merchant,
-    amount: transaction.amount,
-  }));
+export function saveExpenseList(expenses: StoredExpense[]): Promise<{ added: number; duplicates: number }> {
+  return saveStoredEntryList(EXPENSES_STORE, expenses);
 }
 
-export function listTransactions(): Promise<StoredExpense[]> {
-  return getAll<StoredExpense>(TRANSACTIONS_STORE);
+export function listExpenses(): Promise<StoredExpense[]> {
+  return getAll<StoredExpense>(EXPENSES_STORE);
 }
 
-export async function removeTransaction(id: string): Promise<void> {
-  await runInStore(TRANSACTIONS_STORE, "readwrite", (store) => store.delete(id));
+export async function removeExpense(id: string): Promise<void> {
+  await runInStore(EXPENSES_STORE, "readwrite", (store) => store.delete(id));
 }
 
-export function updateTransactionCategory(id: string, categoryId: string): Promise<void> {
-  return updateStoredEntryCategory(TRANSACTIONS_STORE, id, categoryId);
+export function updateExpenseCategory(id: string, categoryId: string): Promise<void> {
+  return updateStoredEntryCategory(EXPENSES_STORE, id, categoryId);
 }
 
-export function updateTransactionFields(
+export function updateExpenseFields(
   id: string,
-  changes: { date: string; merchant: string; amount: number }
+  changes: { date: string; description: string; amount: number }
 ): Promise<void> {
-  return updateStoredEntryFields<StoredExpense>(TRANSACTIONS_STORE, id, changes);
+  return updateStoredEntryFields<StoredExpense>(EXPENSES_STORE, id, changes);
 }
 
-export function updateTransactionBank(id: string, bank: Bank | undefined): Promise<void> {
-  return updateStoredEntryBank(TRANSACTIONS_STORE, id, bank);
+export function updateExpenseBank(id: string, bank: Bank | undefined): Promise<void> {
+  return updateStoredEntryBank(EXPENSES_STORE, id, bank);
 }
 
-export function markTransactionIdListAsNotDuplicate(ids: string[]): Promise<void> {
-  return markStoredEntryIdListAsNotDuplicate(TRANSACTIONS_STORE, ids);
+export function markExpenseIdListAsNotDuplicate(ids: string[]): Promise<void> {
+  return markStoredEntryIdListAsNotDuplicate(EXPENSES_STORE, ids);
 }
 
 export async function saveIncome(entry: StoredIncome): Promise<void> {
   await runInStore(INCOME_STORE, "readwrite", (store) => store.put(entry));
 }
 
-export function saveIncomeEntries(entries: StoredIncome[]): Promise<{ added: number; duplicates: number }> {
-  return saveStoredEntryList(INCOME_STORE, entries, (entry) => ({
-    date: entry.date,
-    description: entry.description,
-    amount: entry.amount,
-  }));
+export function saveIncomeList(entries: StoredIncome[]): Promise<{ added: number; duplicates: number }> {
+  return saveStoredEntryList(INCOME_STORE, entries);
 }
 
 export function listIncome(): Promise<StoredIncome[]> {
@@ -176,8 +187,7 @@ export function markIncomeIdListAsNotDuplicate(ids: string[]): Promise<void> {
 
 async function saveStoredEntryList<T extends StoredEntry>(
   storeName: EntryStoreName,
-  entries: T[],
-  pickEditableDetails: (entry: T) => Partial<T>
+  entries: T[]
 ): Promise<{ added: number; duplicates: number }> {
   const existingById = new Map((await getAll<T>(storeName)).map((entry) => [entry.id, entry]));
 
@@ -193,23 +203,24 @@ async function saveStoredEntryList<T extends StoredEntry>(
       added++;
     }
 
-    const merged = existing ? mergeReimportedEntry(existing, entry, pickEditableDetails) : entry;
+    const merged = existing ? mergeReimportedEntry(existing, entry) : entry;
     await runInStore(storeName, "readwrite", (store) => store.put(merged));
   }
 
   return { added, duplicates };
 }
 
-function mergeReimportedEntry<T extends StoredEntry>(
-  existing: T,
-  incoming: T,
-  pickEditableDetails: (entry: T) => Partial<T>
-): T {
+function mergeReimportedEntry<T extends StoredEntry>(existing: T, incoming: T): T {
   const keepCategory = existing.categoryOverridden || existing.detailsOverridden;
   return {
     ...incoming,
     ...(keepCategory && { categoryId: existing.categoryId, categoryOverridden: existing.categoryOverridden }),
-    ...(existing.detailsOverridden && { ...pickEditableDetails(existing), detailsOverridden: true }),
+    ...(existing.detailsOverridden && {
+      date: existing.date,
+      description: existing.description,
+      amount: existing.amount,
+      detailsOverridden: true,
+    }),
     ...(existing.bankOverridden && { bank: existing.bank, bankOverridden: true }),
     ...(existing.duplicateDismissed && { duplicateDismissed: true }),
   };
@@ -335,9 +346,9 @@ export async function updateCategory(
   }
 }
 
-export async function countTransactionsByCategory(categoryId: string): Promise<number> {
-  const transactions = await listTransactions();
-  return transactions.filter((transaction) => transaction.categoryId === categoryId).length;
+export async function countExpensesByCategory(categoryId: string): Promise<number> {
+  const expenses = await listExpenses();
+  return expenses.filter((expense) => expense.categoryId === categoryId).length;
 }
 
 export async function deleteCategory(id: string): Promise<void> {
@@ -349,10 +360,10 @@ export async function deleteCategory(id: string): Promise<void> {
   if (!category) throw new Error(`categoria #${id} não encontrada`);
 
   if (category.type === "expense") {
-    const affected = (await listTransactions()).filter((transaction) => transaction.categoryId === id);
-    for (const transaction of affected) {
-      await runInStore(TRANSACTIONS_STORE, "readwrite", (store) =>
-        store.put({ ...transaction, categoryId: UNCATEGORIZED_CATEGORY_ID })
+    const affected = (await listExpenses()).filter((expense) => expense.categoryId === id);
+    for (const expense of affected) {
+      await runInStore(EXPENSES_STORE, "readwrite", (store) =>
+        store.put({ ...expense, categoryId: UNCATEGORIZED_CATEGORY_ID })
       );
     }
   } else {
@@ -373,8 +384,8 @@ export class BackupValidationError extends Error {}
 export async function exportBackupData(): Promise<BackupPayload> {
   await ensureCategoriesSeeded();
 
-  const [transactions, income, categories, categoryRules] = await Promise.all([
-    listTransactions(),
+  const [expenses, income, categories, categoryRules] = await Promise.all([
+    listExpenses(),
     listIncome(),
     getAll<Category>(CATEGORIES_STORE),
     getAll<CategoryRule>(CATEGORY_RULES_STORE),
@@ -383,45 +394,50 @@ export async function exportBackupData(): Promise<BackupPayload> {
   return {
     schemaVersion: BACKUP_SCHEMA_VERSION,
     exportedAt: new Date().toISOString(),
-    transactions,
+    expenses,
     income,
     categories,
     categoryRules,
   };
 }
 
-function validateBackupPayload(payload: unknown): asserts payload is BackupPayload {
+export async function restoreBackupData(payload: unknown): Promise<void> {
+  const backup = readBackupPayload(payload);
+
+  for (const expense of backup.expenses) {
+    await runInStore(EXPENSES_STORE, "readwrite", (store) => store.put(expense));
+  }
+  for (const entry of backup.income) {
+    await runInStore(INCOME_STORE, "readwrite", (store) => store.put(entry));
+  }
+  for (const category of backup.categories) {
+    await runInStore(CATEGORIES_STORE, "readwrite", (store) => store.put(category));
+  }
+  for (const rule of backup.categoryRules) {
+    await runInStore(CATEGORY_RULES_STORE, "readwrite", (store) => store.put(rule));
+  }
+}
+
+// aceita o formato atual e o da versão 1 (despesas na chave `transactions`, com `merchant`), convertendo-o
+function readBackupPayload(payload: unknown): BackupPayload {
   if (typeof payload !== "object" || payload === null) {
     throw new BackupValidationError("arquivo de backup inválido");
   }
 
-  const candidate = payload as Partial<BackupPayload>;
-  if (candidate.schemaVersion !== BACKUP_SCHEMA_VERSION) {
-    throw new BackupValidationError("versão do arquivo de backup não suportada");
-  }
-  if (
-    !Array.isArray(candidate.transactions) ||
-    !Array.isArray(candidate.income) ||
-    !Array.isArray(candidate.categories) ||
-    !Array.isArray(candidate.categoryRules)
-  ) {
-    throw new BackupValidationError("arquivo de backup inválido");
-  }
+  const candidate = payload as Record<string, unknown>;
+  const expensesKey = backupExpensesKey(candidate.schemaVersion);
+  const hasEveryList = [expensesKey, "income", "categories", "categoryRules"].every((key) =>
+    Array.isArray(candidate[key])
+  );
+  if (!hasEveryList) throw new BackupValidationError("arquivo de backup inválido");
+
+  return candidate.schemaVersion === LEGACY_BACKUP_SCHEMA_VERSION
+    ? convertLegacyBackupPayloadToCurrent(payload as LegacyBackupPayload)
+    : (payload as BackupPayload);
 }
 
-export async function restoreBackupData(payload: unknown): Promise<void> {
-  validateBackupPayload(payload);
-
-  for (const transaction of payload.transactions) {
-    await runInStore(TRANSACTIONS_STORE, "readwrite", (store) => store.put(transaction));
-  }
-  for (const entry of payload.income) {
-    await runInStore(INCOME_STORE, "readwrite", (store) => store.put(entry));
-  }
-  for (const category of payload.categories) {
-    await runInStore(CATEGORIES_STORE, "readwrite", (store) => store.put(category));
-  }
-  for (const rule of payload.categoryRules) {
-    await runInStore(CATEGORY_RULES_STORE, "readwrite", (store) => store.put(rule));
-  }
+function backupExpensesKey(schemaVersion: unknown): "expenses" | "transactions" {
+  if (schemaVersion === BACKUP_SCHEMA_VERSION) return "expenses";
+  if (schemaVersion === LEGACY_BACKUP_SCHEMA_VERSION) return "transactions";
+  throw new BackupValidationError("versão do arquivo de backup não suportada");
 }

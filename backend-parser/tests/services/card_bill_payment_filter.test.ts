@@ -32,9 +32,9 @@ describe("isCardBillPaymentDescription", () => {
 describe("removeCardBillPaymentList", () => {
   it("remove só os pagamentos de fatura, mantendo a ordem", () => {
     const transactions = [
-      { id: "1", date: "2026-03-01", merchant: "Mercado", amount: 100 },
-      { id: "2", date: "2026-03-05", merchant: "Pagamento de fatura", amount: 900 },
-      { id: "3", date: "2026-03-07", merchant: "Farmácia", amount: 30 },
+      { id: "1", date: "2026-03-01", description: "Mercado", amount: 100 },
+      { id: "2", date: "2026-03-05", description: "Pagamento de fatura", amount: 900 },
+      { id: "3", date: "2026-03-07", description: "Farmácia", amount: 30 },
     ];
 
     expect(removeCardBillPaymentList(transactions).map((t) => t.id)).toEqual(["1", "3"]);

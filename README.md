@@ -18,7 +18,7 @@ Financial data is highly sensitive, and Billie was built from day one to respect
 * **📄 PDF Parsing:** Extracts transaction data from credit card bills (currently supports Nubank, XP/Rico, and Santander).
 * **📥 CSV Import:** Imports bank statements from CSV, with automatic delimiter detection and column mapping for non-standard spreadsheets.
 * **🔒 Password-Protected PDFs:** Handles encrypted statement PDFs natively (via `pdfjs-dist`, no external tools needed).
-* **📊 CSV Export:** Outputs a clean, semicolon-delimited CSV (date, merchant, amount) formatted for Brazilian locale conventions (Excel-friendly).
+* **📊 CSV Export:** Outputs a clean, semicolon-delimited CSV (date, description, amount) formatted for Brazilian locale conventions (Excel-friendly).
 * **💰 Controle de Gastos:** Categorizes transactions and manual entries into income/expenses, with automatic category classification and a period-over-period breakdown.
 * **🌗 Light/Dark Theme:** Toggle between themes from the header, with a smooth transition.
 * **🔄 Smart Updater:** Built-in background checker that notifies you whenever a new release is available on GitHub.

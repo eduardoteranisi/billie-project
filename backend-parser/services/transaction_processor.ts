@@ -11,7 +11,7 @@ interface ParsedTransaction {
 
 export interface CsvRowInput {
   date: string;
-  merchant: string;
+  description: string;
   rawAmount: string;
   isInstallment: boolean;
 }
@@ -43,7 +43,7 @@ export function finalizeCsvTransactions(rows: CsvRowInput[]): Transaction[] {
     rows,
     (row) => ({
       date: parseTransactionDate(row.date),
-      dirtyDescription: row.merchant,
+      dirtyDescription: row.description,
       amount: parseAmount(row.rawAmount),
     }),
     (row) => row.isInstallment
@@ -54,7 +54,7 @@ function finalizeParsed(parsed: ParsedTransaction[]): Transaction[] {
   return parsed.map((t) => ({
     id: generateTransactionId(t.date, t.dirtyDescription, t.amount),
     date: formatIsoDate(t.date),
-    merchant: t.dirtyDescription,
+    description: t.dirtyDescription,
     amount: t.amount,
   }));
 }

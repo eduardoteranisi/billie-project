@@ -13,7 +13,7 @@ describe("parseCsvInvoice", () => {
 
     const result = await parseCsvInvoice(csv);
 
-    expect(result.expenses.map((t) => [t.date, t.merchant, t.amount])).toEqual([
+    expect(result.expenses.map((t) => [t.date, t.description, t.amount])).toEqual([
       ["2026-03-01", "Padaria", 10.5],
       ["2026-03-03", "Uber", 25],
     ]);
@@ -30,11 +30,11 @@ describe("parseCsvInvoice", () => {
 
     const result = await parseCsvInvoice(csv);
 
-    expect(result.expenses.map((t) => [t.merchant, t.amount])).toEqual([
+    expect(result.expenses.map((t) => [t.description, t.amount])).toEqual([
       ["Pix enviado - João", 50],
       ["Padaria", 10.5],
     ]);
-    expect(result.income.map((t) => [t.merchant, t.amount])).toEqual([["Salário", 3000]]);
+    expect(result.income.map((t) => [t.description, t.amount])).toEqual([["Salário", 3000]]);
   });
 
   it("descarta linhas incompletas ou com valor zero", async () => {
@@ -48,7 +48,7 @@ describe("parseCsvInvoice", () => {
 
     const result = await parseCsvInvoice(csv);
 
-    expect(result.expenses.map((t) => t.merchant)).toEqual(["Padaria"]);
+    expect(result.expenses.map((t) => t.description)).toEqual(["Padaria"]);
   });
 
   it("usa a coluna de parcela para corrigir a data das parcelas", async () => {
@@ -67,9 +67,9 @@ describe("parseCsvInvoice", () => {
   it("aceita um mapeamento manual de colunas", async () => {
     const csv = ["Quando;Onde;Quanto", "01/03/2026;Padaria;10,50"].join("\n");
 
-    const result = await parseCsvInvoice(csv, { date: "Quando", merchant: "Onde", amount: "Quanto" });
+    const result = await parseCsvInvoice(csv, { date: "Quando", description: "Onde", amount: "Quanto" });
 
-    expect(result.expenses.map((t) => t.merchant)).toEqual(["Padaria"]);
+    expect(result.expenses.map((t) => t.description)).toEqual(["Padaria"]);
   });
 
   it("lança CsvColumnMappingError quando não reconhece as colunas", async () => {
@@ -80,7 +80,7 @@ describe("parseCsvInvoice", () => {
     expect(error).toBeInstanceOf(CsvColumnMappingError);
     expect(error).toMatchObject({
       headers: ["Quando", "Onde", "Quanto"],
-      missingRoles: ["date", "merchant", "amount"],
+      missingRoles: ["date", "description", "amount"],
     });
   });
 

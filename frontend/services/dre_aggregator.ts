@@ -1,9 +1,9 @@
 import type { Category } from "@billie/parser";
 import type { CategorySummary, DreSummary, StoredExpense, StoredIncome } from "../types";
 
-export function listAvailablePeriods(transactions: StoredExpense[], income: StoredIncome[]): string[] {
+export function listAvailablePeriods(expenses: StoredExpense[], income: StoredIncome[]): string[] {
   const periods = new Set<string>();
-  for (const transaction of transactions) periods.add(transaction.date.slice(0, 7));
+  for (const expense of expenses) periods.add(expense.date.slice(0, 7));
   for (const entry of income) periods.add(entry.date.slice(0, 7));
   return [...periods].sort().reverse();
 }
@@ -25,20 +25,20 @@ function summarizeByCategory(
 
 export function calculateDre(
   period: string,
-  transactions: StoredExpense[],
+  expenses: StoredExpense[],
   income: StoredIncome[],
   allCategories: Category[]
 ): DreSummary {
-  const periodTransactions = transactions.filter((transaction) => transaction.date.slice(0, 7) === period);
+  const periodExpenses = expenses.filter((expense) => expense.date.slice(0, 7) === period);
   const periodIncome = income.filter((entry) => entry.date.slice(0, 7) === period);
 
   const totalIncome = periodIncome.reduce((sum, entry) => sum + entry.amount, 0);
 
   const expenseTotalsByCategory = new Map<string, number>();
-  for (const transaction of periodTransactions) {
+  for (const expense of periodExpenses) {
     expenseTotalsByCategory.set(
-      transaction.categoryId,
-      (expenseTotalsByCategory.get(transaction.categoryId) ?? 0) + transaction.amount
+      expense.categoryId,
+      (expenseTotalsByCategory.get(expense.categoryId) ?? 0) + expense.amount
     );
   }
 

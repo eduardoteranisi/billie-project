@@ -1,6 +1,6 @@
 import type { Category } from "@billie/parser";
 import { calculateDre, listAvailablePeriods } from "../services/dre_aggregator";
-import { listCategories, listIncome, listTransactions } from "../services/finance_store";
+import { listCategories, listIncome, listExpenses } from "../services/finance_store";
 import {
   getSelectedPeriod,
   listenSelectedPeriodChanged,
@@ -31,7 +31,7 @@ export function initOverviewView(): void {
   const expenseCategoryList = getRequiredElementById<HTMLDivElement>("category-list");
   const incomeCategoryList = getRequiredElementById<HTMLDivElement>("income-category-list");
 
-  let transactions: StoredExpense[] = [];
+  let expenses: StoredExpense[] = [];
   let income: StoredIncome[] = [];
   let categories: Category[] = [];
 
@@ -43,15 +43,15 @@ export function initOverviewView(): void {
   async function loadData(): Promise<void> {
     let expenseCategories: Category[];
     let incomeCategories: Category[];
-    [transactions, income, expenseCategories, incomeCategories] = await Promise.all([
-      listTransactions(),
+    [expenses, income, expenseCategories, incomeCategories] = await Promise.all([
+      listExpenses(),
       listIncome(),
       listCategories("expense"),
       listCategories("income"),
     ]);
     categories = [...expenseCategories, ...incomeCategories];
 
-    const periods = listAvailablePeriods(transactions, income);
+    const periods = listAvailablePeriods(expenses, income);
     periodSelect.innerHTML = periods
       .map((period) => `<option value="${escapeHtmlSpecialCharacters(period)}">${escapeHtmlSpecialCharacters(period)}</option>`)
       .join("");
@@ -63,7 +63,7 @@ export function initOverviewView(): void {
     const period = getSelectedPeriod();
     periodSelect.value = period;
 
-    const summary = period ? calculateDre(period, transactions, income, categories) : EMPTY_DRE_SUMMARY;
+    const summary = period ? calculateDre(period, expenses, income, categories) : EMPTY_DRE_SUMMARY;
 
     setCardValue(incomeCard, summary.totalIncome);
     setCardValue(fixedCard, summary.fixedExpenses);

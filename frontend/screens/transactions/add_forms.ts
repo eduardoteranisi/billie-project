@@ -5,7 +5,7 @@ import {
   type Category,
   type CategoryRule,
 } from "@billie/parser";
-import { listCategories, listCategoryRules, saveIncome, saveTransactions } from "../../services/finance_store";
+import { listCategories, listCategoryRules, saveIncome, saveExpenseList } from "../../services/finance_store";
 import { listenStoredDataUpdated, notifyStoredDataUpdated } from "../../services/stored_data_events";
 import type { StoredExpense, StoredIncome } from "../../types";
 import { getRequiredElementById } from "../../utils/dom_helpers";
@@ -76,19 +76,19 @@ export function initTransactionAddForms(): void {
     event.preventDefault();
 
     const date = expenseAddDate.value;
-    const merchant = expenseAddDescription.value.trim();
+    const description = expenseAddDescription.value.trim();
     const amount = parseFloat(expenseAddAmount.value);
-    if (!date || !merchant || Number.isNaN(amount) || amount <= 0) return;
+    if (!date || !description || Number.isNaN(amount) || amount <= 0) return;
 
     const entry: StoredExpense = {
       id: crypto.randomUUID(),
       date,
-      merchant,
+      description,
       amount,
       categoryId: expenseAddCategory.value,
       origin: "manual",
     };
-    await saveTransactions([entry]);
+    await saveExpenseList([entry]);
 
     expenseAddForm.reset();
     expenseAddPopover.hidden = true;

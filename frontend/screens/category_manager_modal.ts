@@ -8,7 +8,7 @@ import {
 import { confirmAction } from "../components/confirm_modal";
 import {
   countIncomeByCategory,
-  countTransactionsByCategory,
+  countExpensesByCategory,
   createCategory,
   deleteCategory,
   listCategories,
@@ -125,7 +125,7 @@ export function initCategoryManagerModal(): void {
         if (!id) return;
 
         const label = row?.querySelector<HTMLInputElement>(".category-manager-label")?.value ?? "";
-        const count = type === "expense" ? await countTransactionsByCategory(id) : await countIncomeByCategory(id);
+        const count = type === "expense" ? await countExpensesByCategory(id) : await countIncomeByCategory(id);
         const confirmMessage =
           count > 0
             ? `Excluir "${label}"? ${count} lançamento(s) serão movidos para "Outros / Não categorizado".`
