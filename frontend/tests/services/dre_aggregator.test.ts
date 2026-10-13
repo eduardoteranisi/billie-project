@@ -12,7 +12,7 @@ const CATEGORIES: Category[] = [
 ];
 
 function buildTransaction(date: string, categoryId: string, amount: number): StoredExpense {
-  return { id: `${date}-${categoryId}-${amount}`, date, merchant: "x", amount, categoryId, origin: "pdf" };
+  return { id: `${date}-${categoryId}-${amount}`, date, description: "x", amount, categoryId, origin: "pdf" };
 }
 
 function buildIncome(date: string, categoryId: string, amount: number): StoredIncome {

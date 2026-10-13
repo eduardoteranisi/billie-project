@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { extractNubankFromLines } from "../../../../services/pdf/nubank/nubank_extractor";
 
-function summarize(transactions: { date: string; merchant: string; amount: number }[]) {
-  return transactions.map((t) => [t.date, t.merchant, t.amount]);
+function summarize(transactions: { date: string; description: string; amount: number }[]) {
+  return transactions.map((t) => [t.date, t.description, t.amount]);
 }
 
 describe("extractNubankFromLines — fatura", () => {

@@ -21,7 +21,7 @@ vi.mock("../../services/transaction_saver", async (importOriginal) => ({
 }));
 
 function buildTransaction(id: string): Transaction {
-  return { id, date: "2026-03-01", merchant: `Loja ${id}`, amount: 10, installment: null } as Transaction;
+  return { id, date: "2026-03-01", description: `Loja ${id}`, amount: 10, installment: null } as Transaction;
 }
 
 describe("parsePdfStatementFile", () => {

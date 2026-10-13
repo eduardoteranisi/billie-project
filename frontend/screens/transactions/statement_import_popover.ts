@@ -42,7 +42,7 @@ export function initStatementImportPopover(): void {
 
   const mappingSelects = {
     date: getRequiredElementById<HTMLSelectElement>("map-col-data"),
-    merchant: getRequiredElementById<HTMLSelectElement>("map-col-estabelecimento"),
+    description: getRequiredElementById<HTMLSelectElement>("map-col-estabelecimento"),
     amount: getRequiredElementById<HTMLSelectElement>("map-col-valor"),
     installment: getRequiredElementById<HTMLSelectElement>("map-col-parcela"),
   };

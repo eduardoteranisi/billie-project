@@ -13,8 +13,8 @@ import {
   sumSaveResults,
 } from "../../services/transaction_saver";
 
-function buildTransaction(id: string, merchant: string): Transaction {
-  return { id, date: "2026-03-01", merchant, amount: 10, bank: "Nubank" };
+function buildTransaction(id: string, description: string): Transaction {
+  return { id, date: "2026-03-01", description, amount: 10, bank: "Nubank" };
 }
 
 // cada teste começa com um IndexedDB vazio: finance_store.ts lê o `indexedDB` global a cada operação

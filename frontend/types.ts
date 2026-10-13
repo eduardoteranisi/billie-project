@@ -37,12 +37,12 @@ export interface DreSummary {
   incomeCategories: CategorySummary[];
 }
 
-export const BACKUP_SCHEMA_VERSION = 1;
+export const BACKUP_SCHEMA_VERSION = 2;
 
 export interface BackupPayload {
   schemaVersion: typeof BACKUP_SCHEMA_VERSION;
   exportedAt: string;
-  transactions: StoredExpense[];
+  expenses: StoredExpense[];
   income: StoredIncome[];
   categories: Category[];
   categoryRules: CategoryRule[];

@@ -5,7 +5,7 @@ const FORMULA_TRIGGER_CHARS = ["=", "+", "-", "@", "\t", "\r"];
 
 export const DEFAULT_CSV_COLUMNS: CsvColumnConfig = {
   date: "date",
-  merchant: "merchant",
+  description: "description",
   amount: "amount",
 };
 
@@ -27,13 +27,13 @@ export function exportToCsv(
   transactions: Transaction[],
   columns: CsvColumnConfig = DEFAULT_CSV_COLUMNS
 ): string {
-  const header = [columns.date, columns.merchant, columns.amount]
+  const header = [columns.date, columns.description, columns.amount]
     .map(sanitizeCsvField)
     .join(CSV_DELIMITER);
   const rows = transactions.map((t) =>
     [
       sanitizeCsvField(t.date),
-      sanitizeCsvField(t.merchant),
+      sanitizeCsvField(t.description),
       sanitizeCsvField(t.amount.toString().replace(".", ",")),
     ].join(CSV_DELIMITER)
   );

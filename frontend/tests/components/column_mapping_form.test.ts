@@ -9,7 +9,7 @@ function buildSelects(values: Partial<Record<keyof ColumnMappingSelects, string>
   const buildSelect = (value = "") => ({ innerHTML: "", value }) as HTMLSelectElement;
   return {
     date: buildSelect(values.date),
-    merchant: buildSelect(values.merchant),
+    description: buildSelect(values.description),
     amount: buildSelect(values.amount),
     installment: buildSelect(values.installment),
   };
@@ -23,7 +23,7 @@ describe("fillColumnMappingSelects", () => {
 
     const expectedOptions = `<option value="Data">Data</option><option value="&lt;Valor&gt;">&lt;Valor&gt;</option>`;
     expect(selects.date.innerHTML).toBe(expectedOptions);
-    expect(selects.merchant.innerHTML).toBe(expectedOptions);
+    expect(selects.description.innerHTML).toBe(expectedOptions);
     expect(selects.amount.innerHTML).toBe(expectedOptions);
     expect(selects.installment.innerHTML).toBe(`<option value="">— nenhuma —</option>${expectedOptions}`);
   });
@@ -31,18 +31,18 @@ describe("fillColumnMappingSelects", () => {
 
 describe("readColumnMappingSelects", () => {
   it("monta a configuração de colunas a partir das selects", () => {
-    const selects = buildSelects({ date: "Data", merchant: "Loja", amount: "Valor", installment: "Parcela" });
+    const selects = buildSelects({ date: "Data", description: "Loja", amount: "Valor", installment: "Parcela" });
 
     expect(readColumnMappingSelects(selects)).toEqual({
       date: "Data",
-      merchant: "Loja",
+      description: "Loja",
       amount: "Valor",
       installment: "Parcela",
     });
   });
 
   it("deixa a parcela indefinida quando nenhuma coluna foi escolhida", () => {
-    const selects = buildSelects({ date: "Data", merchant: "Loja", amount: "Valor", installment: "" });
+    const selects = buildSelects({ date: "Data", description: "Loja", amount: "Valor", installment: "" });
 
     expect(readColumnMappingSelects(selects).installment).toBeUndefined();
   });

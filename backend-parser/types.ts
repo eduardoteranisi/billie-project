@@ -1,14 +1,14 @@
 export interface Transaction {
   id: string;
   date: string;
-  merchant: string;
+  description: string;
   amount: number;
   bank?: Bank;
 }
 
 export interface CsvColumnConfig {
   date: string;
-  merchant: string;
+  description: string;
   amount: string;
   installment?: string;
 }

@@ -76,14 +76,14 @@ export function initTransactionAddForms(): void {
     event.preventDefault();
 
     const date = expenseAddDate.value;
-    const merchant = expenseAddDescription.value.trim();
+    const description = expenseAddDescription.value.trim();
     const amount = parseFloat(expenseAddAmount.value);
-    if (!date || !merchant || Number.isNaN(amount) || amount <= 0) return;
+    if (!date || !description || Number.isNaN(amount) || amount <= 0) return;
 
     const entry: StoredExpense = {
       id: crypto.randomUUID(),
       date,
-      merchant,
+      description,
       amount,
       categoryId: expenseAddCategory.value,
       origin: "manual",

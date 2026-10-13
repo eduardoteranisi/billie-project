@@ -36,6 +36,7 @@ type GroupMode = "none" | "bank" | "day";
 interface ListedEntry {
   id: string;
   date: string;
+  description: string;
   amount: number;
   categoryId: string;
   bank?: Bank;
@@ -48,7 +49,6 @@ interface EntryListOptions<T extends ListedEntry> {
   emptyMessage: string;
   // completa a pergunta "Excluir …?" na confirmação
   removeConfirmTarget: string;
-  getDescription: (entry: T) => string;
   getGroupMode: () => GroupMode;
   setKeepEditingRowOnNextReload: (keep: boolean) => void;
   removeEntry: (id: string) => Promise<void>;
@@ -95,12 +95,10 @@ export function initTransactionLists(): void {
     amountKind: "expense",
     emptyMessage: "Nenhuma transação neste período.",
     removeConfirmTarget: "a transação",
-    getDescription: (transaction) => transaction.merchant,
     removeEntry: removeTransaction,
     updateEntryCategory: updateTransactionCategory,
     updateEntryBank: updateTransactionBank,
-    updateEntryFields: (id, { date, description, amount }) =>
-      updateTransactionFields(id, { date, merchant: description, amount }),
+    updateEntryFields: updateTransactionFields,
     markEntryIdListAsNotDuplicate: markTransactionIdListAsNotDuplicate,
   });
 
@@ -110,7 +108,6 @@ export function initTransactionLists(): void {
     amountKind: "income",
     emptyMessage: "Nenhuma receita lançada neste período.",
     removeConfirmTarget: "a receita",
-    getDescription: (entry) => entry.description,
     removeEntry: removeIncome,
     updateEntryCategory: updateIncomeCategory,
     updateEntryBank: updateIncomeBank,
@@ -125,16 +122,16 @@ export function initTransactionLists(): void {
   void loadData();
 
   async function loadData(): Promise<void> {
-    const [transactions, income, expenseCategories, incomeCategories] = await Promise.all([
+    const [expenses, income, expenseCategories, incomeCategories] = await Promise.all([
       listTransactions(),
       listIncome(),
       listCategories("expense"),
       listCategories("income"),
     ]);
-    expenseList.setEntriesAndCategories(transactions, expenseCategories);
+    expenseList.setEntriesAndCategories(expenses, expenseCategories);
     incomeList.setEntriesAndCategories(income, incomeCategories);
 
-    const periods = listAvailablePeriods(transactions, income);
+    const periods = listAvailablePeriods(expenses, income);
     periodSelect.innerHTML = periods
       .map((period) => `<option value="${escapeHtmlSpecialCharacters(period)}">${escapeHtmlSpecialCharacters(period)}</option>`)
       .join("");
@@ -237,7 +234,7 @@ function createEntryListController<T extends ListedEntry>(options: EntryListOpti
 
   function viewRowHtml(row: T): string {
     const duplicate = possibleDuplicateRowAttributes(possibleDuplicateIds.has(row.id));
-    const description = escapeHtmlSpecialCharacters(options.getDescription(row));
+    const description = escapeHtmlSpecialCharacters(row.description);
     return `
       <div class="entry-row${duplicate.className}"${duplicate.title} data-id="${escapeHtmlSpecialCharacters(row.id)}">
         <span class="entry-date">${escapeHtmlSpecialCharacters(row.date)}</span>
@@ -256,7 +253,7 @@ function createEntryListController<T extends ListedEntry>(options: EntryListOpti
         <div class="row-edit-line">
           <input type="date" class="entry-edit-date" value="${escapeHtmlSpecialCharacters(row.date)}" />
           <select class="entry-edit-bank" title="Banco de origem">${bankOptionsHtml(row.bank)}</select>
-          <input type="text" class="entry-edit-description" value="${escapeHtmlSpecialCharacters(options.getDescription(row))}" />
+          <input type="text" class="entry-edit-description" value="${escapeHtmlSpecialCharacters(row.description)}" />
           <input type="number" step="0.01" min="0.01" class="entry-edit-amount" value="${escapeHtmlSpecialCharacters(String(row.amount))}" />
           <select class="entry-category-select" title="Categoria">${buildCategoryOptionsHtml(categories, row.categoryId)}</select>
         </div>
@@ -347,7 +344,7 @@ function createEntryListController<T extends ListedEntry>(options: EntryListOpti
         if (
           !original ||
           date !== original.date ||
-          description !== options.getDescription(original) ||
+          description !== original.description ||
           amount !== original.amount
         ) {
           await options.updateEntryFields(row.dataset.id, { date, description, amount });

@@ -89,7 +89,7 @@ describe("finalizeTransactions", () => {
     expect(transaction).toEqual({
       id: generateTransactionId(new Date(2026, 2, 15), "Padaria", 10.5),
       date: "2026-03-15",
-      merchant: "Padaria",
+      description: "Padaria",
       amount: 10.5,
     });
   });
@@ -134,9 +134,9 @@ describe("finalizeTransactions", () => {
 describe("finalizeCsvTransactions", () => {
   it("usa a flag isInstallment da linha em vez da descrição", () => {
     const transactions = finalizeCsvTransactions([
-      { date: "2026-03-10", merchant: "Mercado", rawAmount: "100,00", isInstallment: false },
-      { date: "2026-01-15", merchant: "Loja sem marcação", rawAmount: "80,00", isInstallment: true },
-      { date: "2026-01-20", merchant: "Loja 03/10", rawAmount: "30,00", isInstallment: false },
+      { date: "2026-03-10", description: "Mercado", rawAmount: "100,00", isInstallment: false },
+      { date: "2026-01-15", description: "Loja sem marcação", rawAmount: "80,00", isInstallment: true },
+      { date: "2026-01-20", description: "Loja 03/10", rawAmount: "30,00", isInstallment: false },
     ]);
 
     expect(transactions.map((t) => t.date)).toEqual(["2026-03-10", "2026-03-15", "2026-01-20"]);

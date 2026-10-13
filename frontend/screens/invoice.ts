@@ -6,6 +6,7 @@ import {
   saveParsedStatementToFinanceStore,
   type ParsedStatement,
 } from "../services/statement_importer";
+import { convertSavedCsvColumnsToCurrent } from "../services/legacy_data_conversion";
 import type { StoredExpense } from "../types";
 import { fillColumnMappingSelects, readColumnMappingSelects } from "../components/column_mapping_form";
 import { escapeHtmlSpecialCharacters, getRequiredElementById } from "../utils/dom_helpers";
@@ -50,7 +51,7 @@ export function initInvoiceView(): void {
     year: getRequiredElementById<HTMLSelectElement>("ano"),
 
     colDate: getRequiredElementById<HTMLInputElement>("col-data"),
-    colMerchant: getRequiredElementById<HTMLInputElement>("col-estabelecimento"),
+    colDescription: getRequiredElementById<HTMLInputElement>("col-estabelecimento"),
     colAmount: getRequiredElementById<HTMLInputElement>("col-valor"),
     btnRestoreColumns: getRequiredElementById<HTMLButtonElement>("btn-restaurar-colunas"),
 
@@ -70,7 +71,7 @@ export function initInvoiceView(): void {
 
   const mappingSelects = {
     date: getRequiredElementById<HTMLSelectElement>("invoice-map-col-data"),
-    merchant: getRequiredElementById<HTMLSelectElement>("invoice-map-col-estabelecimento"),
+    description: getRequiredElementById<HTMLSelectElement>("invoice-map-col-estabelecimento"),
     amount: getRequiredElementById<HTMLSelectElement>("invoice-map-col-valor"),
     installment: getRequiredElementById<HTMLSelectElement>("invoice-map-col-parcela"),
   };
@@ -135,14 +136,14 @@ export function initInvoiceView(): void {
     const saved = localStorage.getItem(CSV_COLUMNS_STORAGE_KEY);
     if (saved) {
       try {
-        config = { ...DEFAULT_CSV_COLUMNS, ...JSON.parse(saved) };
+        config = convertSavedCsvColumnsToCurrent(JSON.parse(saved), DEFAULT_CSV_COLUMNS);
       } catch {
         config = DEFAULT_CSV_COLUMNS;
       }
     }
 
     els.colDate.value = config.date;
-    els.colMerchant.value = config.merchant;
+    els.colDescription.value = config.description;
     els.colAmount.value = config.amount;
   }
 
@@ -153,14 +154,14 @@ export function initInvoiceView(): void {
   function readCsvColumnsConfig(): CsvColumnConfig {
     return {
       date: els.colDate.value.trim() || DEFAULT_CSV_COLUMNS.date,
-      merchant: els.colMerchant.value.trim() || DEFAULT_CSV_COLUMNS.merchant,
+      description: els.colDescription.value.trim() || DEFAULT_CSV_COLUMNS.description,
       amount: els.colAmount.value.trim() || DEFAULT_CSV_COLUMNS.amount,
     };
   }
 
   function restoreDefaultCsvColumns() {
     els.colDate.value = DEFAULT_CSV_COLUMNS.date;
-    els.colMerchant.value = DEFAULT_CSV_COLUMNS.merchant;
+    els.colDescription.value = DEFAULT_CSV_COLUMNS.description;
     els.colAmount.value = DEFAULT_CSV_COLUMNS.amount;
     saveCsvColumnsConfig();
   }
@@ -329,7 +330,7 @@ export function initInvoiceView(): void {
     els.btnProcess.addEventListener("click", processInvoice);
 
     els.colDate.addEventListener("blur", saveCsvColumnsConfig);
-    els.colMerchant.addEventListener("blur", saveCsvColumnsConfig);
+    els.colDescription.addEventListener("blur", saveCsvColumnsConfig);
     els.colAmount.addEventListener("blur", saveCsvColumnsConfig);
     els.btnRestoreColumns.addEventListener("click", restoreDefaultCsvColumns);
 

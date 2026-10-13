@@ -3,7 +3,7 @@ import { escapeHtmlSpecialCharacters } from "../utils/dom_helpers";
 
 export interface ColumnMappingSelects {
   date: HTMLSelectElement;
-  merchant: HTMLSelectElement;
+  description: HTMLSelectElement;
   amount: HTMLSelectElement;
   installment: HTMLSelectElement;
 }
@@ -14,7 +14,7 @@ export function fillColumnMappingSelects(selects: ColumnMappingSelects, headers:
     .join("");
 
   selects.date.innerHTML = optionsHtml;
-  selects.merchant.innerHTML = optionsHtml;
+  selects.description.innerHTML = optionsHtml;
   selects.amount.innerHTML = optionsHtml;
   selects.installment.innerHTML = `<option value="">— nenhuma —</option>${optionsHtml}`;
 }
@@ -22,7 +22,7 @@ export function fillColumnMappingSelects(selects: ColumnMappingSelects, headers:
 export function readColumnMappingSelects(selects: ColumnMappingSelects): CsvColumnConfig {
   return {
     date: selects.date.value,
-    merchant: selects.merchant.value,
+    description: selects.description.value,
     amount: selects.amount.value,
     installment: selects.installment.value || undefined,
   };

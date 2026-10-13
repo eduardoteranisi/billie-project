@@ -5,7 +5,7 @@ describe("resolveColumns", () => {
   it("encontra as colunas por apelido, ignorando acentos e maiúsculas", () => {
     expect(resolveColumns(["Data", "Descrição", "Valor (R$)"])).toEqual({
       date: 0,
-      merchant: 1,
+      description: 1,
       amount: 2,
       installment: null,
     });
@@ -14,7 +14,7 @@ describe("resolveColumns", () => {
   it("encontra apelidos em inglês e a coluna de parcela", () => {
     expect(resolveColumns(["amount", "installment", "date", "title"])).toEqual({
       date: 2,
-      merchant: 3,
+      description: 3,
       amount: 0,
       installment: 1,
     });
@@ -30,25 +30,25 @@ describe("resolveColumns", () => {
   it("usa o mapeamento manual quando informado", () => {
     const result = resolveColumns(["Quando", "Onde", "Quanto"], {
       date: "quando",
-      merchant: "ONDE",
+      description: "ONDE",
       amount: "Quanto",
     });
 
-    expect(result).toEqual({ date: 0, merchant: 1, amount: 2, installment: null });
+    expect(result).toEqual({ date: 0, description: 1, amount: 2, installment: null });
     expect(isColumnResolutionFailure(result)).toBe(false);
   });
 
   it("no mapeamento manual, procura a parcela pelo apelido se ela não foi informada", () => {
     expect(resolveColumns(["Quando", "Onde", "Quanto", "Parcela"], {
       date: "Quando",
-      merchant: "Onde",
+      description: "Onde",
       amount: "Quanto",
-    })).toEqual({ date: 0, merchant: 1, amount: 2, installment: 3 });
+    })).toEqual({ date: 0, description: 1, amount: 2, installment: 3 });
   });
 
   it("no mapeamento manual, falha se a coluna não existe", () => {
     expect(() =>
-      resolveColumns(["Quando", "Onde"], { date: "Quando", merchant: "Onde", amount: "Quanto" })
+      resolveColumns(["Quando", "Onde"], { date: "Quando", description: "Onde", amount: "Quanto" })
     ).toThrow('Coluna "Quanto" (amount) não encontrada no CSV.');
   });
 });

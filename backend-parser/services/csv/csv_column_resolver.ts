@@ -1,11 +1,11 @@
 import type { CsvColumnConfig } from "../../types";
 import { normalizeText } from "../text_utils";
 
-export type CsvColumnRole = "date" | "merchant" | "amount" | "installment";
+export type CsvColumnRole = "date" | "description" | "amount" | "installment";
 
 const COLUMN_ALIASES: Record<CsvColumnRole, string[]> = {
   date: ["DATA", "DATA DA COMPRA", "DATA DE COMPRA", "DATE"],
-  merchant: [
+  description: [
     "ESTABELECIMENTO",
     "DESCRICAO",
     "DESCRIÇÃO",
@@ -22,7 +22,7 @@ const COLUMN_ALIASES: Record<CsvColumnRole, string[]> = {
 
 export interface ResolvedColumns {
   date: number;
-  merchant: number;
+  description: number;
   amount: number;
   installment: number | null;
 }
@@ -43,20 +43,20 @@ export function resolveColumns(
   }
 
   const date = findByAlias(normalizedHeaders, COLUMN_ALIASES.date);
-  const merchant = findByAlias(normalizedHeaders, COLUMN_ALIASES.merchant);
+  const description = findByAlias(normalizedHeaders, COLUMN_ALIASES.description);
   const amount = findByAlias(normalizedHeaders, COLUMN_ALIASES.amount);
   const installment = findByAlias(normalizedHeaders, COLUMN_ALIASES.installment);
 
   const missingRoles: CsvColumnRole[] = [];
   if (date === null) missingRoles.push("date");
-  if (merchant === null) missingRoles.push("merchant");
+  if (description === null) missingRoles.push("description");
   if (amount === null) missingRoles.push("amount");
 
   if (missingRoles.length > 0) {
     return { headers, missingRoles };
   }
 
-  return { date: date as number, merchant: merchant as number, amount: amount as number, installment };
+  return { date: date as number, description: description as number, amount: amount as number, installment };
 }
 
 function resolveFromExplicitColumns(
@@ -65,14 +65,14 @@ function resolveFromExplicitColumns(
   columns: CsvColumnConfig
 ): ResolvedColumns {
   const date = findExact(headers, normalizedHeaders, columns.date, "date");
-  const merchant = findExact(headers, normalizedHeaders, columns.merchant, "merchant");
+  const description = findExact(headers, normalizedHeaders, columns.description, "description");
   const amount = findExact(headers, normalizedHeaders, columns.amount, "amount");
   const installment =
     columns.installment !== undefined
       ? findExact(headers, normalizedHeaders, columns.installment, "installment")
       : findByAlias(normalizedHeaders, COLUMN_ALIASES.installment);
 
-  return { date, merchant, amount, installment };
+  return { date, description, amount, installment };
 }
 
 function findExact(headers: string[], normalizedHeaders: string[], headerName: string, role: CsvColumnRole): number {

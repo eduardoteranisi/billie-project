@@ -43,8 +43,8 @@ describe("classifyTransactionDescription", () => {
 describe("classifyTransactionList", () => {
   it("acrescenta categoryId mantendo os demais campos", () => {
     const transactions = [
-      { id: "1", date: "2026-03-01", merchant: "UBER TRIP", amount: 25, bank: "Nubank" as const },
-      { id: "2", date: "2026-03-02", merchant: "Loja desconhecida", amount: 40 },
+      { id: "1", date: "2026-03-01", description: "UBER TRIP", amount: 25, bank: "Nubank" as const },
+      { id: "2", date: "2026-03-02", description: "Loja desconhecida", amount: 40 },
     ];
 
     expect(classifyTransactionList(transactions)).toEqual([
