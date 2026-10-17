@@ -1,0 +1,5 @@
+{
+  "extends": "../../../tsconfig.json",
+  "include": [".", "../../../backend-parser/pdfjs_dist.d.ts"],
+  "exclude": ["__snapshots__"]
+}

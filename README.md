@@ -56,6 +56,45 @@ This opens Billie in a native window instead of a browser tab.
 
 ---
 
+## 🧪 Testing
+
+**Unit tests and typecheck** — run before every commit (CI also runs both on every pull request to `main`):
+```bash
+npm run typecheck
+npm test
+```
+Unit tests only use synthetic, inline fixtures — never real statements.
+
+**Snapshot tests over your real statements (`test:local`)** — catch regressions in the parsing results using your own PDFs/CSVs. They run only on your machine, never in CI, and nothing they read or write is committed.
+
+1. Put your statement files in `backend-parser/test-data/`.
+2. Create `backend-parser/test-data/local_statement_list.json` from `frontend/tests/local/local_statement_list.example.json`. Every entry needs `file` and `referenceDate` (`yyyy-mm-dd`, the date the file is "imported" — the test freezes the clock on it, since the parser derives years from today's date). PDFs also need `bank` and `year` (plus `password` if the PDF is protected); CSVs take optional `bank` and `columns`.
+3. Run:
+   ```bash
+   npm run test:local
+   ```
+
+Each file goes through the full pipeline, and the expenses/income (with the default category rules), the possible-duplicate groups and the per-month DRE are compared against a saved snapshot in `frontend/tests/local/__snapshots__/`:
+
+- **Same result** → passes.
+- **Different result** → fails and shows the diff.
+- **File with no snapshot yet** → the snapshot is written and the test passes. Check it, since it becomes the reference.
+
+When a change in the result is intentional (e.g. you fixed a parser bug and checked the diff), accept it as the new reference with:
+```bash
+npm run test:local -- -u
+```
+Never run `-u` without reading the diff first — otherwise a regression silently becomes the new reference.
+
+Run `test:local` when a change can affect the parsing results: extractors and the rest of `backend-parser/`, the category classifier, `dre_aggregator.ts` or `duplicate_detection.ts`. UI-only changes don't show up in it.
+
+**Checking a branch for regressions:** snapshots are gitignored, so they stay put when you switch branches.
+1. On `main`, run `npm run test:local` to generate (or refresh) the reference snapshots. Add new statement files here first.
+2. Switch to the feature branch and run `npm run test:local` again — any failure means the feature changed the result for a real statement.
+3. After an intentional result change is merged, run `npm run test:local -- -u` on `main` so the reference keeps up.
+
+---
+
 ## 📦 Releasing new versions (installers for Windows/Linux)
 
 Installers are **not** built or committed manually — they're produced by CI and attached to a GitHub Release.

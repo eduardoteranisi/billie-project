@@ -1,0 +1,25 @@
+[
+  {
+    "file": "fatura_exemplo.pdf",
+    "referenceDate": "2026-08-15",
+    "bank": "Nubank",
+    "year": "2026"
+  },
+  {
+    "file": "extrato_exemplo_com_senha.pdf",
+    "referenceDate": "2026-08-15",
+    "bank": "Santander",
+    "year": "automático",
+    "password": "senha-do-pdf"
+  },
+  {
+    "file": "extrato_exemplo.csv",
+    "referenceDate": "2026-08-15"
+  },
+  {
+    "file": "extrato_exemplo_com_mapeamento.csv",
+    "referenceDate": "2026-08-15",
+    "bank": "XP / Rico",
+    "columns": { "date": "Data", "description": "Histórico", "amount": "Valor" }
+  }
+]
