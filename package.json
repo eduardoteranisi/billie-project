@@ -10,7 +10,8 @@
     "tauri": "tauri",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc -p ."
+    "test:local": "vitest run --config vitest.local.config.ts",
+    "typecheck": "tsc -p . && tsc -p frontend/tests/local"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.11.4",

@@ -33,6 +33,10 @@ yarn-error.log*
 backend-parser/test-data/*.pdf
 backend-parser/test-data/*.csv
 
+# test:local
+backend-parser/test-data/local_statement_list.json
+frontend/tests/local/__snapshots__/
+
 # local claude files
 .claude/
 .claude.json
