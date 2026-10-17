@@ -24,14 +24,19 @@ import {
   syncSelectedPeriodWithAvailableList,
 } from "../../services/selected_period";
 import { listenStoredDataUpdated, notifyStoredDataUpdated } from "../../services/stored_data_events";
-import { groupTransactionsByBank, groupTransactionsByDay, UNKNOWN_BANK_LABEL } from "../../services/transaction_grouping";
+import {
+  groupTransactionsByBank,
+  groupTransactionsByCategory,
+  groupTransactionsByDay,
+  UNKNOWN_BANK_LABEL,
+} from "../../services/transaction_grouping";
 import type { TransactionGroup } from "../../services/transaction_grouping";
 import type { StoredExpense, StoredIncome } from "../../types";
 import { formatBrlCurrency } from "../../utils/currency_format";
 import { escapeHtmlSpecialCharacters, getRequiredElementById } from "../../utils/dom_helpers";
 import { buildCategoryOptionsHtml } from "./category_options_html";
 
-type GroupMode = "none" | "bank" | "day";
+type GroupMode = "none" | "bank" | "category" | "day";
 
 interface ListedEntry {
   id: string;
@@ -208,6 +213,7 @@ function createEntryListController<T extends ListedEntry>(options: EntryListOpti
   function groupedRowsHtml(rows: T[]): string {
     const groupMode = options.getGroupMode();
     if (groupMode === "bank") return groupListHtml(groupTransactionsByBank(rows), groupMode);
+    if (groupMode === "category") return groupListHtml(groupTransactionsByCategory(rows, categories), groupMode);
     if (groupMode === "day") return groupListHtml(groupTransactionsByDay(rows), groupMode);
     return rowsHtml(rows);
   }
