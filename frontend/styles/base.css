@@ -1,47 +1,72 @@
-@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap");
+/* fontes hospedadas no próprio app (pacotes @fontsource, só o subset latin) */
+@import "@fontsource/bricolage-grotesque/latin-600.css";
+@import "@fontsource/bricolage-grotesque/latin-800.css";
+@import "@fontsource/instrument-sans/latin-400.css";
+@import "@fontsource/instrument-sans/latin-500.css";
+@import "@fontsource/instrument-sans/latin-600.css";
+@import "@fontsource/ibm-plex-mono/latin-400.css";
+@import "@fontsource/ibm-plex-mono/latin-500.css";
 
 :root {
-  /* cor — paleta "tinta de razão" */
-  --bg: #181c18;
-  --surface: #1f2420;
-  --surface-raised: #262c25;
-  --border: #343b31;
-  --border-soft: #2a3026;
+  /* cor — paleta "Barro cru" do manual da marca (tema claro, padrão) */
+  --bg: #fbf4eb;            /* creme */
+  --surface: #ffffff;
+  --surface-raised: #f4e7d8; /* ocre areia clareado */
+  --border: #e6d8c6;
+  --border-soft: #efe4d6;
 
-  --text-primary: #ede8dc;
-  --text-secondary: #9c9a8c;
-  --text-tertiary: #6b6a5f;
+  --text-primary: #231814;  /* grafite */
+  --text-secondary: #6b564b;
+  --text-tertiary: #7a655a;
 
-  --accent: #8fae85;       /* verde-sálvia — ação primária */
-  --accent-strong: #a8c49d;
-  --gold: #c9a24b;         /* selo / destaque de segurança */
-  --danger: #c97456;       /* erro — terracota apagado, não vermelho puro */
-  --danger-soft: color-mix(in srgb, var(--danger) 75%, transparent);
+  --accent: #cf6139;        /* terracota — foco, aba ativa, seleção, alertas */
+  --accent-strong: #692e1c; /* barro queimado — links e texto de destaque */
+  /* terracota escurecido: o terracota puro com texto creme fica em 3,5:1,
+     abaixo do WCAG AA (4,5:1) para texto de 16 px */
+  --button-primary-bg: #b5522e;
+  --button-primary-bg-hover: #692e1c;
+  --button-primary-text: #fbf4eb;
 
-  /* tipografia */
-  --font-display: "Fraunces", Georgia, serif;
-  --font-body: "IBM Plex Sans", -apple-system, sans-serif;
+  --danger: #692e1c;        /* erro — barro queimado, apoiado no texto da mensagem */
+  --success: #566f37;       /* mato escurecido — o mato puro não tem contraste como texto */
+  --income: #566f37;
+  --income-fill: #82a65b;   /* mato */
+  --expense: #a8432e;
+  --expense-soft: color-mix(in srgb, var(--expense) 60%, transparent);
+
+  --shadow: rgba(35, 24, 20, 0.16);
+  --overlay: rgba(35, 24, 20, 0.5);
+
+  /* tipografia — Bricolage fala, Instrument Sans explica, Plex Mono mede */
+  --font-display: "Bricolage Grotesque", -apple-system, sans-serif;
+  --font-body: "Instrument Sans", -apple-system, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
 
-  --radius: 3px;
+  --radius: 8px;
 }
 
-:root[data-theme="light"] {
-  /* cor — paleta "tinta de razão" (variante clara) */
-  --bg: #f5f3ec;
-  --surface: #ffffff;
-  --surface-raised: #faf8f2;
-  --border: #d8d4c5;
-  --border-soft: #e5e1d2;
+:root[data-theme="dark"] {
+  /* cor — paleta "Barro cru" sobre grafite (como a versão invertida da marca) */
+  --bg: #231814;            /* grafite */
+  --surface: #2e211b;
+  --surface-raised: #3a2a22;
+  --border: #4a3629;
+  --border-soft: #3a2a22;
 
-  --text-primary: #1f2420;
-  --text-secondary: #5c5a4d;
-  --text-tertiary: #8a887a;
+  --text-primary: #fbf4eb;  /* creme */
+  --text-secondary: #c9b6a6;
+  --text-tertiary: #a89282;
 
-  --accent: #7fa374;
-  --accent-strong: #4a6640;
-  --gold: #a17f2e;
-  --danger: #a85a3d;
+  --accent-strong: #ebcba8; /* ocre areia — barro queimado some sobre grafite */
+
+  /* barro queimado não tem contraste sobre grafite: erro e despesa usam terracota clareado */
+  --danger: #e8806a;
+  --success: #82a65b;
+  --income: #82a65b;
+  --expense: #e8806a;
+
+  --shadow: rgba(0, 0, 0, 0.35);
+  --overlay: rgba(0, 0, 0, 0.6);
 }
 
 * { box-sizing: border-box; }
@@ -59,11 +84,12 @@ html, body {
   background: var(--bg);
   color: var(--text-primary);
   font-family: var(--font-body);
-  font-size: 14px;
+  font-size: 16px;
+  line-height: 1.55;
 }
 
 #app {
-  width: 600px;
+  width: 720px;
   margin: 0 auto;
   padding: 28px 32px 32px;
   position: relative;
@@ -82,44 +108,24 @@ html, body {
   margin-bottom: 28px;
 }
 
+/* assinatura da marca: 38 px é o tamanho confortável do manual (mínimo 24 px) */
 .brand h1 {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 30px;
-  letter-spacing: -0.01em;
   margin: 0;
-  color: var(--text-primary);
+  line-height: 0;
 }
 
+.brand-lockup {
+  display: block;
+  width: auto;
+  height: 38px;
+}
+
+/* respiro mínimo de ½x (metade da altura do tijolo) em volta da assinatura */
 .brand p {
-  margin: 4px 0 0;
-  font-size: 12.5px;
+  margin: 10px 0 0;
+  font-size: 13px;
   color: var(--text-tertiary);
   letter-spacing: 0.01em;
-}
-
-/* selo "100% local" — elemento de assinatura */
-.stamp {
-  width: 60px;
-  height: 60px;
-  border: 1px solid var(--gold);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  transform: rotate(6deg);
-  flex-shrink: 0;
-  opacity: 0.85;
-}
-
-.stamp span {
-  font-family: var(--font-mono);
-  font-size: 8.5px;
-  font-weight: 500;
-  letter-spacing: 0.04em;
-  color: var(--gold);
-  line-height: 1.35;
 }
 
 /* ---------- banner de atualização ---------- */
@@ -129,19 +135,19 @@ html, body {
   align-items: center;
   justify-content: space-between;
   background: var(--surface);
-  border: 1px solid var(--gold);
+  border: 1px solid var(--accent);
   border-radius: var(--radius);
   padding: 9px 14px;
   margin-bottom: 16px;
-  font-size: 12.5px;
+  font-size: 13px;
 }
 .update-banner.visible { display: flex; }
 .update-banner button {
   background: none;
   border: none;
-  color: var(--gold);
+  color: var(--accent-strong);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 13px;
   text-decoration: underline;
   cursor: pointer;
   padding: 0;
@@ -152,9 +158,9 @@ html, body {
 .link-button {
   background: none;
   border: none;
-  color: var(--gold);
+  color: var(--accent-strong);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 13px;
   text-decoration: underline;
   cursor: pointer;
   padding: 0;
@@ -198,7 +204,7 @@ html, body {
 }
 .icon-btn-labeled span {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 13px;
 }
 .icon-btn svg { display: block; }
 
@@ -214,8 +220,8 @@ html, body {
 
 .section-label {
   font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.1em;
+  font-size: 13px;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--text-tertiary);
   margin: 0 0 12px;
@@ -230,7 +236,6 @@ html, body {
 .section-header .section-label { margin-bottom: 0; }
 
 .section-label-hint {
-  opacity: 0.65;
   font-weight: 400;
 }
 
@@ -258,7 +263,7 @@ html, body {
 
 .field label {
   display: block;
-  font-size: 11px;
+  font-size: 13px;
   color: var(--text-tertiary);
   margin-bottom: 6px;
   letter-spacing: 0.02em;
@@ -275,11 +280,13 @@ select {
   border-radius: var(--radius);
   color: var(--text-primary);
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: 14px;
   padding: 8px 10px;
   outline: none;
   transition: border-color 0.15s, background-color 0.25s ease, color 0.25s ease;
 }
+
+input::placeholder { color: var(--text-tertiary); opacity: 1; }
 
 input:focus, select:focus, select[aria-expanded="true"] {
   border-color: var(--accent);
@@ -307,7 +314,7 @@ select {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 8px 24px var(--shadow);
 }
 
 .select-picker-option {
@@ -316,7 +323,7 @@ select {
   border-radius: var(--radius);
   color: var(--text-primary);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 14px;
   text-align: left;
   white-space: nowrap;
   padding: 6px 10px;
@@ -336,7 +343,7 @@ select {
   align-items: center;
   gap: 10px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 16px;
   color: var(--text-secondary);
   user-select: none;
 }
@@ -373,23 +380,20 @@ select {
 
 .btn-primary {
   width: 100%;
-  background: var(--accent);
-  color: #161917;
+  background: var(--button-primary-bg);
+  color: var(--button-primary-text);
   border: none;
   border-radius: var(--radius);
   font-family: var(--font-body);
   font-weight: 600;
-  font-size: 14px;
+  font-size: 16px;
   padding: 13px;
   cursor: pointer;
   transition: background 0.15s, opacity 0.15s, color 0.25s ease;
   margin-bottom: 12px;
 }
-.btn-primary:hover:not(:disabled) { background: var(--accent-strong); }
+.btn-primary:hover:not(:disabled) { background: var(--button-primary-bg-hover); }
 .btn-primary:disabled { opacity: 0.5; cursor: default; }
-
-:root[data-theme="light"] .btn-primary { color: #1c1712; }
-:root[data-theme="light"] .btn-primary:hover:not(:disabled) { background: #93b989; }
 
 /* ---------- abas ---------- */
 
@@ -406,7 +410,7 @@ select {
   border-bottom: 2px solid transparent;
   color: var(--text-tertiary);
   font-family: var(--font-body);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 600;
   padding: 0 0 10px;
   cursor: pointer;
@@ -423,11 +427,11 @@ select {
 
 .empty-state {
   color: var(--text-tertiary);
-  font-size: 13px;
+  font-size: 16px;
   margin: 0;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 760px) {
   #app { width: 100%; padding: 20px; }
   .field-row { grid-template-columns: 1fr; }
 }

@@ -11,7 +11,7 @@
   padding: 0;
   text-align: left;
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-primary);
 }
 
@@ -32,8 +32,8 @@
 
 .file-action {
   flex-shrink: 0;
-  color: var(--accent);
-  font-size: 12px;
+  color: var(--accent-strong);
+  font-size: 13px;
   letter-spacing: 0.02em;
 }
 
@@ -41,9 +41,9 @@
 
 .log {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-secondary);
-  height: 110px;
+  height: 120px;
   overflow-y: auto;
   line-height: 1.7;
   white-space: pre-wrap;
@@ -51,4 +51,4 @@
 .log .entry { display: block; }
 .log .ts { color: var(--text-tertiary); margin-right: 6px; }
 .log .entry.error { color: var(--danger); }
-.log .entry.success { color: var(--accent-strong); }
+.log .entry.success { color: var(--success); }
