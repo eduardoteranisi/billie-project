@@ -263,6 +263,7 @@
           <select id="transactions-group-mode">
             <option value="none">Nenhum</option>
             <option value="bank">Por banco</option>
+            <option value="category">Por categoria</option>
             <option value="day">Por dia</option>
           </select>
         </div>
@@ -297,6 +298,15 @@
                 <div class="field">
                   <label for="income-add-category">Categoria</label>
                   <select id="income-add-category"></select>
+                </div>
+                <div class="field">
+                  <label for="income-add-bank">Banco</label>
+                  <select id="income-add-bank">
+                    <option value="">Outros / Não identificado</option>
+                    <option>Nubank</option>
+                    <option>XP / Rico</option>
+                    <option>Santander</option>
+                  </select>
                 </div>
                 <div class="field">
                   <label for="income-add-amount">Valor</label>
@@ -334,6 +344,15 @@
                 <div class="field">
                   <label for="expense-add-category">Categoria</label>
                   <select id="expense-add-category"></select>
+                </div>
+                <div class="field">
+                  <label for="expense-add-bank">Banco</label>
+                  <select id="expense-add-bank">
+                    <option value="">Outros / Não identificado</option>
+                    <option>Nubank</option>
+                    <option>XP / Rico</option>
+                    <option>Santander</option>
+                  </select>
                 </div>
                 <div class="field">
                   <label for="expense-add-amount">Valor</label>

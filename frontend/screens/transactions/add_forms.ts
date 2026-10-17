@@ -2,6 +2,7 @@ import {
   classifyTransactionDescription,
   UNCATEGORIZED_CATEGORY_ID,
   UNCATEGORIZED_INCOME_CATEGORY_ID,
+  type Bank,
   type Category,
   type CategoryRule,
 } from "@billie/parser";
@@ -18,6 +19,7 @@ export function initTransactionAddForms(): void {
   const incomeAddDate = getRequiredElementById<HTMLInputElement>("income-add-date");
   const incomeAddDescription = getRequiredElementById<HTMLInputElement>("income-add-description");
   const incomeAddCategory = getRequiredElementById<HTMLSelectElement>("income-add-category");
+  const incomeAddBank = getRequiredElementById<HTMLSelectElement>("income-add-bank");
   const incomeAddAmount = getRequiredElementById<HTMLInputElement>("income-add-amount");
   const btnAddExpense = getRequiredElementById<HTMLButtonElement>("btn-add-expense");
   const expenseAddPopover = getRequiredElementById<HTMLDivElement>("expense-add-popover");
@@ -25,6 +27,7 @@ export function initTransactionAddForms(): void {
   const expenseAddDate = getRequiredElementById<HTMLInputElement>("expense-add-date");
   const expenseAddDescription = getRequiredElementById<HTMLInputElement>("expense-add-description");
   const expenseAddCategory = getRequiredElementById<HTMLSelectElement>("expense-add-category");
+  const expenseAddBank = getRequiredElementById<HTMLSelectElement>("expense-add-bank");
   const expenseAddAmount = getRequiredElementById<HTMLInputElement>("expense-add-amount");
 
   let expenseCategoryRules: CategoryRule[] = [];
@@ -64,6 +67,7 @@ export function initTransactionAddForms(): void {
       description,
       amount,
       categoryId: incomeAddCategory.value,
+      ...bankFromSelect(incomeAddBank),
     };
     await saveIncome(entry);
 
@@ -86,6 +90,7 @@ export function initTransactionAddForms(): void {
       description,
       amount,
       categoryId: expenseAddCategory.value,
+      ...bankFromSelect(expenseAddBank),
       origin: "manual",
     };
     await saveExpenseList([entry]);
@@ -129,6 +134,11 @@ function fillCategorySelect(select: HTMLSelectElement, categories: Category[]): 
   const previousValue = select.value;
   select.innerHTML = buildCategoryOptionsHtml(categories, previousValue);
   if (!select.value && categories.length > 0) select.value = categories[0].id;
+}
+
+// a opção vazia é "Outros / Não identificado": o lançamento fica sem banco, como nas listas
+function bankFromSelect(select: HTMLSelectElement): { bank?: Bank } {
+  return select.value ? { bank: select.value as Bank } : {};
 }
 
 function wirePopover(trigger: HTMLButtonElement, popover: HTMLElement, onOpen?: () => void): void {
