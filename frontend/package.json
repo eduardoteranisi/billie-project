@@ -9,7 +9,8 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
+  "private": true,
   "dependencies": {
     "@billie/parser": "*",
     "@fontsource/bricolage-grotesque": "5.3.0",

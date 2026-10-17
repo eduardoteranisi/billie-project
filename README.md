@@ -127,6 +127,8 @@ To keep the codebase consistent, follow these conventions when adding folders, f
 Pull requests are welcome! If you want to add support for a new bank's PDF format, feel free to open an issue or submit a PR. Please follow the [naming conventions](#-naming-conventions) above.
 
 ## 📄 License
-This project is licensed under the MIT License - see the LICENSE file for details.
+The source code is licensed under the MIT License - see the LICENSE file for details.
+
+The logo and icon files (`frontend/public/brand/`, `src-tauri/icons/`) are MIT-licensed too, but the Billie name and logo are trademarks: the MIT License does not grant the right to use them to identify another product. Forks are welcome, but a modified version must ship under its own name and logo - see [TRADEMARKS.md](TRADEMARKS.md).
 
 Developed by [Eduardo Teranisi](https://github.com/eduardoteranisi).
