@@ -70,10 +70,6 @@
   background: var(--expense);
 }
 
-.category-list.category-list-expense .category-bar-fill-variable {
-  background: var(--expense-soft);
-}
-
 @media (max-width: 760px) {
   .dre-cards { grid-template-columns: 1fr 1fr; }
   .category-breakdown-columns { grid-template-columns: 1fr; }

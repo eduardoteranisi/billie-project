@@ -34,7 +34,6 @@
   --income: #566f37;
   --income-fill: #82a65b;   /* mato */
   --expense: #a8432e;
-  --expense-soft: color-mix(in srgb, var(--expense) 60%, transparent);
 
   --shadow: rgba(35, 24, 20, 0.16);
   --overlay: rgba(35, 24, 20, 0.5);

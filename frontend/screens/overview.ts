@@ -108,14 +108,13 @@ function renderCategoryBreakdown(
   container.innerHTML = summaries
     .map((category) => {
       const barWidth = periodTotal > 0 ? Math.round((category.total / periodTotal) * 100) : 0;
-      const fillGroupClass = category.group ? ` category-bar-fill-${escapeHtmlSpecialCharacters(category.group)}` : "";
       return `
         <div class="category-row">
           <div class="category-row-header">
             <span>${escapeHtmlSpecialCharacters(category.label)}</span>
             <span>${formatBrlCurrency(category.total)}</span>
           </div>
-          <div class="category-bar"><div class="category-bar-fill${fillGroupClass}" style="width: ${barWidth}%"></div></div>
+          <div class="category-bar"><div class="category-bar-fill" style="width: ${barWidth}%"></div></div>
         </div>
       `;
     })
