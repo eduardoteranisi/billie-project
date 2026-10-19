@@ -79,13 +79,13 @@ const THEME_STORAGE_KEY = "billie:tema";
 
 function loadTheme() {
   const saved = localStorage.getItem(THEME_STORAGE_KEY);
-  const theme = saved === "light" ? "light" : "dark";
+  const theme = saved === "dark" ? "dark" : "light";
   document.documentElement.dataset.theme = theme;
   updateThemeIcon(theme);
 }
 
 function toggleTheme() {
-  const current = document.documentElement.dataset.theme === "light" ? "light" : "dark";
+  const current = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
   const next = current === "light" ? "dark" : "light";
   document.documentElement.dataset.theme = next;
   localStorage.setItem(THEME_STORAGE_KEY, next);
@@ -121,5 +121,5 @@ checkForUpdates();
 initOverviewView();
 initCategoryManagerModal();
 initBackupModal();
-showView("invoice");
+showView("overview");
 log("Pronto para iniciar. Selecione a fatura em PDF ou CSV.");

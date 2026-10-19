@@ -42,18 +42,18 @@ export async function runPipeline(options: RunPipelineOptions): Promise<Pipeline
     transactions = removeCardBillPaymentList(transactions);
     const ignoredBillPaymentCount = extractedExpenseCount - transactions.length;
     if (ignoredBillPaymentCount > 0) {
-      onLog(`🧾 ${ignoredBillPaymentCount} pagamento(s) de fatura de cartão ignorado(s) para não duplicar as compras.`);
+      onLog(`${ignoredBillPaymentCount} pagamento(s) de fatura de cartão ignorado(s) para não duplicar as compras.`);
     }
 
-    onLog(`✅ Extração concluída: ${transactions.length} transações encontradas.`);
+    onLog(`Extração concluída: ${transactions.length} transações encontradas.`);
     if (income.length > 0) {
-      onLog(`💰 ${income.length} entradas de receita identificadas.`);
+      onLog(`${income.length} entradas de receita identificadas.`);
     }
-    onLog("🎉 Extração finalizada com sucesso!");
+    onLog("Extração finalizada com sucesso!");
     return { success: true, transactions, income: income.length > 0 ? income : undefined };
   } catch (error) {
     if (error instanceof CsvColumnMappingError) {
-      onLog("⚠️ Não foi possível identificar as colunas automaticamente.");
+      onLog("Não foi possível identificar as colunas automaticamente.");
       return {
         success: false,
         error: error.message,
@@ -62,7 +62,7 @@ export async function runPipeline(options: RunPipelineOptions): Promise<Pipeline
     }
 
     const message = error instanceof Error ? error.message : String(error);
-    onLog(`❌ Erro crítico: ${message}`);
+    onLog(`Erro crítico: ${message}`);
     return { success: false, error: message };
   }
 }

@@ -277,7 +277,7 @@ export function initInvoiceView(): void {
   function showManualColumnMapping(headers: string[]) {
     fillColumnMappingSelects(mappingSelects, headers);
     els.sectionInvoiceMapping.hidden = false;
-    log("⚠️ Não foi possível identificar as colunas automaticamente.", "error");
+    log("Não foi possível identificar as colunas automaticamente.", "error");
   }
 
   async function onConfirmMappingClick() {
