@@ -55,13 +55,13 @@
 
     <!-- ---------- abas ---------- -->
     <nav class="tabs">
-      <button type="button" class="tab active" id="tab-invoice" data-view="invoice">processar fatura</button>
-      <button type="button" class="tab" id="tab-overview" data-view="overview">controle</button>
+      <button type="button" class="tab active" id="tab-overview" data-view="overview">controle</button>
+      <button type="button" class="tab" id="tab-invoice" data-view="invoice">processar fatura</button>
       <button type="button" class="tab" id="tab-transactions" data-view="transactions">lançamentos</button>
     </nav>
 
     <!-- ---------- aba: processar fatura ---------- -->
-    <div id="view-invoice" class="view">
+    <div id="view-invoice" class="view" hidden>
 
       <!-- ---------- arquivo ---------- -->
       <section class="section">
@@ -134,7 +134,11 @@
     </div>
 
     <!-- ---------- aba: controle (visão geral) ---------- -->
-    <div id="view-overview" class="view" hidden>
+    <div id="view-overview" class="view">
+
+      <section class="section" id="overview-empty-hint" hidden>
+        <p class="empty-state">Ainda não há nada salvo. Importe uma fatura na aba processar fatura, ou um extrato pelo botão de importar em lançamentos.</p>
+      </section>
 
       <section class="section">
         <p class="section-label">período</p>

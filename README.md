@@ -22,7 +22,7 @@ Financial data is highly sensitive, and Billie was built from day one to respect
 * **💰 Controle de Gastos:** Categorizes transactions and manual entries into income/expenses, with automatic category classification and a period-over-period breakdown.
 * **🌗 Light/Dark Theme:** Toggle between themes from the header, with a smooth transition.
 * **🔄 Smart Updater:** Built-in background checker that notifies you whenever a new release is available on GitHub.
-* **💻 Minimal Interface:** A three-tab interface — *Processar Fatura* to parse a PDF bill, *Lançamentos* to import a CSV statement or add entries manually, and *Controle* to see the categorized income/expense breakdown — all in one app, no spreadsheets required.
+* **💻 Minimal Interface:** A three-tab interface — *controle* (the tab the app opens on) to see the categorized income/expense breakdown, *processar fatura* to parse a PDF or CSV bill, and *lançamentos* to import a statement or add entries manually — all in one app, no spreadsheets required.
 
 ---
 

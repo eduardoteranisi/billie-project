@@ -30,6 +30,7 @@ export function initOverviewView(): void {
   const resultCard = getRequiredElementById<HTMLParagraphElement>("dre-result");
   const expenseCategoryList = getRequiredElementById<HTMLDivElement>("category-list");
   const incomeCategoryList = getRequiredElementById<HTMLDivElement>("income-category-list");
+  const emptyHint = getRequiredElementById<HTMLElement>("overview-empty-hint");
 
   let expenses: StoredExpense[] = [];
   let income: StoredIncome[] = [];
@@ -52,6 +53,7 @@ export function initOverviewView(): void {
     categories = [...expenseCategories, ...incomeCategories];
 
     const periods = listAvailablePeriods(expenses, income);
+    emptyHint.hidden = periods.length > 0;
     periodSelect.innerHTML = periods
       .map((period) => `<option value="${escapeHtmlSpecialCharacters(period)}">${escapeHtmlSpecialCharacters(period)}</option>`)
       .join("");

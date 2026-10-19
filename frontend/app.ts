@@ -121,5 +121,5 @@ checkForUpdates();
 initOverviewView();
 initCategoryManagerModal();
 initBackupModal();
-showView("invoice");
+showView("overview");
 log("Pronto para iniciar. Selecione a fatura em PDF ou CSV.");
