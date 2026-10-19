@@ -33,7 +33,7 @@
   font-weight: 600;
   letter-spacing: -0.04em;
   margin: 0 0 8px;
-  color: var(--text-primary);
+  color: var(--accent-strong);
 }
 
 .modal-text {

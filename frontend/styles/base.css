@@ -21,6 +21,8 @@
 
   --accent: #cf6139;        /* terracota — foco, aba ativa, seleção, alertas */
   --accent-strong: #692e1c; /* barro queimado — links e texto de destaque */
+  /* grafite: barro queimado se confunde com o vermelho de despesa logo abaixo */
+  --dre-card-title: #231814;
   /* terracota escurecido: o terracota puro com texto creme fica em 3,5:1,
      abaixo do WCAG AA (4,5:1) para texto de 16 px */
   --button-primary-bg: #b5522e;
@@ -58,6 +60,7 @@
   --text-tertiary: #a89282;
 
   --accent-strong: #ebcba8; /* ocre areia — barro queimado some sobre grafite */
+  --dre-card-title: #ebcba8;
 
   /* barro queimado não tem contraste sobre grafite: erro e despesa usam terracota clareado */
   --danger: #e8806a;
@@ -219,11 +222,11 @@ html, body {
 }
 
 .section-label {
-  font-family: var(--font-mono);
-  font-size: 13px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  color: var(--accent-strong);
   margin: 0 0 12px;
 }
 
@@ -409,15 +412,16 @@ select {
   border: none;
   border-bottom: 2px solid transparent;
   color: var(--text-tertiary);
-  font-family: var(--font-body);
-  font-size: 16px;
+  font-family: var(--font-display);
+  font-size: 18px;
   font-weight: 600;
+  letter-spacing: -0.04em;
   padding: 0 0 10px;
   cursor: pointer;
 }
 
 .tab.active {
-  color: var(--text-primary);
+  color: var(--accent-strong);
   border-bottom-color: var(--accent);
 }
 

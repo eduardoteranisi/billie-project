@@ -55,9 +55,9 @@
 
     <!-- ---------- abas ---------- -->
     <nav class="tabs">
-      <button type="button" class="tab active" id="tab-invoice" data-view="invoice">Processar Fatura</button>
-      <button type="button" class="tab" id="tab-overview" data-view="overview">Controle</button>
-      <button type="button" class="tab" id="tab-transactions" data-view="transactions">Lançamentos</button>
+      <button type="button" class="tab active" id="tab-invoice" data-view="invoice">processar fatura</button>
+      <button type="button" class="tab" id="tab-overview" data-view="overview">controle</button>
+      <button type="button" class="tab" id="tab-transactions" data-view="transactions">lançamentos</button>
     </nav>
 
     <!-- ---------- aba: processar fatura ---------- -->
@@ -65,7 +65,7 @@
 
       <!-- ---------- arquivo ---------- -->
       <section class="section">
-        <p class="section-label">Arquivo <span class="section-label-hint">(PDF ou CSV)</span></p>
+        <p class="section-label">arquivo <span class="section-label-hint">(PDF ou CSV)</span></p>
         <button id="file-row" class="file-row empty" type="button">
           <span class="file-name" id="file-name">Nenhum arquivo selecionado</span>
           <span class="leader"></span>
@@ -76,7 +76,7 @@
 
       <!-- ---------- configurações da fatura ---------- -->
       <section class="section" id="section-pdf-details">
-        <p class="section-label">Detalhes da fatura</p>
+        <p class="section-label">detalhes da fatura</p>
         <div class="field-row">
           <div class="field">
             <label for="senha">Senha do PDF</label>
@@ -102,7 +102,7 @@
 
       <!-- ---------- mapeamento manual de colunas (csv, quando a detecção automática falha) ---------- -->
       <section class="section" id="section-invoice-mapping" hidden>
-        <p class="section-label">Mapeamento de colunas (CSV)</p>
+        <p class="section-label">mapeamento de colunas (CSV)</p>
         <p class="modal-text">Não conseguimos identificar automaticamente todas as colunas. Selecione manualmente:</p>
         <div class="field-row">
           <div class="field">
@@ -127,7 +127,7 @@
 
       <!-- ---------- log ---------- -->
       <section class="section">
-        <p class="section-label">Registro</p>
+        <p class="section-label">registro</p>
         <div id="log" class="log"></div>
       </section>
 
@@ -137,37 +137,37 @@
     <div id="view-overview" class="view" hidden>
 
       <section class="section">
-        <p class="section-label">Período</p>
+        <p class="section-label">período</p>
         <select id="overview-period"></select>
       </section>
 
       <section class="dre-cards">
         <div class="dre-card">
-          <p class="dre-card-label">Receita Total</p>
+          <p class="dre-card-label">receita total</p>
           <p class="dre-card-value" id="dre-income">R$ 0,00</p>
         </div>
         <div class="dre-card">
-          <p class="dre-card-label">Despesas Fixas</p>
+          <p class="dre-card-label">despesas fixas</p>
           <p class="dre-card-value negative" id="dre-fixed">R$ 0,00</p>
         </div>
         <div class="dre-card">
-          <p class="dre-card-label">Despesas Variáveis</p>
+          <p class="dre-card-label">despesas variáveis</p>
           <p class="dre-card-value negative" id="dre-variable">R$ 0,00</p>
         </div>
         <div class="dre-card">
-          <p class="dre-card-label">Resultado</p>
+          <p class="dre-card-label">resultado</p>
           <p class="dre-card-value" id="dre-result">R$ 0,00</p>
         </div>
       </section>
 
       <div class="category-breakdown-columns">
         <section class="section">
-          <p class="section-label">Gastos por categoria</p>
+          <p class="section-label">gastos por categoria</p>
           <div class="category-list category-list-expense" id="category-list"></div>
         </section>
 
         <section class="section">
-          <p class="section-label">Receitas por categoria</p>
+          <p class="section-label">receitas por categoria</p>
           <div class="category-list" id="income-category-list"></div>
         </section>
       </div>
@@ -271,13 +271,13 @@
       </div>
 
       <section class="section">
-        <p class="section-label">Período</p>
+        <p class="section-label">período</p>
         <select id="transactions-period"></select>
       </section>
 
       <section class="section">
         <div class="section-header">
-          <p class="section-label">Receitas do período</p>
+          <p class="section-label">receitas do período</p>
           <div class="popover-anchor">
             <button type="button" id="btn-add-income" class="icon-btn icon-btn-labeled" aria-label="Nova receita">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
@@ -323,7 +323,7 @@
 
       <section class="section">
         <div class="section-header">
-          <p class="section-label">Despesas do período</p>
+          <p class="section-label">despesas do período</p>
           <div class="popover-anchor">
             <button type="button" id="btn-add-expense" class="icon-btn icon-btn-labeled" aria-label="Nova despesa">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
@@ -446,7 +446,7 @@
     <!-- ---------- modal: confirmar salvar no controle de gastos ---------- -->
     <div id="modal-save-to-finance-store" class="modal-overlay" hidden>
       <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-save-to-finance-store-title">
-        <p id="modal-save-to-finance-store-title" class="modal-title">salvar no Controle?</p>
+        <p id="modal-save-to-finance-store-title" class="modal-title">salvar no controle?</p>
         <p class="modal-text">Deseja salvar essas transações no Controle de Gastos?</p>
         <div class="modal-actions">
           <button id="modal-save-to-finance-store-confirm" type="button" class="btn-primary">Salvar no Controle</button>
