@@ -564,6 +564,18 @@ describe("restoreBackupData", () => {
     await expect(restoreBackupData(backup)).rejects.toThrow("versão do arquivo de backup não suportada");
     expect(await listExpenses()).toEqual([]);
   });
+
+  it("recusa um backup com um item inválido sem gravar nenhum dos válidos", async () => {
+    const backup = {
+      ...(await exportBackupData()),
+      expenses: [buildExpense("a"), { ...buildExpense("b"), amount: "<img src=x onerror=alert(1)>" }],
+      income: [buildIncome("c")],
+    };
+
+    await expect(restoreBackupData(backup)).rejects.toThrow("despesa nº 2 está corrompida ou incompleta");
+    expect(await listExpenses()).toEqual([]);
+    expect(await listIncome()).toEqual([]);
+  });
 });
 
 describe("migração do banco", () => {

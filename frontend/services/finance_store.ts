@@ -9,8 +9,11 @@ import {
 import type { Bank, Category, CategoryGroup, CategoryRule } from "@billie/parser";
 import { BACKUP_SCHEMA_VERSION } from "../types";
 import type { BackupPayload, StoredExpense, StoredIncome } from "../types";
-import { convertLegacyBackupPayloadToCurrent, convertLegacyExpenseToStoredExpense } from "./legacy_data_conversion";
-import type { LegacyBackupPayload, LegacyStoredExpense } from "./legacy_data_conversion";
+import { readBackupPayload } from "./backup_validation";
+import { convertLegacyExpenseToStoredExpense } from "./legacy_data_conversion";
+import type { LegacyStoredExpense } from "./legacy_data_conversion";
+
+export { BackupValidationError } from "./backup_validation";
 
 export type CategoryType = "expense" | "income";
 
@@ -23,8 +26,6 @@ const LEGACY_EXPENSES_STORE = "transactions";
 const INCOME_STORE = "income";
 const CATEGORIES_STORE = "categories";
 const CATEGORY_RULES_STORE = "categoryRules";
-
-const LEGACY_BACKUP_SCHEMA_VERSION = 1;
 
 type StoredEntry = StoredExpense | StoredIncome;
 type EntryStoreName = typeof EXPENSES_STORE | typeof INCOME_STORE;
@@ -379,8 +380,6 @@ export async function deleteCategory(id: string): Promise<void> {
   await runInStore(CATEGORIES_STORE, "readwrite", (store) => store.delete(id));
 }
 
-export class BackupValidationError extends Error {}
-
 export async function exportBackupData(): Promise<BackupPayload> {
   await ensureCategoriesSeeded();
 
@@ -403,41 +402,25 @@ export async function exportBackupData(): Promise<BackupPayload> {
 
 export async function restoreBackupData(payload: unknown): Promise<void> {
   const backup = readBackupPayload(payload);
+  const database = await openDatabase();
 
-  for (const expense of backup.expenses) {
-    await runInStore(EXPENSES_STORE, "readwrite", (store) => store.put(expense));
-  }
-  for (const entry of backup.income) {
-    await runInStore(INCOME_STORE, "readwrite", (store) => store.put(entry));
-  }
-  for (const category of backup.categories) {
-    await runInStore(CATEGORIES_STORE, "readwrite", (store) => store.put(category));
-  }
-  for (const rule of backup.categoryRules) {
-    await runInStore(CATEGORY_RULES_STORE, "readwrite", (store) => store.put(rule));
-  }
-}
+  // uma transação só: se qualquer gravação falhar, nada do backup fica no banco
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(
+      [EXPENSES_STORE, INCOME_STORE, CATEGORIES_STORE, CATEGORY_RULES_STORE],
+      "readwrite"
+    );
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error);
 
-// aceita o formato atual e o da versão 1 (despesas na chave `transactions`, com `merchant`), convertendo-o
-function readBackupPayload(payload: unknown): BackupPayload {
-  if (typeof payload !== "object" || payload === null) {
-    throw new BackupValidationError("arquivo de backup inválido");
-  }
-
-  const candidate = payload as Record<string, unknown>;
-  const expensesKey = backupExpensesKey(candidate.schemaVersion);
-  const hasEveryList = [expensesKey, "income", "categories", "categoryRules"].every((key) =>
-    Array.isArray(candidate[key])
-  );
-  if (!hasEveryList) throw new BackupValidationError("arquivo de backup inválido");
-
-  return candidate.schemaVersion === LEGACY_BACKUP_SCHEMA_VERSION
-    ? convertLegacyBackupPayloadToCurrent(payload as LegacyBackupPayload)
-    : (payload as BackupPayload);
-}
-
-function backupExpensesKey(schemaVersion: unknown): "expenses" | "transactions" {
-  if (schemaVersion === BACKUP_SCHEMA_VERSION) return "expenses";
-  if (schemaVersion === LEGACY_BACKUP_SCHEMA_VERSION) return "transactions";
-  throw new BackupValidationError("versão do arquivo de backup não suportada");
+    const expensesStore = transaction.objectStore(EXPENSES_STORE);
+    for (const expense of backup.expenses) expensesStore.put(expense);
+    const incomeStore = transaction.objectStore(INCOME_STORE);
+    for (const entry of backup.income) incomeStore.put(entry);
+    const categoriesStore = transaction.objectStore(CATEGORIES_STORE);
+    for (const category of backup.categories) categoriesStore.put(category);
+    const categoryRulesStore = transaction.objectStore(CATEGORY_RULES_STORE);
+    for (const rule of backup.categoryRules) categoryRulesStore.put(rule);
+  });
 }

@@ -4,6 +4,9 @@ import { notifyStoredDataUpdated } from "../services/stored_data_events";
 import { getRequiredElementById } from "../utils/dom_helpers";
 import { downloadTextFile } from "../utils/file_helpers";
 
+// bem acima de qualquer backup real; evita que um arquivo enorme trave o app no JSON.parse
+const MAX_BACKUP_FILE_BYTES = 50 * 1024 * 1024;
+
 export function initBackupModal(): void {
   const btnOpen = getRequiredElementById<HTMLButtonElement>("btn-backup");
   const modal = getRequiredElementById<HTMLDivElement>("modal-backup");
@@ -35,6 +38,11 @@ export function initBackupModal(): void {
     if (!file) return;
 
     backupStatus.hidden = true;
+
+    if (file.size > MAX_BACKUP_FILE_BYTES) {
+      showBackupStatus("Arquivo grande demais para ser um backup do Billie.", "error");
+      return;
+    }
 
     let payload: unknown;
     try {
