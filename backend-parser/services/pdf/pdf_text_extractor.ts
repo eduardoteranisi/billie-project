@@ -24,6 +24,10 @@ export async function extractPdfLines(pdfBytes: Uint8Array, password?: string): 
       data: pdfBytes,
       password,
       standardFontDataUrl: STANDARD_FONT_DATA_URL,
+      // Só extraímos texto: fontes embutidas não precisam virar FontFace no documento
+      // (a superfície da CVE-2024-4367) e formulários XFA nunca são lidos.
+      disableFontFace: true,
+      enableXfa: false,
       // O pdfjs-dist 6 removeu esta opção (não usa mais eval), então ela não existe nos tipos.
       // Mantida como proteção caso o pdfjs-dist volte a uma versão que ainda a aceite.
       // @ts-expect-error
