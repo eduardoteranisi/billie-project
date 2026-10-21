@@ -1,4 +1,4 @@
-import { isTauri } from "@tauri-apps/api/core";
+import { invoke, isTauri } from "@tauri-apps/api/core";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { check, type Update } from "@tauri-apps/plugin-updater";
 
@@ -51,5 +51,12 @@ export function openExternalLink(url: string): void {
     return;
   }
 
-  window.open(url, "_blank");
+  // No app, o WebView não abre janelas (on_new_window em lib.rs): o link vai para o navegador do sistema
+  // pelo plugin opener, cuja capability só aceita a página de Releases. É a mesma chamada que o openUrl do
+  // @tauri-apps/plugin-opener faz, sem trazer o pacote (que exige outra versão do @tauri-apps/api).
+  if (isTauri()) {
+    void invoke("plugin:opener|open_url", { url }).catch(() => {});
+  } else {
+    window.open(url, "_blank");
+  }
 }
