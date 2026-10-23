@@ -9,4 +9,10 @@ describe("formatBrlCurrency", () => {
   it("mantém o sinal de valores negativos", () => {
     expect(formatBrlCurrency(-10)).toBe("-R$ 10,00");
   });
+
+  it("nunca devolve o texto original de um valor que não é número", () => {
+    const notANumber = "<img src=x onerror=alert(1)>" as unknown as number;
+
+    expect(formatBrlCurrency(notANumber)).toBe("R$\u00a0NaN");
+  });
 });
