@@ -2,7 +2,7 @@
   <img src="frontend/public/brand/brand_lockup_primary.svg" alt="Billie" width="280">
 </p>
 
-# Billie - Local Financial Helper
+# Your Local Financial Helper
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
 
