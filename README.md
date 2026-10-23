@@ -1,4 +1,8 @@
-# Billie - Local Financial Helper
+<p align="center">
+  <img src="frontend/public/brand/brand_lockup_primary.svg" alt="Billie" width="280">
+</p>
+
+# Your Local Financial Helper
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
 
@@ -23,6 +27,12 @@ Financial data is highly sensitive, and Billie was built from day one to respect
 * **🌗 Light/Dark Theme:** Toggle between themes from the header, with a smooth transition.
 * **🔄 Smart Updater:** Built-in background checker that notifies you whenever a new release is available on GitHub.
 * **💻 Minimal Interface:** A three-tab interface — *controle* (the tab the app opens on) to see the categorized income/expense breakdown, *processar fatura* to parse a PDF or CSV bill, and *lançamentos* to import a statement or add entries manually — all in one app, no spreadsheets required.
+
+---
+
+## ⚠️ Known Issues
+
+* **Re-importing a statement imported before v2.2.0 duplicates its entries.** Entries saved by v2.1.0 or earlier keep an id computed with an older formula, so importing the same PDF/CSV again adds them a second time instead of recognizing them. The duplicates are flagged by the possible-duplicates notice in *lançamentos* and can be deleted manually. Statements imported for the first time are not affected.
 
 ---
 
