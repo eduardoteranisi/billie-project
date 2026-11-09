@@ -65,12 +65,22 @@
 
       <!-- ---------- arquivo ---------- -->
       <section class="section">
-        <p class="section-label">arquivo <span class="section-label-hint">(PDF ou CSV)</span></p>
-        <button id="file-row" class="file-row empty" type="button">
-          <span class="file-name" id="file-name">Nenhum arquivo selecionado</span>
-          <span class="leader"></span>
-          <span class="file-action" id="file-action-label">Procurar fatura</span>
-        </button>
+        <p class="section-label">arquivo</p>
+        <div id="file-drop-zone" class="file-drop-zone">
+          <button type="button" id="file-drop-prompt" class="file-drop-prompt">
+            <span class="file-drop-title">Clique para procurar a fatura</span>
+            <span class="file-drop-hint">PDF ou CSV</span>
+          </button>
+          <div id="file-selected" class="file-selected" hidden>
+            <span class="file-type-badge" id="file-type-badge"></span>
+            <span class="file-selected-info">
+              <span class="file-name" id="file-name"></span>
+              <span class="file-size" id="file-size"></span>
+            </span>
+            <button type="button" id="btn-change-file" class="file-text-button">Trocar arquivo</button>
+            <button type="button" id="btn-remove-file" class="file-text-button">Remover</button>
+          </div>
+        </div>
         <input type="file" id="file-input" accept=".csv,text/csv,.pdf,application/pdf" hidden />
       </section>
 

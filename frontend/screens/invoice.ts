@@ -10,7 +10,7 @@ import { convertSavedCsvColumnsToCurrent } from "../services/legacy_data_convers
 import type { StoredExpense } from "../types";
 import { fillColumnMappingSelects, readColumnMappingSelects } from "../components/column_mapping_form";
 import { escapeHtmlSpecialCharacters, getRequiredElementById } from "../utils/dom_helpers";
-import { downloadTextFile, isPdf } from "../utils/file_helpers";
+import { downloadTextFile, formatFileSize, isPdf } from "../utils/file_helpers";
 
 const CSV_COLUMNS_STORAGE_KEY = "billie:csv-colunas";
 const OLDEST_SELECTABLE_YEAR = 2021;
@@ -35,8 +35,13 @@ export function log(message: string, type: "info" | "error" | "success" = "info"
 
 export function initInvoiceView(): void {
   const els = {
-    fileRow: getRequiredElementById<HTMLButtonElement>("file-row"),
+    fileDropPrompt: getRequiredElementById<HTMLButtonElement>("file-drop-prompt"),
+    fileSelected: getRequiredElementById<HTMLDivElement>("file-selected"),
+    fileTypeBadge: getRequiredElementById<HTMLSpanElement>("file-type-badge"),
     fileName: getRequiredElementById<HTMLSpanElement>("file-name"),
+    fileSize: getRequiredElementById<HTMLSpanElement>("file-size"),
+    btnChangeFile: getRequiredElementById<HTMLButtonElement>("btn-change-file"),
+    btnRemoveFile: getRequiredElementById<HTMLButtonElement>("btn-remove-file"),
     fileInput: getRequiredElementById<HTMLInputElement>("file-input"),
 
     passwordField: getRequiredElementById<HTMLDivElement>("field-pdf-password"),
@@ -73,6 +78,7 @@ export function initInvoiceView(): void {
 
   let selectedFile: File | null = null;
   let pendingCsvText: string | null = null;
+  let isProcessing = false;
 
   fillYearOptions(els.year);
   loadCsvColumnsConfig();
@@ -91,21 +97,50 @@ export function initInvoiceView(): void {
 
   function onFileInputChange() {
     const file = els.fileInput.files?.[0];
+    // Limpa o input para que escolher de novo o mesmo arquivo dispare "change" outra vez.
+    els.fileInput.value = "";
     if (!file) return;
 
-    selectedFile = file;
     registerSelectedFile(file);
   }
 
   function registerSelectedFile(file: File) {
+    selectedFile = file;
+    els.fileTypeBadge.textContent = isPdf(file) ? "PDF" : "CSV";
     els.fileName.textContent = file.name;
-    els.fileRow.classList.remove("empty");
+    els.fileName.title = file.name;
+    els.fileSize.textContent = formatFileSize(file.size);
+    els.fileDropPrompt.hidden = true;
+    els.fileSelected.hidden = false;
+
+    resetProcessingState();
+    showOnlyFieldsForFileType(file);
+    log(`Arquivo selecionado: ${file.name}`);
+  }
+
+  function removeSelectedFile() {
+    selectedFile = null;
+    els.fileSelected.hidden = true;
+    els.fileDropPrompt.hidden = false;
+    els.passwordField.hidden = false;
+    els.yearField.hidden = false;
+
+    resetProcessingState();
+    els.fileDropPrompt.focus();
+  }
+
+  function resetProcessingState() {
     els.sectionInvoiceMapping.hidden = true;
     pendingCsvText = null;
     els.btnProcess.textContent = PROCESS_BUTTON_LABEL;
     updateProcessButton();
-    showOnlyFieldsForFileType(file);
-    log(`Arquivo selecionado: ${file.name}`);
+  }
+
+  function updateProcessButton() {
+    els.btnProcess.disabled = isProcessing || selectedFile === null;
+    // Trocar o arquivo no meio do processamento misturaria o resultado de um com o estado do outro.
+    els.btnChangeFile.disabled = isProcessing;
+    els.btnRemoveFile.disabled = isProcessing;
   }
 
   // Senha e ano só valem para PDF: o CSV não é criptografado e já traz o ano em cada data.
@@ -113,10 +148,6 @@ export function initInvoiceView(): void {
     const pdfSelected = isPdf(file);
     els.passwordField.hidden = !pdfSelected;
     els.yearField.hidden = !pdfSelected;
-  }
-
-  function updateProcessButton() {
-    els.btnProcess.disabled = selectedFile === null;
   }
 
   function loadCsvColumnsConfig() {
@@ -193,7 +224,8 @@ export function initInvoiceView(): void {
     const file = selectedFile;
     if (!file) return;
 
-    els.btnProcess.disabled = true;
+    isProcessing = true;
+    updateProcessButton();
     els.btnProcess.textContent = "Processando...";
     els.sectionInvoiceMapping.hidden = true;
     log("Processando fatura...");
@@ -209,6 +241,7 @@ export function initInvoiceView(): void {
       log(`Erro ao processar: ${error}`, "error");
       els.btnProcess.textContent = "Tentar novamente";
     } finally {
+      isProcessing = false;
       updateProcessButton();
     }
   }
@@ -308,7 +341,9 @@ export function initInvoiceView(): void {
 
 
   function bindEvents() {
-    els.fileRow.addEventListener("click", () => els.fileInput.click());
+    els.fileDropPrompt.addEventListener("click", () => els.fileInput.click());
+    els.btnChangeFile.addEventListener("click", () => els.fileInput.click());
+    els.btnRemoveFile.addEventListener("click", removeSelectedFile);
     els.fileInput.addEventListener("change", onFileInputChange);
     els.btnProcess.addEventListener("click", processInvoice);
 
