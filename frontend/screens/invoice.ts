@@ -14,6 +14,7 @@ import { downloadTextFile, isPdf } from "../utils/file_helpers";
 
 const CSV_COLUMNS_STORAGE_KEY = "billie:csv-colunas";
 const OLDEST_SELECTABLE_YEAR = 2021;
+const PROCESS_BUTTON_LABEL = "Processar fatura";
 
 export function log(message: string, type: "info" | "error" | "success" = "info") {
   const logEl = getRequiredElementById<HTMLDivElement>("log");
@@ -73,6 +74,7 @@ export function initInvoiceView(): void {
 
   fillYearOptions(els.year);
   loadCsvColumnsConfig();
+  updateProcessButton();
   bindEvents();
 
   function fillYearOptions(select: HTMLSelectElement) {
@@ -96,7 +98,15 @@ export function initInvoiceView(): void {
   function registerSelectedFile(name: string) {
     els.fileName.textContent = name;
     els.fileRow.classList.remove("empty");
+    els.sectionInvoiceMapping.hidden = true;
+    pendingCsvText = null;
+    els.btnProcess.textContent = PROCESS_BUTTON_LABEL;
+    updateProcessButton();
     log(`Arquivo selecionado: ${name}`);
+  }
+
+  function updateProcessButton() {
+    els.btnProcess.disabled = selectedFile === null;
   }
 
   function loadCsvColumnsConfig() {
@@ -170,10 +180,8 @@ export function initInvoiceView(): void {
   }
 
   async function processInvoice() {
-    if (!selectedFile) {
-      log("Nenhum arquivo selecionado.", "error");
-      return;
-    }
+    const file = selectedFile;
+    if (!file) return;
 
     els.btnProcess.disabled = true;
     els.btnProcess.textContent = "Processando...";
@@ -181,17 +189,17 @@ export function initInvoiceView(): void {
     log("Processando fatura...");
 
     try {
-      if (isPdf(selectedFile)) {
-        await processPdfFile(selectedFile);
+      if (isPdf(file)) {
+        await processPdfFile(file);
       } else {
-        pendingCsvText = await selectedFile.text();
+        pendingCsvText = await file.text();
         await processCsvText(pendingCsvText, undefined);
       }
     } catch (error) {
       log(`Erro ao processar: ${error}`, "error");
       els.btnProcess.textContent = "Tentar novamente";
     } finally {
-      els.btnProcess.disabled = false;
+      updateProcessButton();
     }
   }
 
