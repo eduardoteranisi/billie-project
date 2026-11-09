@@ -10,18 +10,11 @@ import { convertSavedCsvColumnsToCurrent } from "../services/legacy_data_convers
 import type { StoredExpense } from "../types";
 import { fillColumnMappingSelects, readColumnMappingSelects } from "../components/column_mapping_form";
 import { escapeHtmlSpecialCharacters, getRequiredElementById } from "../utils/dom_helpers";
-import { downloadTextFile, isPdf } from "../utils/file_helpers";
-
-type InvokeFn = (cmd: string, args?: Record<string, unknown>) => Promise<any>;
-
-declare global {
-  interface Window {
-    __TAURI__?: { invoke: InvokeFn };
-  }
-}
+import { downloadTextFile, findStatementFileProblem, formatFileSize, isPdf } from "../utils/file_helpers";
 
 const CSV_COLUMNS_STORAGE_KEY = "billie:csv-colunas";
 const OLDEST_SELECTABLE_YEAR = 2021;
+const PROCESS_BUTTON_LABEL = "Processar fatura";
 
 export function log(message: string, type: "info" | "error" | "success" = "info") {
   const logEl = getRequiredElementById<HTMLDivElement>("log");
@@ -42,12 +35,20 @@ export function log(message: string, type: "info" | "error" | "success" = "info"
 
 export function initInvoiceView(): void {
   const els = {
-    fileRow: getRequiredElementById<HTMLButtonElement>("file-row"),
+    filePickerError: getRequiredElementById<HTMLParagraphElement>("file-picker-error"),
+    filePickerPrompt: getRequiredElementById<HTMLButtonElement>("file-picker-prompt"),
+    fileSelected: getRequiredElementById<HTMLDivElement>("file-selected"),
+    fileTypeBadge: getRequiredElementById<HTMLSpanElement>("file-type-badge"),
     fileName: getRequiredElementById<HTMLSpanElement>("file-name"),
+    fileSize: getRequiredElementById<HTMLSpanElement>("file-size"),
+    btnChangeFile: getRequiredElementById<HTMLButtonElement>("btn-change-file"),
+    btnRemoveFile: getRequiredElementById<HTMLButtonElement>("btn-remove-file"),
     fileInput: getRequiredElementById<HTMLInputElement>("file-input"),
 
+    passwordField: getRequiredElementById<HTMLDivElement>("field-pdf-password"),
     password: getRequiredElementById<HTMLInputElement>("senha"),
     bank: getRequiredElementById<HTMLSelectElement>("banco"),
+    yearField: getRequiredElementById<HTMLDivElement>("field-invoice-year"),
     year: getRequiredElementById<HTMLSelectElement>("ano"),
 
     colDate: getRequiredElementById<HTMLInputElement>("col-data"),
@@ -76,12 +77,13 @@ export function initInvoiceView(): void {
     installment: getRequiredElementById<HTMLSelectElement>("invoice-map-col-parcela"),
   };
 
-  let selectedFilePath: string | null = null;
   let selectedFile: File | null = null;
   let pendingCsvText: string | null = null;
+  let isProcessing = false;
 
   fillYearOptions(els.year);
   loadCsvColumnsConfig();
+  updateProcessButton();
   bindEvents();
 
   function fillYearOptions(select: HTMLSelectElement) {
@@ -94,40 +96,75 @@ export function initInvoiceView(): void {
       .join("");
   }
 
-  function selectFile() {
-    if (window.__TAURI__) {
-      selectFileWithTauri();
-    } else {
-      els.fileInput.click();
-    }
-  }
-
-  async function selectFileWithTauri() {
-    const result = await window.__TAURI__!.invoke("selecionar_arquivo");
-    if (!result?.caminho) return;
-
-    selectedFilePath = result.caminho;
-    selectedFile = null;
-    registerSelectedFile(result.caminho.split("/").pop());
-  }
-
   function onFileInputChange() {
     const file = els.fileInput.files?.[0];
+    // Limpa o input para que escolher de novo o mesmo arquivo dispare "change" outra vez.
+    els.fileInput.value = "";
     if (!file) return;
 
+    trySelectFile(file);
+  }
+
+  function trySelectFile(file: File) {
+    const problem = findStatementFileProblem(file);
+    if (problem) {
+      showFileError(problem);
+      return;
+    }
+    registerSelectedFile(file);
+  }
+
+  function showFileError(message: string) {
+    els.filePickerError.textContent = message;
+    els.filePickerError.hidden = false;
+    log(message, "error");
+  }
+
+  function registerSelectedFile(file: File) {
     selectedFile = file;
-    selectedFilePath = null;
-    registerSelectedFile(file.name);
+    els.filePickerError.hidden = true;
+    els.fileTypeBadge.textContent = isPdf(file) ? "PDF" : "CSV";
+    els.fileName.textContent = file.name;
+    els.fileName.title = file.name;
+    els.fileSize.textContent = formatFileSize(file.size);
+    els.filePickerPrompt.hidden = true;
+    els.fileSelected.hidden = false;
+
+    resetProcessingState();
+    showOnlyFieldsForFileType(file);
+    log(`Arquivo selecionado: ${file.name}`);
   }
 
-  function registerSelectedFile(name: string) {
-    els.fileName.textContent = name;
-    els.fileRow.classList.remove("empty");
-    log(`Arquivo selecionado: ${name}`);
+  function removeSelectedFile() {
+    selectedFile = null;
+    els.fileSelected.hidden = true;
+    els.filePickerPrompt.hidden = false;
+    els.passwordField.hidden = false;
+    els.yearField.hidden = false;
+
+    resetProcessingState();
+    els.filePickerPrompt.focus();
   }
 
-  function hasSelectedFile(): boolean {
-    return selectedFilePath !== null || selectedFile !== null;
+  function resetProcessingState() {
+    els.sectionInvoiceMapping.hidden = true;
+    pendingCsvText = null;
+    els.btnProcess.textContent = PROCESS_BUTTON_LABEL;
+    updateProcessButton();
+  }
+
+  function updateProcessButton() {
+    els.btnProcess.disabled = isProcessing || selectedFile === null;
+    // Trocar o arquivo no meio do processamento misturaria o resultado de um com o estado do outro.
+    els.btnChangeFile.disabled = isProcessing;
+    els.btnRemoveFile.disabled = isProcessing;
+  }
+
+  // Senha e ano só valem para PDF: o CSV não é criptografado e já traz o ano em cada data.
+  function showOnlyFieldsForFileType(file: File) {
+    const pdfSelected = isPdf(file);
+    els.passwordField.hidden = !pdfSelected;
+    els.yearField.hidden = !pdfSelected;
   }
 
   function loadCsvColumnsConfig() {
@@ -201,32 +238,28 @@ export function initInvoiceView(): void {
   }
 
   async function processInvoice() {
-    if (!hasSelectedFile()) {
-      log("Nenhum arquivo selecionado.", "error");
-      return;
-    }
+    const file = selectedFile;
+    if (!file) return;
 
-    els.btnProcess.disabled = true;
+    isProcessing = true;
+    updateProcessButton();
     els.btnProcess.textContent = "Processando...";
     els.sectionInvoiceMapping.hidden = true;
     log("Processando fatura...");
 
     try {
-      if (!selectedFile) {
-        throw new Error("Seleção de arquivo pelo Tauri ainda não implementada.");
-      }
-
-      if (isPdf(selectedFile)) {
-        await processPdfFile(selectedFile);
+      if (isPdf(file)) {
+        await processPdfFile(file);
       } else {
-        pendingCsvText = await selectedFile.text();
+        pendingCsvText = await file.text();
         await processCsvText(pendingCsvText, undefined);
       }
     } catch (error) {
       log(`Erro ao processar: ${error}`, "error");
       els.btnProcess.textContent = "Tentar novamente";
     } finally {
-      els.btnProcess.disabled = false;
+      isProcessing = false;
+      updateProcessButton();
     }
   }
 
@@ -325,7 +358,10 @@ export function initInvoiceView(): void {
 
 
   function bindEvents() {
-    els.fileRow.addEventListener("click", selectFile);
+    els.filePickerPrompt.addEventListener("click", () => els.fileInput.click());
+    els.btnChangeFile.addEventListener("click", () => els.fileInput.click());
+    els.btnRemoveFile.addEventListener("click", removeSelectedFile);
+
     els.fileInput.addEventListener("change", onFileInputChange);
     els.btnProcess.addEventListener("click", processInvoice);
 

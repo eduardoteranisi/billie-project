@@ -1,41 +1,92 @@
-/* ---------- linha de arquivo (padrão pontilhado de razão) ---------- */
+/* ---------- campo de arquivo ---------- */
 
-.file-row {
+.file-picker {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.file-picker-prompt {
   display: flex;
-  align-items: baseline;
-  gap: 8px;
-  cursor: pointer;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 28px 16px;
   background: none;
   border: none;
-  width: 100%;
-  padding: 0;
-  text-align: left;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-family: var(--font-body);
+}
+.file-picker-prompt[hidden] { display: none; }
+.file-picker-prompt:hover { background: var(--surface-raised); }
+.file-picker-prompt:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.file-picker-title { font-size: 15px; font-weight: 500; color: var(--accent-strong); }
+.file-picker-hint { font-size: 13px; color: var(--text-tertiary); }
+
+.file-picker-error {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--danger);
+}
+.file-picker-error[hidden] { display: none; }
+
+.file-selected {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+}
+.file-selected[hidden] { display: none; }
+
+.file-type-badge {
+  flex-shrink: 0;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: var(--surface-raised);
+  color: var(--accent-strong);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.file-selected-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.file-name {
   font-family: var(--font-mono);
   font-size: 14px;
   color: var(--text-primary);
-}
-
-.file-row .file-name {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  min-width: 0;
-}
-.file-row.empty .file-name { color: var(--text-tertiary); }
-
-.leader {
-  flex: 1;
-  border-bottom: 1px dotted var(--border);
-  height: 1px;
-  margin-bottom: 5px;
 }
 
-.file-action {
-  flex-shrink: 0;
-  color: var(--accent-strong);
+.file-size {
+  font-family: var(--font-mono);
   font-size: 13px;
-  letter-spacing: 0.02em;
+  color: var(--text-tertiary);
 }
+
+.file-text-button {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  padding: 4px 2px;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--accent-strong);
+}
+.file-text-button:hover:not(:disabled) { text-decoration: underline; }
+.file-text-button:disabled { opacity: 0.5; cursor: default; }
+.file-text-button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* ---------- log ---------- */
 
