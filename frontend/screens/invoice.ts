@@ -12,14 +12,6 @@ import { fillColumnMappingSelects, readColumnMappingSelects } from "../component
 import { escapeHtmlSpecialCharacters, getRequiredElementById } from "../utils/dom_helpers";
 import { downloadTextFile, isPdf } from "../utils/file_helpers";
 
-type InvokeFn = (cmd: string, args?: Record<string, unknown>) => Promise<any>;
-
-declare global {
-  interface Window {
-    __TAURI__?: { invoke: InvokeFn };
-  }
-}
-
 const CSV_COLUMNS_STORAGE_KEY = "billie:csv-colunas";
 const OLDEST_SELECTABLE_YEAR = 2021;
 
@@ -76,7 +68,6 @@ export function initInvoiceView(): void {
     installment: getRequiredElementById<HTMLSelectElement>("invoice-map-col-parcela"),
   };
 
-  let selectedFilePath: string | null = null;
   let selectedFile: File | null = null;
   let pendingCsvText: string | null = null;
 
@@ -94,29 +85,11 @@ export function initInvoiceView(): void {
       .join("");
   }
 
-  function selectFile() {
-    if (window.__TAURI__) {
-      selectFileWithTauri();
-    } else {
-      els.fileInput.click();
-    }
-  }
-
-  async function selectFileWithTauri() {
-    const result = await window.__TAURI__!.invoke("selecionar_arquivo");
-    if (!result?.caminho) return;
-
-    selectedFilePath = result.caminho;
-    selectedFile = null;
-    registerSelectedFile(result.caminho.split("/").pop());
-  }
-
   function onFileInputChange() {
     const file = els.fileInput.files?.[0];
     if (!file) return;
 
     selectedFile = file;
-    selectedFilePath = null;
     registerSelectedFile(file.name);
   }
 
@@ -124,10 +97,6 @@ export function initInvoiceView(): void {
     els.fileName.textContent = name;
     els.fileRow.classList.remove("empty");
     log(`Arquivo selecionado: ${name}`);
-  }
-
-  function hasSelectedFile(): boolean {
-    return selectedFilePath !== null || selectedFile !== null;
   }
 
   function loadCsvColumnsConfig() {
@@ -201,7 +170,7 @@ export function initInvoiceView(): void {
   }
 
   async function processInvoice() {
-    if (!hasSelectedFile()) {
+    if (!selectedFile) {
       log("Nenhum arquivo selecionado.", "error");
       return;
     }
@@ -212,10 +181,6 @@ export function initInvoiceView(): void {
     log("Processando fatura...");
 
     try {
-      if (!selectedFile) {
-        throw new Error("Seleção de arquivo pelo Tauri ainda não implementada.");
-      }
-
       if (isPdf(selectedFile)) {
         await processPdfFile(selectedFile);
       } else {
@@ -325,7 +290,7 @@ export function initInvoiceView(): void {
 
 
   function bindEvents() {
-    els.fileRow.addEventListener("click", selectFile);
+    els.fileRow.addEventListener("click", () => els.fileInput.click());
     els.fileInput.addEventListener("change", onFileInputChange);
     els.btnProcess.addEventListener("click", processInvoice);
 
