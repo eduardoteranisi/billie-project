@@ -39,8 +39,10 @@ export function initInvoiceView(): void {
     fileName: getRequiredElementById<HTMLSpanElement>("file-name"),
     fileInput: getRequiredElementById<HTMLInputElement>("file-input"),
 
+    passwordField: getRequiredElementById<HTMLDivElement>("field-pdf-password"),
     password: getRequiredElementById<HTMLInputElement>("senha"),
     bank: getRequiredElementById<HTMLSelectElement>("banco"),
+    yearField: getRequiredElementById<HTMLDivElement>("field-invoice-year"),
     year: getRequiredElementById<HTMLSelectElement>("ano"),
 
     colDate: getRequiredElementById<HTMLInputElement>("col-data"),
@@ -92,17 +94,25 @@ export function initInvoiceView(): void {
     if (!file) return;
 
     selectedFile = file;
-    registerSelectedFile(file.name);
+    registerSelectedFile(file);
   }
 
-  function registerSelectedFile(name: string) {
-    els.fileName.textContent = name;
+  function registerSelectedFile(file: File) {
+    els.fileName.textContent = file.name;
     els.fileRow.classList.remove("empty");
     els.sectionInvoiceMapping.hidden = true;
     pendingCsvText = null;
     els.btnProcess.textContent = PROCESS_BUTTON_LABEL;
     updateProcessButton();
-    log(`Arquivo selecionado: ${name}`);
+    showOnlyFieldsForFileType(file);
+    log(`Arquivo selecionado: ${file.name}`);
+  }
+
+  // Senha e ano só valem para PDF: o CSV não é criptografado e já traz o ano em cada data.
+  function showOnlyFieldsForFileType(file: File) {
+    const pdfSelected = isPdf(file);
+    els.passwordField.hidden = !pdfSelected;
+    els.yearField.hidden = !pdfSelected;
   }
 
   function updateProcessButton() {
