@@ -1,13 +1,12 @@
-/* ---------- campo de arquivo (arrastar e soltar ou procurar) ---------- */
+/* ---------- campo de arquivo ---------- */
 
-.file-drop-zone {
-  border: 1.5px dashed var(--border);
+.file-picker {
+  border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
-  transition: border-color 0.15s, background 0.15s;
 }
 
-.file-drop-prompt {
+.file-picker-prompt {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -19,13 +18,20 @@
   border-radius: var(--radius);
   cursor: pointer;
   font-family: var(--font-body);
-  color: var(--text-primary);
 }
-.file-drop-prompt:hover .file-drop-title { color: var(--accent-strong); }
-.file-drop-prompt:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.file-picker-prompt[hidden] { display: none; }
+.file-picker-prompt:hover { background: var(--surface-raised); }
+.file-picker-prompt:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-.file-drop-title { font-size: 15px; font-weight: 500; }
-.file-drop-hint { font-size: 13px; color: var(--text-tertiary); }
+.file-picker-title { font-size: 15px; font-weight: 500; color: var(--accent-strong); }
+.file-picker-hint { font-size: 13px; color: var(--text-tertiary); }
+
+.file-picker-error {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--danger);
+}
+.file-picker-error[hidden] { display: none; }
 
 .file-selected {
   display: flex;

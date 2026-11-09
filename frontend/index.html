@@ -66,10 +66,10 @@
       <!-- ---------- arquivo ---------- -->
       <section class="section">
         <p class="section-label">arquivo</p>
-        <div id="file-drop-zone" class="file-drop-zone">
-          <button type="button" id="file-drop-prompt" class="file-drop-prompt">
-            <span class="file-drop-title">Clique para procurar a fatura</span>
-            <span class="file-drop-hint">PDF ou CSV</span>
+        <div class="file-picker">
+          <button type="button" id="file-picker-prompt" class="file-picker-prompt">
+            <span class="file-picker-title">Clique para procurar a fatura</span>
+            <span class="file-picker-hint">PDF ou CSV</span>
           </button>
           <div id="file-selected" class="file-selected" hidden>
             <span class="file-type-badge" id="file-type-badge"></span>
@@ -81,6 +81,7 @@
             <button type="button" id="btn-remove-file" class="file-text-button">Remover</button>
           </div>
         </div>
+        <p id="file-picker-error" class="file-picker-error" role="alert" hidden></p>
         <input type="file" id="file-input" accept=".csv,text/csv,.pdf,application/pdf" hidden />
       </section>
 

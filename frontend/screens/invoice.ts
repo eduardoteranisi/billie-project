@@ -10,7 +10,7 @@ import { convertSavedCsvColumnsToCurrent } from "../services/legacy_data_convers
 import type { StoredExpense } from "../types";
 import { fillColumnMappingSelects, readColumnMappingSelects } from "../components/column_mapping_form";
 import { escapeHtmlSpecialCharacters, getRequiredElementById } from "../utils/dom_helpers";
-import { downloadTextFile, formatFileSize, isPdf } from "../utils/file_helpers";
+import { downloadTextFile, findStatementFileProblem, formatFileSize, isPdf } from "../utils/file_helpers";
 
 const CSV_COLUMNS_STORAGE_KEY = "billie:csv-colunas";
 const OLDEST_SELECTABLE_YEAR = 2021;
@@ -35,7 +35,8 @@ export function log(message: string, type: "info" | "error" | "success" = "info"
 
 export function initInvoiceView(): void {
   const els = {
-    fileDropPrompt: getRequiredElementById<HTMLButtonElement>("file-drop-prompt"),
+    filePickerError: getRequiredElementById<HTMLParagraphElement>("file-picker-error"),
+    filePickerPrompt: getRequiredElementById<HTMLButtonElement>("file-picker-prompt"),
     fileSelected: getRequiredElementById<HTMLDivElement>("file-selected"),
     fileTypeBadge: getRequiredElementById<HTMLSpanElement>("file-type-badge"),
     fileName: getRequiredElementById<HTMLSpanElement>("file-name"),
@@ -101,16 +102,32 @@ export function initInvoiceView(): void {
     els.fileInput.value = "";
     if (!file) return;
 
+    trySelectFile(file);
+  }
+
+  function trySelectFile(file: File) {
+    const problem = findStatementFileProblem(file);
+    if (problem) {
+      showFileError(problem);
+      return;
+    }
     registerSelectedFile(file);
+  }
+
+  function showFileError(message: string) {
+    els.filePickerError.textContent = message;
+    els.filePickerError.hidden = false;
+    log(message, "error");
   }
 
   function registerSelectedFile(file: File) {
     selectedFile = file;
+    els.filePickerError.hidden = true;
     els.fileTypeBadge.textContent = isPdf(file) ? "PDF" : "CSV";
     els.fileName.textContent = file.name;
     els.fileName.title = file.name;
     els.fileSize.textContent = formatFileSize(file.size);
-    els.fileDropPrompt.hidden = true;
+    els.filePickerPrompt.hidden = true;
     els.fileSelected.hidden = false;
 
     resetProcessingState();
@@ -121,12 +138,12 @@ export function initInvoiceView(): void {
   function removeSelectedFile() {
     selectedFile = null;
     els.fileSelected.hidden = true;
-    els.fileDropPrompt.hidden = false;
+    els.filePickerPrompt.hidden = false;
     els.passwordField.hidden = false;
     els.yearField.hidden = false;
 
     resetProcessingState();
-    els.fileDropPrompt.focus();
+    els.filePickerPrompt.focus();
   }
 
   function resetProcessingState() {
@@ -341,9 +358,10 @@ export function initInvoiceView(): void {
 
 
   function bindEvents() {
-    els.fileDropPrompt.addEventListener("click", () => els.fileInput.click());
+    els.filePickerPrompt.addEventListener("click", () => els.fileInput.click());
     els.btnChangeFile.addEventListener("click", () => els.fileInput.click());
     els.btnRemoveFile.addEventListener("click", removeSelectedFile);
+
     els.fileInput.addEventListener("change", onFileInputChange);
     els.btnProcess.addEventListener("click", processInvoice);
 

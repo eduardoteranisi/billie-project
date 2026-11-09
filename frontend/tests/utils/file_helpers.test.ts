@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatFileSize, isCsv, isPdf } from "../../utils/file_helpers";
+import { findStatementFileProblem, formatFileSize, isCsv, isPdf } from "../../utils/file_helpers";
 
 describe("isPdf", () => {
   it("reconhece o PDF pelo tipo MIME", () => {
@@ -40,5 +40,22 @@ describe("formatFileSize", () => {
 
   it("mostra megabytes com uma casa decimal no padrão brasileiro", () => {
     expect(formatFileSize(1.25 * 1024 * 1024)).toBe("1,3 MB");
+  });
+});
+
+describe("findStatementFileProblem", () => {
+  it("aceita PDF e CSV com conteúdo", () => {
+    expect(findStatementFileProblem(new File(["%PDF"], "fatura.pdf"))).toBeNull();
+    expect(findStatementFileProblem(new File(["data;valor"], "extrato.csv"))).toBeNull();
+  });
+
+  it("recusa arquivos que não são PDF nem CSV", () => {
+    expect(findStatementFileProblem(new File(["x"], "foto.png", { type: "image/png" }))).toBe(
+      '"foto.png" não é PDF nem CSV.'
+    );
+  });
+
+  it("recusa arquivos vazios", () => {
+    expect(findStatementFileProblem(new File([], "fatura.pdf"))).toBe('"fatura.pdf" está vazio.');
   });
 });
